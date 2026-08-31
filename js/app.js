@@ -7,6 +7,7 @@
 (function () {
   "use strict";
   const S = window.PametStore;
+  const A = window.PametAuth;
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
@@ -24,6 +25,41 @@
   let currentTab = "home";
   let calCursor = new Date();           // month being shown in calendar
   let selectedDate = new Date();        // day selected in calendar
+  let displayName = "";                 // first name shown on home (from auth)
+
+  // ---- Honor-system badge (medical cross in a medal) ----
+  const TIER_ICON = '<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="9" r="6"/><path d="M12 6.5v5M9.5 9h5"/><path d="M8.5 14.5 7 21l5-3 5 3-1.5-6.5"/></svg>';
+  function tierBadgeEl(tier) {
+    if (!tier) return null;
+    const el = document.createElement("span");
+    el.className = "tier-badge";
+    el.style.setProperty("--tier-color", tier.color);
+    el.title = `${tier.name} — ${tier.minDays}+ days logged`;
+    el.innerHTML = TIER_ICON + "<span>" + esc(tier.name) + "</span>";
+    return el;
+  }
+  function setTierBadge(container, tier) {
+    if (!container) return;
+    container.innerHTML = "";
+    if (tier) { const b = tierBadgeEl(tier); if (b) container.appendChild(b); }
+  }
+
+  // ---- Settings help tooltips (inject from data-help, tap-friendly) ----
+  function wireHelp() {
+    $$(".help").forEach((h) => {
+      if (h.querySelector(".tip")) return;
+      const tip = document.createElement("span");
+      tip.className = "tip";
+      tip.textContent = h.dataset.help || "";
+      h.appendChild(tip);
+      h.setAttribute("tabindex", "0");
+      h.addEventListener("click", () => {
+        const open = h.classList.contains("show");
+        $$(".help.show").forEach((x) => x.classList.remove("show"));
+        if (!open) h.classList.add("show");
+      });
+    });
+  }
 
   // ============================================================
   // NAVIGATION
@@ -51,26 +87,32 @@
     const m = S.metrics();
     const pats = S.patterns();
 
-    $("#greeting").textContent = `${greetingText()}, ${S.settings.userName || "friend"} 👋`;
+    // Greeting uses the account's first name only (per v1.0.1 spec).
+    $("#greeting").textContent = `${greetingText()}, ${displayName || S.settings.userName || "friend"} 👋`;
     $("#todayDate").textContent = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+    setTierBadge($("#greetTier"), S.tier());
 
-    // Streak
-    $("#streakDays").textContent = m.streakDays;
-    const dots = $("#streakDots");
-    dots.innerHTML = "";
-    for (let i = 0; i < 7; i++) {
-      const d = document.createElement("span");
-      if (i >= 6) d.className = "off";
-      dots.appendChild(d);
+    // Streak (honors the "Show day streak" toggle)
+    const showStreak = !!S.settings.showStreak;
+    $("#streakCard").style.display = showStreak ? "flex" : "none";
+    if (showStreak) {
+      $("#streakDays").textContent = m.streakDays;
+      const dots = $("#streakDots");
+      dots.innerHTML = "";
+      for (let i = 0; i < 7; i++) {
+        const d = document.createElement("span");
+        if (i >= 6) d.className = "off";
+        dots.appendChild(d);
+      }
     }
 
-    // Insight banner (top pattern)
+    // Insight banner (top pattern) — honors the "Show AI insight" toggle.
     const top = pats[0];
-    if (top) {
+    if (top && !!S.settings.showInsight) {
       $("#insightText").textContent = top.detail;
-      $("#insightBanner").style.display = "flex";
+      $("#insightBanner").hidden = false;
     } else {
-      $("#insightBanner").style.display = "none";
+      $("#insightBanner").hidden = true;
     }
 
     // Metric cards
@@ -206,9 +248,24 @@
       ? `${confirmed} confirmed pattern${confirmed > 1 ? "s" : ""} detected. Patterns update nightly as you log more.`
       : "Log a few more days and your personal patterns will appear here.";
 
+    // Free plan shows at most FREE_LIMITS.patterns; Pro is unlimited.
+    const limit = S.patternLimit();
+    const hiddenCount = pats.length - Math.min(pats.length, limit);
+    const upgrade = $("#patternsUpgrade");
+    if (hiddenCount > 0) {
+      upgrade.hidden = false;
+      upgrade.innerHTML = `
+        <span class="uc-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M13 2L3 14h7l-1 8 10-12h-7z"/></svg></span>
+        <div class="uc-body"><p class="uc-title">${hiddenCount} more pattern${hiddenCount > 1 ? "s" : ""} available</p><p class="uc-sub">Upgrade to Pro for unlimited AI patterns.</p></div>
+        <button class="uc-btn" id="patternsUpgradeBtn">Upgrade</button>`;
+    } else {
+      upgrade.hidden = true;
+      upgrade.innerHTML = "";
+    }
+
     const list = $("#patternList");
     list.innerHTML = "";
-    pats.forEach((p) => {
+    pats.slice(0, limit).forEach((p) => {
       const c = PAT_COLORS[p.colorName] || PAT_COLORS.neutral;
       const card = document.createElement("div");
       card.className = "pattern-card" + (p.isEmerging ? " emerging" : "");
@@ -347,14 +404,14 @@
       sg.appendChild(b);
     });
 
-    // Mood (single)
-    buildChipFlow($("#moodFlow"), S.MOODS, (v, el) => { if (logState.mood === v) { logState.mood = ""; el.classList.remove("selected"); } else { $$("#moodFlow .chip").forEach((c) => c.classList.remove("selected")); logState.mood = v; el.classList.add("selected"); } });
+    // Mood (single) — includes custom moods
+    buildChipFlow($("#moodFlow"), S.allMoods(), (v, el) => { if (logState.mood === v) { logState.mood = ""; el.classList.remove("selected"); } else { $$("#moodFlow .chip").forEach((c) => c.classList.remove("selected")); logState.mood = v; el.classList.add("selected"); } });
 
-    // Activity (single)
-    buildChipFlow($("#activityFlow"), S.ACTIVITIES, (v, el) => { if (logState.activity === v) { logState.activity = ""; el.classList.remove("selected"); } else { $$("#activityFlow .chip").forEach((c) => c.classList.remove("selected")); logState.activity = v; el.classList.add("selected"); } });
+    // Activity (single) — includes custom activities
+    buildChipFlow($("#activityFlow"), S.allActivities(), (v, el) => { if (logState.activity === v) { logState.activity = ""; el.classList.remove("selected"); } else { $$("#activityFlow .chip").forEach((c) => c.classList.remove("selected")); logState.activity = v; el.classList.add("selected"); } });
 
-    // Meds (multi)
-    buildChipFlow($("#medFlow"), S.MEDS, (v, el) => { if (v === "None") { logState.meds.clear(); $$("#medFlow .chip").forEach((c) => c.classList.remove("selected")); el.classList.add("selected"); return; } toggleSet(logState.meds, v); el.classList.toggle("selected"); });
+    // Meds (multi) — includes custom meds
+    buildChipFlow($("#medFlow"), S.allMeds(), (v, el) => { if (v === "None") { logState.meds.clear(); $$("#medFlow .chip").forEach((c) => c.classList.remove("selected")); el.classList.add("selected"); return; } toggleSet(logState.meds, v); el.classList.toggle("selected"); });
 
     // Sliders
     $("#severityRange").value = logState.severity;
@@ -372,6 +429,23 @@
       c.addEventListener("click", () => onPick(v, c));
       container.appendChild(c);
     });
+  }
+
+  // Prompt for a new custom field in one of the four log categories.
+  const CUSTOM_LABELS = { symptoms: "symptom", moods: "mood", activities: "activity", meds: "medication" };
+  function addCustomField(category) {
+    const label = CUSTOM_LABELS[category] || "field";
+    const name = prompt(`Add a custom ${label}:`);
+    if (!name) return;
+    const v = name.trim();
+    if (!v) return;
+    const ok = S.addCustomField(category, v);
+    if (ok) { buildLogForm(); toast(`Custom ${label} added`, "success"); }
+    else if (!S.isPro() && S.customCount(category) >= S.FREE_LIMITS.customPerCategory) {
+      toast(`Free plan allows ${S.FREE_LIMITS.customPerCategory} custom ${label}s — upgrade to Pro for unlimited`);
+    } else {
+      toast(`That ${label} already exists`);
+    }
   }
 
   function toggleSet(set, v) { set.has(v) ? set.delete(v) : set.add(v); }
@@ -415,7 +489,7 @@
     resetLogForm();
     refreshAll();
     setTimeout(closeLog, 900);
-    toast("Entry saved");
+    toast("Entry saved ✓", "success");
   }
 
   // ============================================================
@@ -423,14 +497,20 @@
   // ============================================================
   function renderSettings() {
     const s = S.settings;
-    $("#userAvatar").textContent = (s.userName || "A").trim().charAt(0).toUpperCase() || "A";
-    $("#userNameInput").value = s.userName;
-    $("#settingsStreak").textContent = S.metrics().streakDays;
+    const u = A.getUser();
 
-    const map = { setDarkMode: "isDarkMode", setDailyReminder: "dailyReminder", setPatternAlerts: "patternAlerts", setStreakReminders: "streakReminders", setWeeklyDigest: "weeklyDigest", setAiPatterns: "aiPatterns", setE2e: "e2eEncryption", setCaregiver: "caregiverAccess", setShareData: "shareData" };
+    // Profile (from the auth account)
+    const first = displayName || (u && u.firstName) || s.userName || "";
+    $("#userAvatar").textContent = (first || "A").trim().charAt(0).toUpperCase() || "A";
+    $("#userNameInput").value = first;
+    if (u) $("#settingsEmail").textContent = u.email || "";
+    setTierBadge($("#settingsTier"), S.tier());
+
+    // Toggles (incl. new v1.0.1 options)
+    const map = { setDarkMode: "isDarkMode", setShowStreak: "showStreak", setShowInsight: "showInsight", setDailyReminder: "dailyReminder", setPatternAlerts: "patternAlerts", setStreakReminders: "streakReminders", setWeeklyDigest: "weeklyDigest", setAiPatterns: "aiPatterns", setE2e: "e2eEncryption", setCaregiver: "caregiverAccess", setPrimaryCare: "primaryCareAccess", setShareData: "shareData" };
     Object.entries(map).forEach(([id, key]) => { const el = $("#" + id); if (el) el.checked = !!s[key]; });
 
-    // custom symptoms
+    // Custom symptoms
     const list = $("#customSymptomList");
     list.innerHTML = "";
     (s.customSymptoms || []).forEach((sym) => {
@@ -438,10 +518,30 @@
       li.innerHTML = `<span>${esc(sym)}</span>`;
       const rm = document.createElement("button");
       rm.className = "remove"; rm.textContent = "✕"; rm.title = "Remove";
-      rm.addEventListener("click", () => { S.removeCustomSymptom(sym); renderSettings(); buildLogForm(); });
+      rm.addEventListener("click", () => { S.removeCustomField("symptoms", sym); renderSettings(); buildLogForm(); });
       li.appendChild(rm);
       list.appendChild(li);
     });
+
+    // Plan comparison + CTA
+    renderPlan();
+  }
+
+  function renderPlan() {
+    const box = $("#planCompare");
+    if (!box) return;
+    const current = S.plan().key;
+    box.innerHTML = Object.values(S.PLANS).map((p) => `
+      <div class="plan-card${p.key === current ? " active" : ""}">
+        <div class="plan-card-head"><span class="plan-card-name">${esc(p.name)}</span><span class="plan-card-price">${esc(p.price)}${p.key === current ? " · Active" : ""}</span></div>
+        <ul class="plan-features">${p.features.map((f) => `<li>${esc(f)}</li>`).join("")}</ul>
+      </div>`).join("");
+    $("#planLineText").textContent = current === "pro" ? "Pro plan" : "Free plan";
+    const cta = $("#upgradeBtn");
+    if (cta) {
+      if (current === "pro") { cta.textContent = "Pro active ✓"; cta.disabled = true; }
+      else { cta.textContent = "Upgrade to Pro"; cta.disabled = false; }
+    }
   }
 
   // ============================================================
@@ -455,10 +555,11 @@
   // TOAST
   // ============================================================
   let toastTimer;
-  function toast(msg) {
+  function toast(msg, kind) {
     let t = $("#toast");
     if (!t) { t = document.createElement("div"); t.id = "toast"; t.className = "toast"; $(".app-shell").appendChild(t); }
     t.textContent = msg;
+    t.classList.toggle("success", kind === "success");
     requestAnimationFrame(() => t.classList.add("show"));
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => t.classList.remove("show"), 2200);
@@ -478,7 +579,52 @@
   // ============================================================
   // WIRE UP
   // ============================================================
+  // ---- Auth gate: show welcome or the app ----
+  function enterApp() {
+    $("#welcome").classList.add("hidden");
+    const u = A.getUser();
+    displayName = (u && u.firstName) || "";
+    if (displayName) S.setSetting("userName", displayName);
+    applyTheme();
+    renderDashboard();
+  }
+  function showWelcome() {
+    $("#welcome").classList.remove("hidden");
+  }
+
   function init() {
+    // Welcome / auth gate (v1.0.1)
+    const secure = $("#welcomeSecure");
+    if (secure) {
+      if (A.isSecure) secure.textContent = "🔒 Your password is encrypted on this device."
+      else { secure.textContent = "⚠️ Reduced security: this page isn't served over HTTPS, so a lighter password hash is used."; secure.classList.add("warn"); }
+    }
+
+    // Toggle login / register forms
+    $("#showRegister").addEventListener("click", (e) => { e.preventDefault(); $("#loginForm").hidden = true; $("#registerForm").hidden = false; });
+    $("#showLogin").addEventListener("click", (e) => { e.preventDefault(); $("#registerForm").hidden = true; $("#loginForm").hidden = false; });
+
+    const setFormError = (msg) => { let el = $(".form-error"); if (!el) { el = document.createElement("p"); el.className = "form-error"; $("#welcome").appendChild(el); } el.textContent = msg || ""; };
+
+    $("#registerForm").addEventListener("submit", async (e) => {
+      e.preventDefault(); setFormError("");
+      try {
+        await A.register({ firstName: $("#regFirstName").value, lastName: $("#regLastName").value, email: $("#regEmail").value, password: $("#regPassword").value });
+        enterApp(); toast("Account created ✓", "success");
+      } catch (err) { setFormError(err.message); }
+    });
+
+    $("#loginForm").addEventListener("submit", async (e) => {
+      e.preventDefault(); setFormError("");
+      try {
+        await A.login($("#loginEmail").value, $("#loginPassword").value);
+        enterApp(); toast(`Welcome back ✓`);
+      } catch (err) { setFormError(err.message); }
+    });
+
+    // Gate the app until authenticated.
+    if (A.isAuthed()) enterApp(); else showWelcome();
+
     applyTheme();
     renderDashboard();
     $$(".tab[data-tab]").forEach((t) => t.classList.toggle("active", t.dataset.tab === currentTab));
@@ -501,6 +647,12 @@
     $("#logBackdrop").addEventListener("click", (e) => { if (e.target.id === "logBackdrop") closeLog(); });
     $("#saveEntry").addEventListener("click", saveEntry);
 
+    // "+" custom-field buttons in the log sheet
+    $("#addSymptomPlus").addEventListener("click", () => addCustomField("symptoms"));
+    $("#addMoodPlus").addEventListener("click", () => addCustomField("moods"));
+    $("#addActivityPlus").addEventListener("click", () => addCustomField("activities"));
+    $("#addMedPlus").addEventListener("click", () => addCustomField("meds"));
+
     // Sliders
     $("#severityRange").addEventListener("input", (e) => { logState.severity = +e.target.value; $("#severityValue").textContent = `${Math.round(logState.severity)}/10`; });
     $$(".range[data-field]").forEach((r) => r.addEventListener("input", (e) => { logState[r.dataset.field] = +e.target.value; updateSliderOut(e.target); }));
@@ -513,27 +665,68 @@
     $("#emailReport").addEventListener("click", emailReport);
     $("#downloadPdf").addEventListener("click", downloadPdf);
 
-    // Settings toggles
-    const toggleMap = { setDarkMode: "isDarkMode", setDailyReminder: "dailyReminder", setPatternAlerts: "patternAlerts", setStreakReminders: "streakReminders", setWeeklyDigest: "weeklyDigest", setAiPatterns: "aiPatterns", setE2e: "e2eEncryption", setCaregiver: "caregiverAccess", setShareData: "shareData" };
+    // Settings toggles (incl. new v1.0.1 options)
+    const toggleMap = { setDarkMode: "isDarkMode", setShowStreak: "showStreak", setShowInsight: "showInsight", setDailyReminder: "dailyReminder", setPatternAlerts: "patternAlerts", setStreakReminders: "streakReminders", setWeeklyDigest: "weeklyDigest", setAiPatterns: "aiPatterns", setE2e: "e2eEncryption", setCaregiver: "caregiverAccess", setPrimaryCare: "primaryCareAccess", setShareData: "shareData" };
     Object.entries(toggleMap).forEach(([id, key]) => {
       const el = $("#" + id);
-      if (el) el.addEventListener("change", (e) => { S.setSetting(key, e.target.checked); if (key === "isDarkMode") applyTheme(); });
+      if (el) el.addEventListener("change", (e) => {
+        S.setSetting(key, e.target.checked);
+        if (key === "isDarkMode") applyTheme();
+        if (key === "showStreak" || key === "showInsight") renderDashboard();
+      });
     });
 
-    // Name
-    $("#userNameInput").addEventListener("input", (e) => { S.setSetting("userName", e.target.value); $("#userAvatar").textContent = (e.target.value || "A").trim().charAt(0).toUpperCase() || "A"; });
+    // Name (syncs the account's first name)
+    $("#userNameInput").addEventListener("input", (e) => {
+      const v = e.target.value;
+      displayName = v.trim();
+      if (A.hasAccount()) A.updateProfile({ firstName: v });
+      S.setSetting("userName", v);
+      $("#userAvatar").textContent = (v || "A").trim().charAt(0).toUpperCase() || "A";
+    });
 
-    // Custom symptoms
+    // Custom symptoms (settings)
     $("#addSymptomBtn").addEventListener("click", () => {
       const v = $("#newSymptomInput").value.trim();
-      if (v) { S.addCustomSymptom(v); $("#newSymptomInput").value = ""; renderSettings(); buildLogForm(); toast("Symptom added"); }
+      if (v) {
+        const ok = S.addCustomField("symptoms", v);
+        $("#newSymptomInput").value = "";
+        renderSettings(); buildLogForm();
+        toast(ok ? "Symptom added ✓" : `Free plan allows ${S.FREE_LIMITS.customPerCategory} custom symptoms`, ok ? "success" : undefined);
+      }
     });
     $("#newSymptomInput").addEventListener("keydown", (e) => { if (e.key === "Enter") $("#addSymptomBtn").click(); });
 
-    // Data
-    $("#exportCsv").addEventListener("click", exportCsv);
-    $("#exportJson").addEventListener("click", exportJson);
-    $("#deleteAccount").addEventListener("click", () => { if (confirm("Delete all Pamet data? This resets to sample entries.")) { S.reset(); applyTheme(); renderSettings(); refreshAll(); toast("Data reset"); } });
+    // Plan upgrade / downgrade
+    $("#upgradeBtn").addEventListener("click", () => {
+      if (S.isPro()) { S.setPlan("free"); toast("Switched to Free plan"); }
+      else { S.setPlan("pro"); toast("Welcome to Pro ✓", "success"); }
+      renderSettings(); refreshAll();
+    });
+
+    // Data + account actions
+    $("#exportCsv").addEventListener("click", () => { if (!S.isPro()) { toast("CSV export is a Pro feature"); return; } exportCsv(); });
+    $("#exportJson").addEventListener("click", () => { if (!S.isPro()) { toast("JSON export is a Pro feature"); return; } exportJson(); });
+    $("#changePasswordBtn").addEventListener("click", async () => {
+      const oldPw = prompt("Current password:"); if (oldPw === null) return;
+      const newPw = prompt("New password (6+ characters): "); if (!newPw) return;
+      if (newPw.length < 6) { toast("Password must be 6+ characters"); return; }
+      try { await A.changePassword(oldPw, newPw); toast("Password changed ✓", "success"); } catch (err) { toast(err.message); }
+    });
+    $("#logoutBtn").addEventListener("click", () => { A.endSession(); showWelcome(); toast("Logged out"); });
+    $("#deleteAccount").addEventListener("click", () => {
+      if (confirm("Delete your account and all Pamet data? This cannot be undone.")) {
+        S.wipeAll(); A.endSession(); showWelcome(); toast("Account deleted");
+      }
+    });
+
+    // Patterns-screen upgrade button (delegated)
+    $("#patternList").parentElement && $("#patternsUpgrade").addEventListener("click", (e) => {
+      if (e.target.id === "patternsUpgradeBtn") { S.setPlan("pro"); toast("Welcome to Pro ✓", "success"); renderPatterns(); }
+    });
+
+    // Settings help tooltips (tap-friendly)
+    wireHelp();
 
     // Build the log form once
     buildLogForm();

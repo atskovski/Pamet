@@ -1,5 +1,16 @@
-DS_Store
+# OS
 .DS_Store
+
+# Node
 node_modules/
+
+# Logs
 *.log
-.DS_Store
+
+# Secrets — never commit credentials
+github_pat_*
+*.token
+.env
+*.pem
+id_ed25519
+id_rsa

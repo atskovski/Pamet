@@ -1,4 +1,4 @@
-# Pamet — Web
+# Pamet — Web (v1.0.1)
 
 A faithful web port of the **Pamet** iOS symptom-journal app. Same warm terracotta / sage / rose design language, same five screens — rebuilt as a responsive, framework-free website that runs entirely in the browser.
 
@@ -20,12 +20,25 @@ python3 -m http.server 8099
 
 | Screen | Features |
 |--------|----------|
-| **Home** | Time-aware greeting, day-streak card, live AI insight banner, 4 metric cards (computed from your data), recent entries |
-| **Log** | Bottom-sheet form: 16+ symptom chips, severity slider, sleep/stress/water/energy sliders, mood, activity, medications, notes |
+| **Welcome / Login** | Secured account gate (first name, last name, email + password). Only the **first name** shows on the Home greeting. |
+| **Home** | Time-aware greeting + honor-system badge, day-streak card (toggleable), live AI insight banner (toggleable), 4 metric cards, recent entries |
+| **Log** | Bottom-sheet form: symptom/mood/activity/medication chips with **"+" custom-field buttons** (scrollable), severity slider, sleep/stress/water/energy sliders, notes |
 | **Calendar** | Monthly grid with color-coded days (mild / significant / healthy), month navigation, per-day detail |
-| **Patterns** | AI pattern cards with confidence bars — **detected live from your actual entries** via correlation analysis |
+| **Patterns** | AI pattern cards with confidence bars — **detected live from your actual entries**. Free is capped at 10; Pro is unlimited. |
 | **Report** | Doctor-ready report with overview, symptom breakdown, AI patterns, medications, notes + **Email** and **Download PDF** |
-| **Settings** | Dark mode, notifications, AI/privacy toggles, custom symptoms, plan, CSV/JSON export, reset |
+| **Settings** | Dark mode, home-screen toggles (streak/insight), notifications, AI/privacy + **Primary Care Access**, custom symptoms, Free/Pro plan comparison, CSV/JSON export, change password, log out, delete account — each with a **? help tooltip** |
+
+## v1.0.1 — what's new
+
+- **Welcome / login screen.** A secured account gate appears before the app.
+- **Honor-system badges.** A small medical-medal badge (bronze → silver → gold → platinum → beast) appears next to your name, earned by total days logged.
+- **Free vs Pro plans.** You start on Free; upgrade to Pro in Settings. Free is capped at **10 AI patterns** and **5 custom fields per category**; Pro is unlimited.
+- **New settings.** "Show day streak" and "Show AI insight" toggles, a **Primary Care Access** toggle (Pro), and a **? help tooltip** next to every option.
+- **Custom fields anywhere.** "+" buttons in the Log sheet let you add custom symptoms, moods, activities, and medications (scrollable).
+- **Green confirmations.** Saves and key actions confirm in the app's sage-green palette.
+
+### Security note (auth)
+This is a **static, client-side app**. Your password is salted and hashed with **PBKDF2 (Web Crypto)** and stored in your browser — the plaintext is never saved. This is a **local privacy gate**, not server authentication. It works on `localhost` and HTTPS (e.g. GitHub Pages). For true multi-device accounts, a backend is required. When opened via `file://` (no Web Crypto), a lighter hash is used and the app shows a warning.
 
 ## How it differs from the iOS app (in a good way)
 
@@ -39,10 +52,11 @@ python3 -m http.server 8099
 
 ```
 pamet-web/
-├── index.html        ← all screens, tab bar, log sheet
-├── css/styles.css    ← full palette + responsive/dark theming
+├── index.html        ← welcome/auth + all screens, tab bar, log sheet
+├── css/styles.css    ← palette, welcome/badges/tooltips/plan theming
 └── js/
-    ├── store.js      ← data model, persistence, pattern engine, metrics, report
+    ├── store.js      ← data model, tiers, plans, limits, pattern engine, metrics
+    ├── auth.js       ← local PBKDF2 account gate (register/login/session)
     └── app.js        ← rendering + interactivity for every screen
 ```
 
@@ -53,7 +67,7 @@ All colors are CSS custom properties in `styles.css`, mirroring `Colors.swift`:
 
 ## Notes & next steps
 
-- Data is local to the browser (no account, no server). For multi-device sync, point `store.js` persistence at a backend (Supabase/Firebase).
+- Data is local to the browser (no account server). For multi-device sync, point `store.js` persistence at a backend (Supabase/Firebase).
 - The pattern engine is intentionally simple and transparent. Swap `detectPatterns()` in `js/store.js` for a real ML call when you're ready.
 - Add a PWA manifest + service worker to make it installable on phones.
 

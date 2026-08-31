@@ -26,8 +26,57 @@
     aiPatterns: true,
     e2eEncryption: true,
     caregiverAccess: false,
+    primaryCareAccess: false,
     shareData: false,
-    customSymptoms: ["Tingling","Vision blur","Tinnitus"]
+    showStreak: true,
+    showInsight: true,
+    plan: "free",
+    customSymptoms: ["Tingling","Vision blur","Tinnitus"],
+    customMoods: [],
+    customActivities: [],
+    customMeds: []
+  };
+
+  // ---- Honor-system tiers (based on total unique days logged) ----
+  // Clean, simple medical-medal badges. Ranges chosen so a regular
+  // logger reaches Silver quickly and the top tiers reward real commitment.
+  const TIERS = [
+    { key: "beast",    name: "Beast",    minDays: 180, color: "#7C5CBF" },
+    { key: "platinum", name: "Platinum", minDays: 91,  color: "#A7B8C8" },
+    { key: "gold",     name: "Gold",     minDays: 31,  color: "#D9A441" },
+    { key: "silver",   name: "Silver",   minDays: 8,   color: "#B4AFA6" },
+    { key: "bronze",   name: "Bronze",   minDays: 1,   color: "#C08A5A" }
+  ];
+
+  // ---- Free vs Pro plans ----
+  const PLANS = {
+    free: {
+      key: "free", name: "Free", price: "$0",
+      features: [
+        "Daily logging & calendar",
+        "Up to 10 AI patterns",
+        "5 custom fields per category",
+        "Doctor report (PDF)",
+        "Dark mode"
+      ]
+    },
+    pro: {
+      key: "pro", name: "Pro", price: "$6/mo",
+      features: [
+        "Unlimited AI patterns",
+        "Unlimited custom fields",
+        "CSV & JSON export",
+        "Primary-care doctor sync",
+        "Caregiver access",
+        "No limits, no ads"
+      ]
+    }
+  };
+
+  // ---- Free-plan limits ----
+  const FREE_LIMITS = {
+    patterns: 10,
+    customPerCategory: 5
   };
 
   // ---- Date helpers ----
@@ -234,9 +283,22 @@
     };
   }
 
+  // ---- Tier + plan helpers ----
+  function totalDaysLogged(entries) {
+    return new Set(entries.map((e) => dayKey(e.date))).size;
+  }
+  function tierFor(days) {
+    for (const t of TIERS) if (days >= t.minDays) return t;
+    return null; // 0 days logged → no badge yet
+  }
+  function planOf() { return PLANS[Store._settings.plan] || PLANS.free; }
+  function isPro() { return Store._settings.plan === "pro"; }
+  function patternLimit() { return isPro() ? Infinity : FREE_LIMITS.patterns; }
+  function customLimit(cat) { return isPro() ? Infinity : FREE_LIMITS.customPerCategory; }
+
   // ---- Public API ----
   const Store = {
-    SYMPTOMS, MOODS, ACTIVITIES, MEDS,
+    SYMPTOMS, MOODS, ACTIVITIES, MEDS, TIERS, PLANS, FREE_LIMITS,
     _entries: loadEntries(),
     _settings: loadSettings(),
 
@@ -268,6 +330,40 @@
     },
 
     allSymptoms() { return [...SYMPTOMS, ...(this._settings.customSymptoms || [])]; },
+    allMoods() { return [...MOODS, ...(this._settings.customMoods || [])]; },
+    allActivities() { return [...ACTIVITIES, ...(this._settings.customActivities || [])]; },
+    allMeds() { return [...MEDS, ...(this._settings.customMeds || [])]; },
+
+    // Generic custom-field add/remove for the four log categories.
+    addCustomField(category, name) {
+      const key = { symptoms: "customSymptoms", moods: "customMoods", activities: "customActivities", meds: "customMeds" }[category];
+      const canonical = { symptoms: SYMPTOMS, moods: MOODS, activities: ACTIVITIES, meds: MEDS }[category];
+      if (!key || !name) return false;
+      const list = this._settings[key] || [];
+      if (list.includes(name) || canonical.includes(name)) return false;
+      if (!isPro() && list.length >= FREE_LIMITS.customPerCategory) return false;
+      list.push(name); this._settings[key] = list; this.persistSettings();
+      return true;
+    },
+    removeCustomField(category, name) {
+      const key = { symptoms: "customSymptoms", moods: "customMoods", activities: "customActivities", meds: "customMeds" }[category];
+      if (!key) return;
+      this._settings[key] = (this._settings[key] || []).filter((x) => x !== name);
+      this.persistSettings();
+    },
+    customCount(category) {
+      const key = { symptoms: "customSymptoms", moods: "customMoods", activities: "customActivities", meds: "customMeds" }[category];
+      return (this._settings[key] || []).length;
+    },
+
+    // Honor-system + plan accessors
+    totalDaysLogged() { return totalDaysLogged(this._entries); },
+    tier() { return tierFor(totalDaysLogged(this._entries)); },
+    plan() { return planOf(); },
+    isPro() { return isPro(); },
+    setPlan(key) { this._settings.plan = (key === "pro") ? "pro" : "free"; this.persistSettings(); },
+    patternLimit() { return patternLimit(); },
+    customLimit(category) { return customLimit(category); },
 
     patterns() { return detectPatterns(this._entries); },
     metrics() { return computeMetrics(this._entries); },
@@ -277,6 +373,13 @@
 
     reset() {
       this._entries = sampleEntries().map((e, i) => ({ id: "seed-" + i, ...e }));
+      this._settings = { ...DEFAULT_SETTINGS };
+      this.persistEntries(); this.persistSettings();
+    },
+
+    // Full wipe (used by "delete account"): entries + settings + account.
+    wipeAll() {
+      this._entries = [];
       this._settings = { ...DEFAULT_SETTINGS };
       this.persistEntries(); this.persistSettings();
     }
