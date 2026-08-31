@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#C4673A" />
+  <title>Pamet — Symptom Journal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Georgia&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%23C4673A'/%3E%3Ctext x='50' y='68' font-size='58' text-anchor='middle' fill='%23FAF0EA' font-family='Georgia'%3EP%3C/text%3E%3C/svg%3E" />
+</head>
+<body>
+  <div class="app-shell">
+
+    <!-- Top app bar -->
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark">P</span>
+        <span class="brand-name">Pamet</span>
+      </div>
+      <button class="icon-btn" id="themeToggle" title="Toggle dark mode" aria-label="Toggle dark mode">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+    </header>
+
+    <!-- Screens -->
+    <main class="screens" id="screens">
+
+      <!-- ============ DASHBOARD ============ -->
+      <section class="screen active" id="screen-home">
+        <div class="scroll-area">
+          <div class="content-col">
+
+            <div class="dash-header">
+              <h1 class="greeting" id="greeting">Good morning, Alex 👋</h1>
+              <p class="today-date" id="todayDate"></p>
+            </div>
+
+            <div class="streak-card">
+              <div class="streak-left">
+                <div class="streak-num-row">
+                  <span class="streak-days" id="streakDays">14</span>
+                  <span class="streak-unit">day streak</span>
+                </div>
+                <p class="streak-sub">Keep logging every day!</p>
+              </div>
+              <div class="streak-dots" id="streakDots"></div>
+            </div>
+
+            <div class="insight-banner" id="insightBanner">
+              <span class="insight-dot"></span>
+              <div class="insight-body">
+                <p class="insight-kicker">AI INSIGHT — HIGH CONFIDENCE</p>
+                <p class="insight-text" id="insightText"></p>
+                <button class="link-btn" data-nav="patterns">View all patterns →</button>
+              </div>
+            </div>
+
+            <div class="metrics-grid">
+              <article class="metric-card" data-metric="symptomDays">
+                <span class="metric-icon" style="--icon-bg:var(--warm-light)"><svg class="icon" viewBox="0 0 24 24"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg></span>
+                <div class="metric-value" data-value>--</div>
+                <div class="metric-labels"><span data-label>Symptom days</span><span data-sublabel>this week</span></div>
+                <span class="metric-badge" data-badge="+3 vs last" style="--badge:var(--warm-terracotta)"></span>
+              </article>
+              <article class="metric-card" data-metric="avgSeverity">
+                <span class="metric-icon" style="--icon-bg:var(--sage-light)"><svg class="icon" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></span>
+                <div class="metric-value" data-value>--</div>
+                <div class="metric-labels"><span data-label>Avg severity</span><span data-sublabel>this month</span></div>
+                <span class="metric-badge" data-badge="Improving" style="--badge:var(--sage-green)"></span>
+              </article>
+              <article class="metric-card" data-metric="topSymptom">
+                <span class="metric-icon" style="--icon-bg:var(--warm-light)"><svg class="icon" viewBox="0 0 24 24"><path d="M12 3a9 9 0 0 0-9 9c0 2.4 1 4.6 2.5 6.2L4 21h4l1-2 3 2 3-2 1 2h4l-1.5-2.8C20 16.6 21 14.4 21 12a9 9 0 0 0-9-9z"/></svg></span>
+                <div class="metric-value" data-value>--</div>
+                <div class="metric-labels"><span data-label>Top symptom</span><span data-sublabel>most frequent</span></div>
+                <span class="metric-badge" data-badge="Watch" style="--badge:var(--rose-pink)"></span>
+              </article>
+              <article class="metric-card" data-metric="patterns">
+                <span class="metric-icon" style="--icon-bg:var(--sage-light)"><svg class="icon" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v1a3 3 0 0 0-3 3v1a3 3 0 0 0-2 3c0 1.5 1 2.8 2 3v1a3 3 0 0 0 3 3h6a3 3 0 0 0 3-3v-1c1-.2 2-1.5 2-3a3 3 0 0 0-2-3V9a3 3 0 0 0-3-3V5a3 3 0 0 0-3-3z"/></svg></span>
+                <div class="metric-value" data-value>--</div>
+                <div class="metric-labels"><span data-label>AI patterns</span><span data-sublabel>confirmed</span></div>
+                <span class="metric-badge" data-badge="AI active" style="--badge:var(--sage-green)"></span>
+              </article>
+            </div>
+
+            <div class="section-head">
+              <h2 class="section-title">Recent entries</h2>
+              <button class="link-btn" data-nav="calendar">View all</button>
+            </div>
+
+            <div class="entry-list" id="recentEntries"></div>
+
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ CALENDAR ============ -->
+      <section class="screen" id="screen-calendar">
+        <div class="scroll-area">
+          <div class="content-col">
+            <div class="cal-header">
+              <h2 class="screen-title" id="calMonth"></h2>
+              <div class="cal-nav">
+                <button class="link-btn" id="calPrev">← Prev</button>
+                <button class="link-btn" id="calNext">Next →</button>
+              </div>
+            </div>
+
+            <div class="cal-card">
+              <div class="cal-weekdays" id="calWeekdays"></div>
+              <div class="cal-grid" id="calGrid"></div>
+            </div>
+
+            <div class="legend">
+              <span class="legend-item"><i style="background:var(--warm-light)"></i>Mild</span>
+              <span class="legend-item"><i style="background:var(--rose-light)"></i>Significant</span>
+              <span class="legend-item"><i style="background:var(--sage-light)"></i>No symptoms</span>
+            </div>
+
+            <div class="cal-detail" id="calDetail"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ PATTERNS ============ -->
+      <section class="screen" id="screen-patterns">
+        <div class="scroll-area">
+          <div class="content-col">
+            <h2 class="screen-title">AI Patterns</h2>
+            <div class="insight-banner patterns-banner">
+              <span class="insight-dot"></span>
+              <div class="insight-body">
+                <p class="insight-kicker">AI ANALYSIS — <span id="patternDaysCount"></span> DAYS OF DATA</p>
+                <p class="insight-text" id="patternSummary"></p>
+              </div>
+            </div>
+            <div class="pattern-list" id="patternList"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ REPORT ============ -->
+      <section class="screen" id="screen-report">
+        <div class="scroll-area">
+          <div class="content-col">
+            <h2 class="screen-title">Doctor Report</h2>
+
+            <div class="report-actions">
+              <button class="btn btn-ghost" id="emailReport"><svg class="icon sm" viewBox="0 0 24 24"><path d="M4 4h16v16H4z M4 6l8 6 8-6"/></svg> Email doctor</button>
+              <button class="btn btn-primary" id="downloadPdf"><svg class="icon sm" viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg> Download PDF</button>
+            </div>
+
+            <div class="report-doc" id="reportDoc"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ SETTINGS ============ -->
+      <section class="screen" id="screen-settings">
+        <div class="scroll-area">
+          <div class="content-col settings-col">
+
+            <div class="settings-card profile-card">
+              <span class="avatar" id="userAvatar">A</span>
+              <div class="profile-text">
+                <input class="name-input" id="userNameInput" value="Alex" aria-label="Your name" />
+                <p class="plan-line">Pro plan · <span id="settingsStreak">14</span>-day streak</p>
+              </div>
+            </div>
+
+            <div class="settings-card">
+              <p class="settings-section">Appearance</p>
+              <label class="setting-row">
+                <span class="setting-label"><svg class="icon sm" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg> Dark mode</span>
+                <input type="checkbox" class="switch" id="setDarkMode" />
+              </label>
+            </div>
+
+            <div class="settings-card">
+              <p class="settings-section">Notifications</p>
+              <label class="setting-row"><span class="setting-label"><svg class="icon sm" viewBox="0 0 24 24"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></svg> Daily reminder (8pm)</span><input type="checkbox" class="switch" id="setDailyReminder" /></label>
+              <label class="setting-row"><span class="setting-label"><svg class="icon sm" viewBox="0 0 24 24"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg> New pattern alerts</span><input type="checkbox" class="switch" id="setPatternAlerts" /></label>
+              <label class="setting-row"><span class="setting-label"><svg class="icon sm" viewBox="0 0 24 24"><path d="M12 2c1 3-2 5-2 8a4 4 0 0 0 8 0c0-1 0-2-1-3 0 2-2 2-2 1 0-2 1-4-3-6z"/></svg> Streak reminders</span><input type="checkbox" class="switch" id="setStreakReminders" /></label>
+              <label class="setting-row"><span class="setting-label"><svg class="icon sm" viewBox="0 0 24 24"><path d="M4 4h16v16H4z M4 6l8 6 8-6"/></svg> Weekly digest email</span><input type="checkbox" class="switch" id="setWeeklyDigest" /></label>
+            </div>
+
+            <div class="settings-card">
+              <p class="settings-section">AI &amp; Privacy</p>
+              <label class="setting-row"><span class="setting-label"><svg class="icon sm" viewBox="0 0 24 24"><path d="M12 3a9 9 0 0 0-9 9c0 2.4 1 4.6 2.5 6.2L4 21h4l1-2 3 2 3-2 1 2h4l-1.5-2.8C20 16.6 21 14.4 21 12a9 9 0 0 0-9-9z"/></svg> AI pattern detection</span><input type="checkbox" class="switch" id="setAiPatterns" /></label>
+              <label class="setting-row"><span class="setting-label"><svg class="icon sm" viewBox="0 0 24 24"><path d="M5 11h14v10H5z M8 11V7a4 4 0 0 1 8 0v4"/></svg> End-to-end encryption</span><input type="checkbox" class="switch" id="setE2e" /></label>
+              <label class="setting-row"><span class="setting-label"><svg class="icon sm" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 21v-2a4 4 0 0 0-3-3.9"/></svg> Caregiver access</span><input type="checkbox" class="switch" id="setCaregiver" /></label>
+              <label class="setting-row"><span class="setting-label"><svg class="icon sm" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg> Improve AI (anonymous)</span><input type="checkbox" class="switch" id="setShareData" /></label>
+            </div>
+
+            <div class="settings-card">
+              <p class="settings-section">Custom symptoms</p>
+              <ul class="custom-symptom-list" id="customSymptomList"></ul>
+              <div class="add-symptom-row">
+                <input class="text-input" id="newSymptomInput" placeholder="Add custom symptom..." />
+                <button class="link-btn" id="addSymptomBtn">Add</button>
+              </div>
+            </div>
+
+            <div class="settings-card">
+              <p class="settings-section">Your plan</p>
+              <div class="plan-row">
+                <div>
+                  <p class="plan-name">Pro</p>
+                  <p class="plan-desc">$6/month · Unlimited logging, AI patterns, doctor export</p>
+                </div>
+                <span class="plan-badge">Active</span>
+              </div>
+            </div>
+
+            <div class="settings-card">
+              <p class="settings-section">Data</p>
+              <button class="data-btn" id="exportCsv">Export all data (CSV)</button>
+              <button class="data-btn" id="exportJson">Export all data (JSON)</button>
+              <button class="data-btn danger" id="deleteAccount">Delete account</button>
+            </div>
+
+            <p class="footer-line">Pamet v1.0.0 · Made with care ❤️</p>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Bottom tab bar -->
+    <nav class="tabbar" id="tabbar">
+      <button class="tab" data-tab="home"><svg class="icon" viewBox="0 0 24 24"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg><span>Home</span></button>
+      <button class="tab" data-tab="calendar"><svg class="icon" viewBox="0 0 24 24"><path d="M4 6h16v14H4z M4 10h16M8 3v5M16 3v5"/></svg><span>Calendar</span></button>
+      <button class="tab tab-log" id="openLog" aria-label="Log a symptom"><span class="log-plus">+</span></button>
+      <button class="tab" data-tab="patterns"><svg class="icon" viewBox="0 0 24 24"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg><span>Patterns</span></button>
+      <button class="tab" data-tab="settings"><svg class="icon" viewBox="0 0 24 24"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>Settings</span></button>
+    </nav>
+
+    <!-- Log sheet (modal) -->
+    <div class="sheet-backdrop" id="logBackdrop">
+      <div class="sheet" role="dialog" aria-modal="true" aria-label="Log a symptom">
+        <div class="sheet-handle"></div>
+        <div class="sheet-head">
+          <h2 class="screen-title">Log a symptom</h2>
+          <button class="icon-btn" id="closeLog" aria-label="Close"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+        </div>
+        <div class="sheet-scroll">
+
+          <div class="success-banner" id="logSuccess" hidden>
+            <span class="success-check">✓</span>
+            <span>Entry saved! AI is updating your patterns.</span>
+          </div>
+
+          <div class="section-card">
+            <p class="section-kicker">What are you feeling?</p>
+            <div class="symptom-grid" id="symptomGrid"></div>
+          </div>
+
+          <div class="section-card">
+            <p class="section-kicker">Overall severity</p>
+            <div class="range-scale"><span>None</span><span>Severe</span></div>
+            <div class="slider-row">
+              <input type="range" min="0" max="10" step="1" value="4" class="range" id="severityRange" />
+              <span class="range-value" id="severityValue">4/10</span>
+            </div>
+          </div>
+
+          <div class="section-card">
+            <p class="section-kicker">Context — helps the AI</p>
+            <div class="slider-row"><span class="slider-label">Sleep last night</span><input type="range" min="2" max="12" step="1" value="7" class="range" data-field="sleepHours" /><span class="range-value" data-out="sleepHours">7h</span></div>
+            <div class="slider-row"><span class="slider-label">Stress level</span><input type="range" min="0" max="10" step="1" value="5" class="range" data-field="stressLevel" /><span class="range-value" data-out="stressLevel">5/10</span></div>
+            <div class="slider-row"><span class="slider-label">Water intake</span><input type="range" min="0" max="12" step="1" value="6" class="range" data-field="waterGlasses" /><span class="range-value" data-out="waterGlasses">6 glasses</span></div>
+            <div class="slider-row"><span class="slider-label">Energy level</span><input type="range" min="0" max="10" step="1" value="5" class="range" data-field="energyLevel" /><span class="range-value" data-out="energyLevel">5/10</span></div>
+          </div>
+
+          <div class="section-card">
+            <p class="section-kicker">How are you feeling emotionally?</p>
+            <div class="chip-flow" id="moodFlow"></div>
+          </div>
+
+          <div class="section-card">
+            <p class="section-kicker">Physical activity today</p>
+            <div class="chip-flow" id="activityFlow"></div>
+          </div>
+
+          <div class="section-card">
+            <p class="section-kicker">Any medications taken?</p>
+            <div class="chip-flow" id="medFlow"></div>
+          </div>
+
+          <div class="section-card">
+            <p class="section-kicker">Notes</p>
+            <div class="notes-wrap">
+              <textarea class="notes-input" id="notesInput" placeholder="When did it start? What were you doing? Any food, activity, or stress involved? The more detail, the better the AI can find patterns."></textarea>
+            </div>
+          </div>
+
+          <button class="btn btn-primary btn-block" id="saveEntry">Save this entry</button>
+
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="js/store.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
