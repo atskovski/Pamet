@@ -1,0 +1,18 @@
+{
+  "name": "Pamet — Symptom Journal",
+  "short_name": "Pamet",
+  "description": "Your personal symptom journal. Log daily, spot patterns, and share a doctor-ready report.",
+  "id": "/",
+  "start_url": "/index.html",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FDF8F3",
+  "theme_color": "#C4673A",
+  "categories": ["health", "productivity"],
+  "icons": [
+    { "src": "/assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

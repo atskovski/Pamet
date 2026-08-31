@@ -44,6 +44,22 @@
     if (tier) { const b = tierBadgeEl(tier); if (b) container.appendChild(b); }
   }
 
+  // Small "X days to next tier" nudge under the greeting.
+  function renderTierNudge() {
+    const el = $("#tierNudge");
+    if (!el) return;
+    const days = S.totalDaysLogged();
+    const next = S.nextTier();
+    if (!next) {
+      el.hidden = false;
+      el.textContent = "🏆 Beast status — you're at the top tier. Keep it up!";
+      return;
+    }
+    const remaining = next.minDays - days;
+    el.hidden = false;
+    el.textContent = `${remaining} day${remaining > 1 ? "s" : ""} to ${next.name}`;
+  }
+
   // ---- Settings help tooltips (inject from data-help, tap-friendly) ----
   function wireHelp() {
     $$(".help").forEach((h) => {
@@ -91,6 +107,7 @@
     $("#greeting").textContent = `${greetingText()}, ${displayName || S.settings.userName || "friend"} 👋`;
     $("#todayDate").textContent = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
     setTierBadge($("#greetTier"), S.tier());
+    renderTierNudge();
 
     // Streak (honors the "Show day streak" toggle)
     const showStreak = !!S.settings.showStreak;

@@ -289,7 +289,12 @@
   }
   function tierFor(days) {
     for (const t of TIERS) if (days >= t.minDays) return t;
-    return null; // 0 days logged → no badge yet
+    return null; // 0 days logged, no badge yet
+  }
+  // Next tier up (for the "X days to go" nudge), or null if already Beast.
+  function nextTier(days) {
+    for (const t of TIERS) if (days < t.minDays) return t;
+    return null; // already at the top tier
   }
   function planOf() { return PLANS[Store._settings.plan] || PLANS.free; }
   function isPro() { return Store._settings.plan === "pro"; }
@@ -359,6 +364,7 @@
     // Honor-system + plan accessors
     totalDaysLogged() { return totalDaysLogged(this._entries); },
     tier() { return tierFor(totalDaysLogged(this._entries)); },
+    nextTier() { return nextTier(totalDaysLogged(this._entries)); },
     plan() { return planOf(); },
     isPro() { return isPro(); },
     setPlan(key) { this._settings.plan = (key === "pro") ? "pro" : "free"; this.persistSettings(); },

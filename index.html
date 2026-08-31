@@ -9,6 +9,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Georgia&display=swap" rel="stylesheet" />
   <script src="js/auth.js"></script>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <link rel="apple-touch-icon" href="assets/icon-192.png" />
   <link rel="stylesheet" href="css/styles.css" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%23C4673A'/%3E%3Ctext x='50' y='68' font-size='58' text-anchor='middle' fill='%23FAF0EA' font-family='Georgia'%3EP%3C/text%3E%3C/svg%3E" />
 </head>
@@ -73,6 +77,7 @@
             <div class="dash-header">
               <h1 class="greeting" id="greeting">Good morning, Alex 👋 <span class="tier-badge" id="greetTier" hidden></span></h1>
               <p class="today-date" id="todayDate"></p>
+              <p class="tier-nudge" id="tierNudge" hidden></p>
             </div>
 
             <div class="streak-card" id="streakCard">
@@ -348,5 +353,13 @@
 
   <script src="js/store.js"></script>
   <script src="js/app.js"></script>
+  <script>
+    // Register the service worker for offline use + installability (v1.0.1).
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('sw.js').catch(function () { /* offline-only environments */ });
+      });
+    }
+  </script>
 </body>
 </html>
