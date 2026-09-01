@@ -7,14 +7,17 @@
 (function (global) {
   "use strict";
 
-  const ENTRY_KEY = "pamet_entries_v1";
+  const LEGACY_ENTRY_KEY = "pamet_entries_v1";
   const SETTINGS_KEY = "pamet_settings_v1";
+  const PROFILES_KEY = "pamet_profiles_v2";
+  const ACTIVE_PROFILE_KEY = "pamet_active_profile_v2";
+  const PRIMARY_PROFILE_ID = "primary";
 
   // ---- Canonical option lists (match the iOS app) ----
-  const SYMPTOMS = ["Headache","Migraine","Nausea","Fatigue","Dizziness","Brain fog","Joint pain","Back pain","Chest tightness","Shortness of breath","Insomnia","Anxiety","Skin rash","Eye strain","Stomach pain","Heart palpitations"];
-  const MOODS = ["Great 😊","Good 🙂","Okay 😐","Low 😔","Anxious 😰","Tired 😴","Hopeful 🌱","Overwhelmed 🌊"];
-  const ACTIVITIES = ["None","Short walk","Run","Gym","Yoga","Swimming","Cycling","Stretching"];
-  const MEDS = ["None","Ibuprofen","Paracetamol","Antihistamine","Aspirin","Prescription"];
+  const SYMPTOMS = ["Headache","Migraine","Fatigue","Back pain","Joint pain","Nausea","Dizziness","Stomach pain","Brain fog","Shortness of breath"];
+  const MOODS = ["Great 😊","Good 🙂","Okay 😐","Calm 😌","Hopeful 🌱","Tired 😴","Low 😔","Anxious 😰","Overwhelmed 🌊","Irritable 😤"];
+  const ACTIVITIES = ["None","Walk","Run","Gym / strength","Cycling","Yoga","Stretching","Swimming","Sports","Household / yard work"];
+  const MEDS = ["None","Prescription medication","Ibuprofen","Acetaminophen","Aspirin","Antihistamine","Decongestant","Antacid","Vitamin / supplement","Topical medication"];
 
   const DEFAULT_SETTINGS = {
     userName: "",
@@ -90,20 +93,38 @@
   function dayKey(d) { const x = startOfDay(d); return x.getFullYear() + "-" + (x.getMonth()+1) + "-" + x.getDate(); }
 
   // ---- Persistence ----
-  function loadEntries() {
+  function loadProfiles() {
     try {
-      const raw = localStorage.getItem(ENTRY_KEY);
+      const saved = JSON.parse(localStorage.getItem(PROFILES_KEY));
+      if (Array.isArray(saved) && saved.length) return saved;
+    } catch (e) { /* ignore */ }
+    const profiles = [{ id: PRIMARY_PROFILE_ID, name: "My profile", relationship: "Self", createdAt: new Date().toISOString() }];
+    try { localStorage.setItem(PROFILES_KEY, JSON.stringify(profiles)); } catch (e) { /* ignore */ }
+    return profiles;
+  }
+  function activeProfileId(profiles) {
+    const saved = localStorage.getItem(ACTIVE_PROFILE_KEY);
+    return profiles.some((profile) => profile.id === saved) ? saved : profiles[0].id;
+  }
+  function entryKey(profileId) { return `pamet_entries_v2_${profileId}`; }
+  const initialProfiles = loadProfiles();
+  let currentProfileId = activeProfileId(initialProfiles);
+
+  function loadEntries(profileId = currentProfileId) {
+    try {
+      let raw = localStorage.getItem(entryKey(profileId));
+      if (!raw && profileId === PRIMARY_PROFILE_ID) raw = localStorage.getItem(LEGACY_ENTRY_KEY);
       if (raw) {
         const saved = JSON.parse(raw);
         if (Array.isArray(saved)) {
           // v1.0.3 migration: sample records from earlier builds were never user data.
           const entries = saved.filter((entry) => !String(entry && entry.id || "").startsWith("seed-"));
-          if (entries.length !== saved.length) saveRaw(entries);
+          if (entries.length !== saved.length || !localStorage.getItem(entryKey(profileId))) saveRaw(entries, profileId);
           return entries;
         }
       }
     } catch (e) { /* ignore */ }
-    saveRaw([]);
+    saveRaw([], profileId);
     return [];
   }
   function loadSettings() {
@@ -113,8 +134,8 @@
     } catch (e) { /* ignore */ }
     return { ...DEFAULT_SETTINGS };
   }
-  function saveRaw(entries) {
-    try { localStorage.setItem(ENTRY_KEY, JSON.stringify(entries)); } catch (e) { /* ignore */ }
+  function saveRaw(entries, profileId = currentProfileId) {
+    try { localStorage.setItem(entryKey(profileId), JSON.stringify(entries)); } catch (e) { /* ignore */ }
   }
 
   // ---- Live pattern detection ----
@@ -279,21 +300,50 @@
     return null; // already at the top tier
   }
   function planOf() { return PLANS[Store._settings.plan] || PLANS.free; }
-  function isPro() { return Store._settings.plan === "pro"; }
+  function isPro() { return ["pro", "ultra"].includes(Store._settings.plan); }
   function patternLimit() { return isPro() ? Infinity : FREE_LIMITS.patterns; }
   function customLimit(cat) { return isPro() ? Infinity : FREE_LIMITS.customPerCategory; }
+  function visibleEntries(entries) {
+    if (Store && Store._settings && Store._settings.plan !== "free") return entries;
+    const cutoff = Date.now() - 90 * 86400000;
+    return entries.filter((entry) => +new Date(entry.date) >= cutoff);
+  }
 
   // ---- Public API ----
   const Store = {
     SYMPTOMS, MOODS, ACTIVITIES, MEDS, TIERS, PLANS, FREE_LIMITS,
     _entries: loadEntries(),
     _settings: loadSettings(),
+    _profiles: initialProfiles,
+    _activeProfileId: currentProfileId,
 
-    get entries() { return this._entries; },
+    get entries() { return visibleEntries(this._entries); },
     get settings() { return this._settings; },
+    get profiles() { return this._profiles.slice(); },
+    get activeProfile() { return this._profiles.find((profile) => profile.id === this._activeProfileId) || this._profiles[0]; },
 
     persistEntries() { saveRaw(this._entries); },
     persistSettings() { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(this._settings)); } catch (e) {} },
+    persistProfiles() { try { localStorage.setItem(PROFILES_KEY, JSON.stringify(this._profiles)); localStorage.setItem(ACTIVE_PROFILE_KEY, this._activeProfileId); } catch (e) {} },
+
+    addProfile(name, relationship = "Other") {
+      const clean = String(name || "").trim();
+      if (!clean || this._settings.plan !== "ultra") return null;
+      const profile = { id: "p-" + Date.now() + "-" + Math.random().toString(36).slice(2, 7), name: clean.slice(0, 80), relationship: String(relationship || "Other").slice(0, 40), createdAt: new Date().toISOString() };
+      this._profiles.push(profile); this.persistProfiles(); saveRaw([], profile.id); return profile;
+    },
+    switchProfile(id) {
+      if (!this._profiles.some((profile) => profile.id === id)) return false;
+      this.persistEntries(); this._activeProfileId = id; currentProfileId = id; this._entries = loadEntries(id); this.persistProfiles(); return true;
+    },
+    removeProfile(id) {
+      if (id === PRIMARY_PROFILE_ID || this._settings.plan !== "ultra") return false;
+      const exists = this._profiles.some((profile) => profile.id === id); if (!exists) return false;
+      this._profiles = this._profiles.filter((profile) => profile.id !== id);
+      try { localStorage.removeItem(entryKey(id)); } catch (e) {}
+      if (this._activeProfileId === id) this.switchProfile(PRIMARY_PROFILE_ID); else this.persistProfiles();
+      return true;
+    },
 
     addEntry(entry) {
       entry.id = "e-" + Date.now() + "-" + Math.random().toString(36).slice(2, 7);
@@ -349,15 +399,15 @@
     nextTier() { return nextTier(totalDaysLogged(this._entries)); },
     plan() { return planOf(); },
     isPro() { return isPro(); },
-    setPlan(key) { this._settings.plan = (key === "pro") ? "pro" : "free"; this.persistSettings(); },
+    setPlan(key) { this._settings.plan = ["pro", "ultra"].includes(key) ? key : "free"; this.persistSettings(); },
     patternLimit() { return patternLimit(); },
     customLimit(category) { return customLimit(category); },
 
-    patterns() { return this._settings.aiPatterns ? detectPatterns(this._entries) : []; },
-    metrics() { return computeMetrics(this._entries); },
-    report() { return buildReport(this._entries, this.patterns()); },
+    patterns() { return this._settings.aiPatterns ? detectPatterns(visibleEntries(this._entries)) : []; },
+    metrics() { return computeMetrics(visibleEntries(this._entries)); },
+    report() { return buildReport(visibleEntries(this._entries), this.patterns()); },
 
-    entryForDate(date) { return this._entries.find((e) => sameDay(e.date, date)) || null; },
+    entryForDate(date) { return visibleEntries(this._entries).find((e) => sameDay(e.date, date)) || null; },
 
     reset() {
       this._entries = [];
@@ -369,7 +419,11 @@
     wipeAll() {
       this._entries = [];
       this._settings = { ...DEFAULT_SETTINGS };
-      this.persistEntries(); this.persistSettings();
+      this._profiles.forEach((profile) => { try { localStorage.removeItem(entryKey(profile.id)); } catch (e) {} });
+      try { localStorage.removeItem(LEGACY_ENTRY_KEY); localStorage.removeItem(PROFILES_KEY); localStorage.removeItem(ACTIVE_PROFILE_KEY); } catch (e) {}
+      this._profiles = [{ id: PRIMARY_PROFILE_ID, name: "My profile", relationship: "Self", createdAt: new Date().toISOString() }];
+      this._activeProfileId = PRIMARY_PROFILE_ID; currentProfileId = PRIMARY_PROFILE_ID;
+      this.persistEntries(); this.persistSettings(); this.persistProfiles();
     }
   };
 

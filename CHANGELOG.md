@@ -2,6 +2,37 @@
 
 This file is the repository-only system of record for product and engineering changes. It is **not rendered inside the Pamet application**.
 
+## [2.0.0] — 2026-09-01
+
+### Added
+
+- Added ten researched, broadly recognizable starter options in each Log category: symptoms, emotional feelings, physical activity, and medication types.
+- Added a **minus (−)** action beside every custom-field plus action. The removal dialog identifies the selected custom item and requires confirmation before deletion.
+- Added Ultra multi-profile management. Each profile has separately keyed, device-local journal storage; v1 entries migrate into the primary profile.
+- Added Ultra appointment preparation, 90-day longitudinal comparisons with visible data-strength context, and Advanced Visit Brief generation.
+- Added Ultra advanced sharing with profile scope, view/download permissions, configurable expiration, optional notes, revocation, and backend permission metadata.
+- Added a complete authenticated backend account-deletion endpoint that cancels an active Stripe subscription and deletes account, audit, and cascade-linked sharing data.
+- Added automated Phase 2 assertions for defaults, removal controls, profiles, advanced tools, account deletion, permission persistence, service-worker versioning, and dark-mode contrast.
+
+### Changed
+
+- Version changed from **v1.0.3** to **v2.0.0** for the Phase 2 feature release.
+- Reworked dark mode into layered teal surfaces with 9.47:1 primary-text contrast, 7.70:1 secondary-text contrast, and at least 3:1 meaningful control-boundary contrast.
+- Settings help controls now prevent accidental toggle changes, support keyboard activation, expose expanded state, and close when users click elsewhere.
+- CSV and JSON export are available to every plan as a data-portability and trust requirement.
+- Password changes now require at least eight characters and use a dedicated confirmation form.
+- Free history is a 90-day rolling view while export continues to include the user's complete locally stored history.
+- Pro is presented as **Most popular** and remains the recommended individual tier; Ultra is labeled for families and care teams.
+
+### Pricing decision
+
+- Retained Pro at **$6.99/month or $59.99/year** and Ultra at **$12.99/month or $99.99/year**.
+- Pro remains the value anchor for individual users. Ultra is intentionally a stretch tier based on multi-profile, care-coordination, and appointment-preparation value rather than additional logging limits.
+
+### Preserved exclusions
+
+- No live caregiver alerts, missed-log escalation, drug-interaction warnings, emergency detection, live doctor portal, or diagnostic/treatment claims were added.
+
 ## [1.0.3] — 2026-09-01
 
 ### Added

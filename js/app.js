@@ -74,11 +74,17 @@
       tip.textContent = h.dataset.help || "";
       h.appendChild(tip);
       h.setAttribute("tabindex", "0");
-      h.addEventListener("click", () => {
+      h.setAttribute("role", "button");
+      h.setAttribute("aria-label", "About this setting");
+      h.setAttribute("aria-expanded", "false");
+      h.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
         const open = h.classList.contains("show");
-        $$(".help.show").forEach((x) => x.classList.remove("show"));
-        if (!open) h.classList.add("show");
+        $$(".help.show").forEach((x) => { x.classList.remove("show"); x.setAttribute("aria-expanded", "false"); });
+        if (!open) { h.classList.add("show"); h.setAttribute("aria-expanded", "true"); }
       });
+      h.addEventListener("keydown", (event) => { if (["Enter", " "].includes(event.key)) { event.preventDefault(); h.click(); } });
     });
   }
 
@@ -356,7 +362,7 @@
   function exportCsv() {
     const headers = ["date","symptoms","severity","sleep_hours","stress","water_glasses","energy","mood","activity","medications","notes"];
     const lines = [headers.join(",")];
-    S.entries.forEach((e) => {
+    S._entries.forEach((e) => {
       const row = [
         e.date.slice(0, 10),
         csv(e.symptoms.join("; ")),
@@ -372,7 +378,7 @@
   function csv(v) { v = String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
 
   function exportJson() {
-    download("pamet-export.json", JSON.stringify(S.entries, null, 2), "application/json");
+    download("pamet-export.json", JSON.stringify(S._entries, null, 2), "application/json");
     toast("JSON exported");
   }
 
@@ -497,6 +503,28 @@
     } else {
       toast(`That ${label} already exists`);
     }
+  }
+
+  function removeCustomField(category) {
+    const key = { symptoms: "customSymptoms", moods: "customMoods", activities: "customActivities", meds: "customMeds" }[category];
+    const label = CUSTOM_LABELS[category] || "field";
+    const items = (S.settings[key] || []).slice();
+    if (!items.length) { toast(`No custom ${label}s to remove`); return; }
+    let root = $("#removeFieldDialog");
+    if (root) root.remove();
+    root = document.createElement("div");
+    root.id = "removeFieldDialog";
+    root.className = "field-dialog-backdrop";
+    root.innerHTML = `<section class="field-dialog" role="dialog" aria-modal="true" aria-labelledby="removeFieldTitle"><h3 id="removeFieldTitle">Remove a custom ${esc(label)}</h3><p>Choose the specific item you want to remove.</p><div class="field-remove-list">${items.map((item) => `<button type="button" data-remove-value="${esc(item)}">${esc(item)} <span aria-hidden="true">−</span></button>`).join("")}</div><button type="button" class="btn btn-ghost btn-block" data-cancel-remove>Cancel</button></section>`;
+    document.body.appendChild(root);
+    root.querySelector("[data-cancel-remove]").addEventListener("click", () => root.remove());
+    root.addEventListener("click", (event) => { if (event.target === root) root.remove(); });
+    root.querySelectorAll("[data-remove-value]").forEach((button) => button.addEventListener("click", () => {
+      const value = button.dataset.removeValue;
+      if (!confirm(`Remove “${value}” from your ${label} options?`)) return;
+      S.removeCustomField(category, value); root.remove(); buildLogForm(); toast(`${value} removed`, "success");
+    }));
+    root.querySelector("[data-remove-value]").focus();
   }
 
   function toggleSet(set, v) { set.has(v) ? set.delete(v) : set.add(v); }
@@ -721,6 +749,10 @@
     $("#addMoodPlus").addEventListener("click", () => addCustomField("moods"));
     $("#addActivityPlus").addEventListener("click", () => addCustomField("activities"));
     $("#addMedPlus").addEventListener("click", () => addCustomField("meds"));
+    $("#removeSymptomMinus").addEventListener("click", () => removeCustomField("symptoms"));
+    $("#removeMoodMinus").addEventListener("click", () => removeCustomField("moods"));
+    $("#removeActivityMinus").addEventListener("click", () => removeCustomField("activities"));
+    $("#removeMedMinus").addEventListener("click", () => removeCustomField("meds"));
 
     // Sliders
     $("#severityRange").addEventListener("input", (e) => { logState.severity = +e.target.value; $("#severityValue").textContent = `${Math.round(logState.severity)}/10`; });
@@ -774,18 +806,22 @@
     });
 
     // Data + account actions
-    $("#exportCsv").addEventListener("click", () => { if (!S.isPro()) { toast("CSV export is a Pro feature"); return; } exportCsv(); });
-    $("#exportJson").addEventListener("click", () => { if (!S.isPro()) { toast("JSON export is a Pro feature"); return; } exportJson(); });
+    $("#exportCsv").addEventListener("click", exportCsv);
+    $("#exportJson").addEventListener("click", exportJson);
     $("#changePasswordBtn").addEventListener("click", async () => {
       const oldPw = prompt("Current password:"); if (oldPw === null) return;
-      const newPw = prompt("New password (6+ characters): "); if (!newPw) return;
-      if (newPw.length < 6) { toast("Password must be 6+ characters"); return; }
+      const newPw = prompt("New password (8+ characters): "); if (!newPw) return;
+      if (newPw.length < 8) { toast("Password must be 8+ characters"); return; }
       try { await A.changePassword(oldPw, newPw); toast("Password changed ✓", "success"); } catch (err) { toast(err.message); }
     });
     $("#logoutBtn").addEventListener("click", () => { A.endSession(); showWelcome(); toast("Logged out"); });
-    $("#deleteAccount").addEventListener("click", () => {
+    $("#deleteAccount").addEventListener("click", async () => {
       if (confirm("Delete your account and all Pamet data? This cannot be undone.")) {
-        S.wipeAll(); A.endSession(); showWelcome(); toast("Account deleted");
+        try {
+          const credential = A.getBackendCredential && A.getBackendCredential();
+          if (credential && credential.deviceKey) await fetch("/api/account", { method: "DELETE", headers: { Authorization: `Bearer ${credential.deviceKey}` } });
+        } catch (e) { /* Local deletion still proceeds if optional services are offline. */ }
+        S.wipeAll(); A.deleteLocalAccount(); showWelcome(); toast("Account and local health data deleted");
       }
     });
 
@@ -796,6 +832,7 @@
 
     // Settings help tooltips (tap-friendly)
     wireHelp();
+    document.addEventListener("click", (event) => { if (!event.target.closest(".help")) $$(".help.show").forEach((x) => { x.classList.remove("show"); x.setAttribute("aria-expanded", "false"); }); });
 
     // Build the log form once
     buildLogForm();

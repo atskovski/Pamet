@@ -33,4 +33,14 @@ const legacy = loadStore({
 check(legacy.store.entries.length === 1, 'Legacy sample entries must be removed without deleting real entries.');
 check(legacy.store.entries[0].id === 'real-1', 'The real user entry must survive sample-data migration.');
 
+legacy.store.setPlan('ultra');
+const dependent = legacy.store.addProfile('Family profile', 'Parent');
+check(dependent && legacy.store.profiles.length === 2, 'Ultra must be able to add a second profile.');
+check(legacy.store.switchProfile(dependent.id), 'Ultra must be able to switch profiles.');
+check(legacy.store.entries.length === 0, 'A new profile must start with a separate empty history.');
+legacy.store.addEntry({ date: new Date().toISOString(), symptoms: ['Fatigue'], severity: 3, medications: [] });
+check(legacy.store.entries.length === 1, 'The active profile must accept its own entries.');
+legacy.store.switchProfile('primary');
+check(legacy.store.entries.length === 1 && legacy.store.entries[0].id === 'real-1', 'Switching profiles must restore the primary profile history.');
+
 console.log('Pamet store checks passed.');
