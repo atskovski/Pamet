@@ -1,6 +1,6 @@
 # Pamet — Personal Health Journal
 
-**Version 1.0.3** · **Your health history, finally useful.**
+**Version 2.0.0 — Phase 2** · **Your health history, finally useful.**
 
 Pamet is a privacy-first personal health journal designed to help people consistently document symptoms, medications, lifestyle factors, and user-provided medical information, then turn those observations into useful, understandable health history.
 
@@ -74,12 +74,25 @@ Pamet contains **no advertising on any plan**.
 | Correlation insights | — | ✓ | ✓ |
 | Advanced trends / What Changed? | — | ✓ | Advanced |
 | Visit Briefs | 1/month | Unlimited | Unlimited |
+| CSV / JSON data export | ✓ | ✓ | ✓ |
 | Basic sharing | — | ✓ | ✓ |
 | Multiple caregivers / roles | — | — | ✓ |
 | Appointment preparation | — | — | ✓ |
 | Longitudinal analysis | — | — | ✓ |
+| Multiple separate profiles | — | — | ✓ |
+| Advanced Visit Brief | — | — | ✓ |
 
-**Pro annual is the preferred purchase option and saves about 28%.** Ultra is represented in the product architecture but is disabled for purchase by default until its Phase 2 features are ready.
+**Pro is the recommended plan for most individual users.** Its annual option saves about 28%. Ultra is intentionally positioned as a stretch tier for families, caregivers, and people preparing for more complex care conversations. Ultra purchasing requires its Stripe price IDs and `ULTRA_ENABLED=true` in the deployment.
+
+## Phase 2 Highlights
+
+- Ten useful starting choices in each logging category: physical symptoms, emotional feelings, activity, and medication types.
+- Paired **+ / −** controls in every category; removing a custom option identifies it by name and requires confirmation.
+- A lighter, layered dark palette with WCAG AA text contrast and 3:1 control-boundary contrast.
+- Tap/click Settings explanations with keyboard support, outside-click dismissal, and correct behavior inside toggle labels.
+- Data export on every plan, a validated local password-change workflow, persistent logout, and complete account deletion across local storage, backend account data, sharing records, audit records, and active Stripe billing.
+- Ultra multi-profile management with separate on-device entry storage for every profile.
+- Ultra appointment preparation, 90-day longitudinal comparisons with data-strength context, Advanced Visit Briefs, and role/expiration-based sharing.
 
 ## v1.0.3 Highlights
 
@@ -126,7 +139,7 @@ Pamet uses **Warm Clinical Minimalism**: warm and personal enough to feel like a
 
 ## Architecture
 
-Pamet remains **local-first** for journal entries. v1.0.3 uses a Node.js backend only for functionality that cannot safely be implemented as browser-only JavaScript:
+Pamet remains **local-first** for journal entries. Phase 2 uses a Node.js backend only for functionality that cannot safely be implemented as browser-only JavaScript:
 
 Production deployments track the protected `main` branch so only reviewed, merged releases are promoted to `pamet.wasmer.app`.
 
@@ -144,11 +157,13 @@ Pamet/
 ├── css/styles.css
 ├── css/brand-v1.0.3.css
 ├── css/release-v1.0.3.css
+├── css/phase2.css
 ├── js/auth.js
 ├── js/store.js
 ├── js/app.js
 ├── js/v1.0.3.js
 ├── js/feedback-v1.0.3.js
+├── js/phase2.js
 ├── assets/pamet-mark.svg
 ├── db/schema.sql
 ├── server.js
@@ -177,7 +192,7 @@ npm start
 
 ## Optional Email Setup
 
-Email remains disabled unless both Resend environment variables are configured. v1.0.3 does not require email for core logging, feedback, billing, or installability.
+Email remains disabled unless both Resend environment variables are configured. Phase 2 does not require email for core logging, feedback, billing, or installability.
 
 ```text
 RESEND_API_KEY=

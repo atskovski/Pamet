@@ -1,5 +1,5 @@
 'use strict';
-// Security wrapper for Pamet v1.0.3 billing entitlement checks.
+// Security wrapper for Pamet Phase 2 billing entitlement checks.
 const express=require('express');
 const crypto=require('crypto');
 const mysql=require('mysql2/promise');
@@ -20,4 +20,4 @@ app.post('/api/billing/sync',async(req,res,next)=>{try{const a=String(req.header
 app.use(core);
 app.use((err,req,res,next)=>{console.error(err);if(res.headersSent)return next(err);res.status(500).json({error:process.env.NODE_ENV==='production'?'Pamet could not complete that request.':err.message})});
 const PORT=Number(process.env.PORT||8080);
-app.listen(PORT,()=>console.log(`Pamet v1.0.3 listening securely on ${PORT}`));
+app.listen(PORT,()=>console.log(`Pamet v2.0.0 listening securely on ${PORT}`));

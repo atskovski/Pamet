@@ -17,6 +17,7 @@
   <link rel="stylesheet" href="css/styles.css" />
   <link rel="stylesheet" href="css/brand-v1.0.3.css" data-pamet-brand-v103 />
   <link rel="stylesheet" href="css/release-v1.0.3.css" />
+  <link rel="stylesheet" href="css/phase2.css" />
   <link rel="icon" href="assets/pamet-mark.svg" type="image/svg+xml" />
 </head>
 <body>
@@ -242,8 +243,8 @@
 
             <div class="settings-card">
               <p class="settings-section">Notifications</p>
-              <label class="setting-row"><span class="setting-label"><svg class="icon sm" viewBox="0 0 24 24"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></svg> Daily reminder (8pm) <span class="help" data-help="A gentle nudge every evening so you don't forget to log your day.">?</span></span><input type="checkbox" class="switch" id="setDailyReminder" /></label>
-              <label class="setting-row"><span class="setting-label"><svg class="icon sm" viewBox="0 0 24 24"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg> New pattern alerts <span class="help" data-help="Notify you when Pamet confirms a new pattern in your entries.">?</span></span><input type="checkbox" class="switch" id="setPatternAlerts" /></label>
+              <label class="setting-row"><span class="setting-label"><svg class="icon sm" viewBox="0 0 24 24"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></svg> Daily reminder (8pm) <span class="help" data-help="Saves your preference for an 8pm logging reminder on this device.">?</span></span><input type="checkbox" class="switch" id="setDailyReminder" /></label>
+              <label class="setting-row"><span class="setting-label"><svg class="icon sm" viewBox="0 0 24 24"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg> New pattern alerts <span class="help" data-help="Show a notice in Pamet when enough recorded data forms a new observation.">?</span></span><input type="checkbox" class="switch" id="setPatternAlerts" /></label>
               <label class="setting-row"><span class="setting-label"><svg class="icon sm" viewBox="0 0 24 24"><path d="M12 2c1 3-2 5-2 8a4 4 0 0 0 8 0c0-1 0-2-1-3 0 2-2 2-2 1 0-2 1-4-3-6z"/></svg> Streak reminders <span class="help" data-help="Remind you if your logging streak is about to break.">?</span></span><input type="checkbox" class="switch" id="setStreakReminders" /></label>
               <label class="setting-row"><span class="setting-label"><svg class="icon sm" viewBox="0 0 24 24"><path d="M4 4h16v16H4z M4 6l8 6 8-6"/></svg> Weekly digest email <span class="help" data-help="A weekly summary of your trends and any new patterns, sent by email.">?</span></span><input type="checkbox" class="switch" id="setWeeklyDigest" /></label>
             </div>
@@ -252,8 +253,8 @@
               <p class="settings-section">Patterns &amp; Privacy</p>
               <label class="setting-row"><span class="setting-label"><svg class="icon sm" viewBox="0 0 24 24"><path d="M12 3a9 9 0 0 0-9 9c0 2.4 1 4.6 2.5 6.2L4 21h4l1-2 3 2 3-2 1 2h4l-1.5-2.8C20 16.6 21 14.4 21 12a9 9 0 0 0-9-9z"/></svg> Pamet pattern detection <span class="help" data-help="Lets Pamet look for relationships in your entries on this device. Pamet observes; it does not diagnose.">?</span></span><input type="checkbox" class="switch" id="setAiPatterns" /></label>
               <label class="setting-row"><span class="setting-label"><svg class="icon sm" viewBox="0 0 24 24"><path d="M5 11h14v10H5z M8 11V7a4 4 0 0 1 8 0v4"/></svg> End-to-end encryption <span class="help" data-help="Your entries are encrypted before they're stored, so only you can read them.">?</span></span><input type="checkbox" class="switch" id="setE2e" /></label>
-              <label class="setting-row"><span class="setting-label"><svg class="icon sm" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 21v-2a4 4 0 0 0-3-3.9"/></svg> Caregiver access <span class="help" data-help="Let a trusted caregiver view your journal and patterns.">?</span></span><input type="checkbox" class="switch" id="setCaregiver" /></label>
-              <label class="setting-row"><span class="setting-label"><svg class="icon sm" viewBox="0 0 24 24"><path d="M12 3v18M3 12h18"/></svg> Primary Care Access <span class="help" data-help="Pro only. Shares your journal and doctor report directly with your primary-care doctor's portal.">?</span></span><input type="checkbox" class="switch" id="setPrimaryCare" /></label>
+              <label class="setting-row"><span class="setting-label"><svg class="icon sm" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 21v-2a4 4 0 0 0-3-3.9"/></svg> Caregiver access <span class="help" data-help="Create a secure, expiring summary link for a trusted caregiver. You can revoke access at any time.">?</span></span><input type="checkbox" class="switch" id="setCaregiver" /></label>
+              <label class="setting-row"><span class="setting-label"><svg class="icon sm" viewBox="0 0 24 24"><path d="M12 3v18M3 12h18"/></svg> Primary Care Access <span class="help" data-help="Create a secure, expiring Visit Brief link for your care team. This is sharing, not a live doctor portal.">?</span></span><input type="checkbox" class="switch" id="setPrimaryCare" /></label>
               <div class="feedback-setting">
                 <div class="setting-row feedback-setting-head">
                   <span class="setting-label"><svg class="icon sm" viewBox="0 0 24 24"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/></svg> Help improve Pamet <span class="help" data-help="Share optional product feedback. Pamet does not attach your entries, symptoms, notes, or account details.">?</span></span>
@@ -285,7 +286,7 @@
               <button class="data-btn danger" id="deleteAccount">Delete account</button>
             </div>
 
-            <p class="footer-line">Pamet v1.0.3 · Your health history, finally useful.</p>
+            <p class="footer-line">Pamet v2.0.0 · Your health history, finally useful.</p>
           </div>
         </div>
       </section>
@@ -317,7 +318,7 @@
           </div>
 
           <div class="section-card">
-            <div class="kicker-row"><p class="section-kicker">What are you feeling?</p><button class="add-chip" id="addSymptomPlus" aria-label="Add custom symptom">+</button></div>
+            <div class="kicker-row"><p class="section-kicker">What are you feeling?</p><div class="field-actions"><button class="remove-chip" id="removeSymptomMinus" aria-label="Remove a custom symptom">−</button><button class="add-chip" id="addSymptomPlus" aria-label="Add custom symptom">+</button></div></div>
             <div class="chip-scroll"><div class="symptom-grid" id="symptomGrid"></div></div>
           </div>
 
@@ -339,17 +340,17 @@
           </div>
 
           <div class="section-card">
-            <div class="kicker-row"><p class="section-kicker">How are you feeling emotionally?</p><button class="add-chip" id="addMoodPlus" aria-label="Add custom mood">+</button></div>
+            <div class="kicker-row"><p class="section-kicker">How are you feeling emotionally?</p><div class="field-actions"><button class="remove-chip" id="removeMoodMinus" aria-label="Remove a custom emotional feeling">−</button><button class="add-chip" id="addMoodPlus" aria-label="Add custom mood">+</button></div></div>
             <div class="chip-scroll"><div class="chip-flow" id="moodFlow"></div></div>
           </div>
 
           <div class="section-card">
-            <div class="kicker-row"><p class="section-kicker">Physical activity today</p><button class="add-chip" id="addActivityPlus" aria-label="Add custom activity">+</button></div>
+            <div class="kicker-row"><p class="section-kicker">Physical activity today</p><div class="field-actions"><button class="remove-chip" id="removeActivityMinus" aria-label="Remove a custom activity">−</button><button class="add-chip" id="addActivityPlus" aria-label="Add custom activity">+</button></div></div>
             <div class="chip-scroll"><div class="chip-flow" id="activityFlow"></div></div>
           </div>
 
           <div class="section-card">
-            <div class="kicker-row"><p class="section-kicker">Any medications taken?</p><button class="add-chip" id="addMedPlus" aria-label="Add custom medication">+</button></div>
+            <div class="kicker-row"><p class="section-kicker">Any medications taken?</p><div class="field-actions"><button class="remove-chip" id="removeMedMinus" aria-label="Remove a custom medication">−</button><button class="add-chip" id="addMedPlus" aria-label="Add custom medication">+</button></div></div>
             <div class="chip-scroll"><div class="chip-flow" id="medFlow"></div></div>
           </div>
 
@@ -373,8 +374,9 @@
   <script src="js/app.js"></script>
   <script src="js/v1.0.3.js" data-pamet-v103></script>
   <script src="js/feedback-v1.0.3.js"></script>
+  <script src="js/phase2.js"></script>
   <script>
-    // Register the service worker for offline use + installability (v1.0.3).
+    // Register the service worker for offline use + installability (Phase 2).
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {
         navigator.serviceWorker.register('sw.js').catch(function () { /* offline-only environments */ });
