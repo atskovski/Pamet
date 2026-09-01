@@ -1,0 +1,23 @@
+name: Pamet weekly digest trigger
+
+on:
+  schedule:
+    - cron: '0 15 * * 1'
+  workflow_dispatch:
+
+jobs:
+  send-weekly-digests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Pamet weekly digest job
+        env:
+          PAMET_APP_URL: ${{ secrets.PAMET_APP_URL }}
+          PAMET_CRON_SECRET: ${{ secrets.PAMET_CRON_SECRET }}
+        run: |
+          test -n "$PAMET_APP_URL"
+          test -n "$PAMET_CRON_SECRET"
+          curl --fail-with-body --silent --show-error \
+            -X POST "$PAMET_APP_URL/api/jobs/weekly-digest" \
+            -H "Authorization: Bearer $PAMET_CRON_SECRET" \
+            -H "Content-Type: application/json" \
+            --data '{}'
