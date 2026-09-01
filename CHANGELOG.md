@@ -18,6 +18,7 @@ This file is the repository-only system of record for product and engineering ch
 - Added implemented view/download share behavior, strict share validation, invitation rollback on email failure, and revocation auditing.
 - Added production static assertions and HTTP security smoke tests.
 - Disabled immutable caching for unversioned application assets and refreshed the service-worker shell cache so deployments cannot strand clients on mixed releases.
+- Added release-specific asset URLs and versioned worker registration to prevent an existing worker from replaying an earlier application bundle during rollout.
 
 ## [2.0.0] — 2026-09-01
 

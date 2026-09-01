@@ -14,6 +14,7 @@ function check(condition, message) { if (!condition) throw new Error(message); }
 check(!server.includes("express.static(path.join(__dirname),"), 'The repository root must never be public.');
 check(server.includes("app.use('/assets'") && server.includes("app.use('/css'") && server.includes("app.use('/js'"), 'Static files must use explicit allowlisted mounts.');
 check(server.includes('immutable: false') && server.includes('maxAge: 0'), 'Unversioned application assets must revalidate after deployments.');
+check(fs.readFileSync('index.html', 'utf8').includes('js/app.js?v=2012'), 'Executable assets must use a release-specific URL.');
 check(server.includes('Content-Security-Policy') && server.includes('Strict-Transport-Security') && server.includes("app.disable('x-powered-by')"), 'Production security headers must remain enabled.');
 check(server.includes('function rateLimit') && server.includes('limits.billing') && server.includes('limits.sharing'), 'Sensitive handlers must remain rate limited.');
 check(server.includes('priceIsValid') && [699, 5999, 1299, 9999].every((amount) => server.includes(`amount: ${amount}`)), 'Stripe prices must be verified against the approved catalog.');

@@ -15,15 +15,15 @@ function check(condition, message) {
 }
 
 check(
-  html.includes('href="css/brand-v1.0.3.css" data-pamet-brand-v103'),
+  html.includes('href="css/brand-v1.0.3.css?v=2012" data-pamet-brand-v103'),
   'The v1.0.3 brand stylesheet must be loaded directly.'
 );
 check(
-  html.includes('src="js/v1.0.3.js" data-pamet-v103'),
+  html.includes('src="js/v1.0.3.js?v=2012" data-pamet-v103'),
   'The v1.0.3 runtime must be loaded directly.'
 );
 check(
-  html.indexOf('src="js/app.js"') < html.indexOf('src="js/v1.0.3.js"'),
+  html.indexOf('src="js/app.js?v=2012"') < html.indexOf('src="js/v1.0.3.js?v=2012"'),
   'The v1.0.3 runtime must load after the base app.'
 );
 check(
