@@ -1,4 +1,4 @@
--- Pamet v1.0.2 database schema. server.js also creates these tables automatically.
+-- Pamet v1.0.3 database schema. server.js also creates these tables automatically.
 CREATE TABLE IF NOT EXISTS pamet_users (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
   local_user_id VARCHAR(128) NOT NULL UNIQUE,
@@ -43,4 +43,17 @@ CREATE TABLE IF NOT EXISTS pamet_audit_log (
   event_json JSON NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_audit (user_id, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Product feedback is intentionally detached from account and health data.
+CREATE TABLE IF NOT EXISTS pamet_feedback (
+  id CHAR(36) NOT NULL PRIMARY KEY,
+  category VARCHAR(24) NOT NULL,
+  rating TINYINT UNSIGNED NULL,
+  message VARCHAR(1000) NOT NULL,
+  app_version VARCHAR(16) NOT NULL,
+  screen VARCHAR(40) NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_feedback_created (created_at),
+  INDEX idx_feedback_category (category)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
