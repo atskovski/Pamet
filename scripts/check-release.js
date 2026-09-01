@@ -71,7 +71,7 @@ check(
   'The PWA manifest must include standalone display and phone-sized icons.'
 );
 check(
-  worker.includes('pamet-shell-v201') && !worker.slice(0, worker.indexOf('const PATHS')).includes('/api/'),
+  worker.includes('pamet-shell-v201-2') && !worker.slice(0, worker.indexOf('const PATHS')).includes('/api/'),
   'The Phase 2 service worker must use a fresh cache and never list API data in the shell.'
 );
 

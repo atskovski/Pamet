@@ -437,7 +437,8 @@ app.get('/api/share/:token', limits.publicShare, async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
-const staticOptions = { dotfiles: 'ignore', etag: true, fallthrough: false, immutable: NODE_ENV === 'production', maxAge: NODE_ENV === 'production' ? '1h' : 0 };
+// Asset URLs are not content-hashed, so they must revalidate on every release.
+const staticOptions = { dotfiles: 'ignore', etag: true, fallthrough: false, immutable: false, maxAge: 0 };
 app.use('/assets', express.static(path.join(__dirname, 'assets'), staticOptions));
 app.use('/css', express.static(path.join(__dirname, 'css'), staticOptions));
 app.use('/js', express.static(path.join(__dirname, 'js'), staticOptions));

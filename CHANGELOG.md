@@ -17,6 +17,7 @@ This file is the repository-only system of record for product and engineering ch
 - Removed the inaccurate end-to-end-encryption setting and clarified local-storage boundaries.
 - Added implemented view/download share behavior, strict share validation, invitation rollback on email failure, and revocation auditing.
 - Added production static assertions and HTTP security smoke tests.
+- Disabled immutable caching for unversioned application assets and refreshed the service-worker shell cache so deployments cannot strand clients on mixed releases.
 
 ## [2.0.0] — 2026-09-01
 
