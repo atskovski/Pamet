@@ -17,7 +17,7 @@
   const MEDS = ["None","Ibuprofen","Paracetamol","Antihistamine","Aspirin","Prescription"];
 
   const DEFAULT_SETTINGS = {
-    userName: "Alex",
+    userName: "",
     isDarkMode: false,
     dailyReminder: true,
     patternAlerts: true,
@@ -27,11 +27,10 @@
     e2eEncryption: true,
     caregiverAccess: false,
     primaryCareAccess: false,
-    shareData: false,
     showStreak: true,
     showInsight: true,
     plan: "free",
-    customSymptoms: ["Tingling","Vision blur","Tinnitus"],
+    customSymptoms: [],
     customMoods: [],
     customActivities: [],
     customMeds: []
@@ -54,7 +53,7 @@
       key: "free", name: "Free", price: "$0",
       features: [
         "Daily logging & calendar",
-        "Up to 10 AI patterns",
+        "Up to 10 Pamet patterns",
         "5 custom fields per category",
         "Doctor report (PDF)",
         "Dark mode"
@@ -63,7 +62,7 @@
     pro: {
       key: "pro", name: "Pro", price: "$6/mo",
       features: [
-        "Unlimited AI patterns",
+        "Unlimited Pamet patterns",
         "Unlimited custom fields",
         "CSV & JSON export",
         "Primary-care doctor sync",
@@ -90,28 +89,22 @@
   function sameDay(a, b) { return startOfDay(a).getTime() === startOfDay(b).getTime(); }
   function dayKey(d) { const x = startOfDay(d); return x.getFullYear() + "-" + (x.getMonth()+1) + "-" + x.getDate(); }
 
-  // ---- Sample data (mirrors iOS sampleEntries) ----
-  function sampleEntries() {
-    return [
-      { date: daysAgo(1).toISOString(), symptoms:["Headache","Fatigue"], severity:6.5, sleepHours:5.5, stressLevel:8, waterGlasses:4, energyLevel:3, mood:"Low 😔", activity:"None", medications:["Ibuprofen"], notes:"Stressful presentation at work. Headache around noon, worsened by 3pm." },
-      { date: daysAgo(2).toISOString(), symptoms:[], severity:0, sleepHours:8, stressLevel:3, waterGlasses:8, energyLevel:8, mood:"Great 😊", activity:"Short walk", medications:[], notes:"Rest day. Worked from home. Feeling good." },
-      { date: daysAgo(4).toISOString(), symptoms:["Headache","Nausea","Brain fog"], severity:7.5, sleepHours:5, stressLevel:9, waterGlasses:3, energyLevel:2, mood:"Overwhelmed 🌊", activity:"None", medications:["Ibuprofen","Paracetamol"], notes:"Deadline crunch. Skipped lunch. Nausea by evening." },
-      { date: daysAgo(6).toISOString(), symptoms:["Joint pain","Fatigue"], severity:5, sleepHours:6, stressLevel:4, waterGlasses:6, energyLevel:4, mood:"Okay 😐", activity:"Run", medications:[], notes:"Right knee flared after morning run. Stiff all day." },
-      { date: daysAgo(8).toISOString(), symptoms:["Headache"], severity:4, sleepHours:6.5, stressLevel:7, waterGlasses:5, energyLevel:5, mood:"Tired 😴", activity:"Gym", medications:[], notes:"Mild headache in the afternoon. Faded by evening." },
-      { date: daysAgo(10).toISOString(), symptoms:[], severity:0, sleepHours:9, stressLevel:2, waterGlasses:9, energyLevel:9, mood:"Great 😊", activity:"Yoga", medications:[], notes:"Great day. Slept in, no meetings. Felt refreshed." },
-      { date: daysAgo(12).toISOString(), symptoms:["Fatigue","Eye strain"], severity:3.5, sleepHours:7, stressLevel:5, waterGlasses:6, energyLevel:4, mood:"Okay 😐", activity:"Short walk", medications:[], notes:"Long screen day. Eyes tired by end of afternoon." }
-    ].map((e, i) => ({ id: "seed-" + i, ...e }));
-  }
-
   // ---- Persistence ----
   function loadEntries() {
     try {
       const raw = localStorage.getItem(ENTRY_KEY);
-      if (raw) return JSON.parse(raw);
+      if (raw) {
+        const saved = JSON.parse(raw);
+        if (Array.isArray(saved)) {
+          // v1.0.3 migration: sample records from earlier builds were never user data.
+          const entries = saved.filter((entry) => !String(entry && entry.id || "").startsWith("seed-"));
+          if (entries.length !== saved.length) saveRaw(entries);
+          return entries;
+        }
+      }
     } catch (e) { /* ignore */ }
-    const seed = sampleEntries();
-    saveRaw(seed);
-    return seed;
+    saveRaw([]);
+    return [];
   }
   function loadSettings() {
     try {
@@ -188,17 +181,6 @@
       });
     }
 
-    // 5. Fallback if data is sparse — keep the app feeling alive
-    if (pats.length === 0) {
-      pats.push({
-        title: "Not enough data yet",
-        detail: "Keep logging daily and Pamet's AI will start surfacing your personal patterns here. Aim for 3–5 days of entries to see the first correlations.",
-        confidence: 0.2,
-        occurrences: "gathering data…",
-        colorName: "neutral", isEmerging: true
-      });
-    }
-
     return pats.sort((a, b) => b.confidence - a.confidence);
   }
 
@@ -234,7 +216,7 @@
       symptomDaysLastWeek,
       avgSeverity: avgSeverity.toFixed(1),
       topSymptom: top ? top[0] : "—",
-      streakDays: Math.max(streak, 1)
+      streakDays: streak
     };
   }
 
@@ -371,14 +353,14 @@
     patternLimit() { return patternLimit(); },
     customLimit(category) { return customLimit(category); },
 
-    patterns() { return detectPatterns(this._entries); },
+    patterns() { return this._settings.aiPatterns ? detectPatterns(this._entries) : []; },
     metrics() { return computeMetrics(this._entries); },
     report() { return buildReport(this._entries, this.patterns()); },
 
     entryForDate(date) { return this._entries.find((e) => sameDay(e.date, date)) || null; },
 
     reset() {
-      this._entries = sampleEntries().map((e, i) => ({ id: "seed-" + i, ...e }));
+      this._entries = [];
       this._settings = { ...DEFAULT_SETTINGS };
       this.persistEntries(); this.persistSettings();
     },

@@ -3,14 +3,26 @@
   "short_name": "Pamet",
   "description": "Your health history, finally useful. Track what you feel, see what changes, and bring the story to your doctor.",
   "id": "/",
-  "start_url": "/index.html",
+  "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",
-  "orientation": "portrait",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "any",
   "background_color": "#F4F5F2",
   "theme_color": "#0F3D3E",
   "categories": ["health", "productivity"],
   "icons": [
-    { "src": "/assets/pamet-mark.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+    { "src": "/assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/assets/pamet-mark.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Log an entry",
+      "short_name": "Log entry",
+      "description": "Open Pamet and log how you feel.",
+      "url": "/?source=pwa&action=log"
+    }
   ]
 }

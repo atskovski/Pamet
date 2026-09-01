@@ -1,0 +1,36 @@
+'use strict';
+
+const fs = require('fs');
+const vm = require('vm');
+
+function loadStore(initial = {}) {
+  const data = new Map(Object.entries(initial));
+  const localStorage = {
+    getItem(key) { return data.has(key) ? data.get(key) : null; },
+    setItem(key, value) { data.set(key, String(value)); },
+    removeItem(key) { data.delete(key); }
+  };
+  const context = { window: {}, localStorage, console, Date, Math, Set };
+  vm.runInNewContext(fs.readFileSync('js/store.js', 'utf8'), context, { filename: 'js/store.js' });
+  return { store: context.window.PametStore, data };
+}
+
+function check(condition, message) {
+  if (!condition) throw new Error(message);
+}
+
+const fresh = loadStore();
+check(fresh.store.entries.length === 0, 'A fresh Pamet store must contain no entries.');
+check(fresh.store.patterns().length === 0, 'A fresh Pamet store must contain no patterns.');
+check(fresh.store.metrics().streakDays === 0, 'A fresh Pamet store must contain no streak.');
+
+const legacy = loadStore({
+  pamet_entries_v1: JSON.stringify([
+    { id: 'seed-0', date: new Date().toISOString(), symptoms: ['Headache'] },
+    { id: 'real-1', date: new Date().toISOString(), symptoms: [], severity: 0 }
+  ])
+});
+check(legacy.store.entries.length === 1, 'Legacy sample entries must be removed without deleting real entries.');
+check(legacy.store.entries[0].id === 'real-1', 'The real user entry must survive sample-data migration.');
+
+console.log('Pamet store checks passed.');

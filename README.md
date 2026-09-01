@@ -1,6 +1,6 @@
 # Pamet — Personal Health Journal
 
-**Version 1.0.2** · **Your health history, finally useful.**
+**Version 1.0.3** · **Your health history, finally useful.**
 
 Pamet is a privacy-first personal health journal designed to help people consistently document symptoms, medications, lifestyle factors, and user-provided medical information, then turn those observations into useful, understandable health history.
 
@@ -76,12 +76,21 @@ Pamet contains **no advertising on any plan**.
 | Visit Briefs | 1/month | Unlimited | Unlimited |
 | Basic sharing | — | ✓ | ✓ |
 | Multiple caregivers / roles | — | — | ✓ |
-| AI appointment preparation | — | — | ✓ |
+| Appointment preparation | — | — | ✓ |
 | Longitudinal analysis | — | — | ✓ |
 
 **Pro annual is the preferred purchase option and saves about 28%.** Ultra is represented in the product architecture but is disabled for purchase by default until its Phase 2 features are ready.
 
-## v1.0.2 Highlights
+## v1.0.3 Highlights
+
+- New accounts begin with a truthful empty health history: no sample entries, fake dashboard metrics, observations, streaks, or recent-entry content.
+- Home replaces empty metrics with one focused first-log prompt. Metrics and Recent entries appear only after a real entry exists.
+- “Pamet pattern detection” and observational Pamet language replace AI-first product labels.
+- Logging requires a symptom status, mood, and activity before saving; **No symptoms today** remains a valid entry.
+- **Help improve Pamet** records privacy-minimal product feedback without account identifiers or health data.
+- Refined scalable Pamet mark plus complete installable-PWA icons, manifest metadata, shortcut, and offline shell.
+
+## v1.0.2 Foundations
 
 - Persistent sign-in across browser restarts until explicit logout.
 - Account creation is hidden on devices that already have a Pamet account.
@@ -117,7 +126,7 @@ Pamet uses **Warm Clinical Minimalism**: warm and personal enough to feel like a
 
 ## Architecture
 
-Pamet remains **local-first** for journal entries. v1.0.2 adds a Node.js backend only for functionality that cannot safely be implemented as browser-only JavaScript:
+Pamet remains **local-first** for journal entries. v1.0.3 uses a Node.js backend only for functionality that cannot safely be implemented as browser-only JavaScript:
 
 - Stripe subscriptions and verified entitlements
 - Registration and weekly-digest email delivery
@@ -131,11 +140,13 @@ Pamet/
 ├── index.html
 ├── share.html
 ├── css/styles.css
-├── css/brand-v1.0.2.css
+├── css/brand-v1.0.3.css
+├── css/release-v1.0.3.css
 ├── js/auth.js
 ├── js/store.js
 ├── js/app.js
-├── js/v1.0.2.js
+├── js/v1.0.3.js
+├── js/feedback-v1.0.3.js
 ├── assets/pamet-mark.svg
 ├── db/schema.sql
 ├── server.js
@@ -162,9 +173,9 @@ npm install
 npm start
 ```
 
-## Email Setup
+## Optional Email Setup
 
-v1.0.2 uses Resend for transactional email:
+Email remains disabled unless both Resend environment variables are configured. v1.0.3 does not require email for core logging, feedback, billing, or installability.
 
 ```text
 RESEND_API_KEY=
@@ -178,6 +189,19 @@ Supported emails:
 - Caregiver/provider invitation: secure expiring link to the selected read-only snapshot.
 
 Email subjects intentionally avoid symptom details.
+
+## Product Feedback Storage
+
+The Settings screen includes **Help improve Pamet**. Feedback is stored in the deployment’s existing MySQL database in `pamet_feedback` with only:
+
+- category
+- optional 1–5 rating
+- message (maximum 1,000 characters)
+- app version
+- originating screen
+- created timestamp
+
+The table contains no user ID, email, device credential, IP-address field, journal-entry field, symptom field, medication field, or note field. Pamet does not automatically attach health or account data; the form also asks users not to put medical or account details in the free-text message. A valid Pamet device credential is required to submit feedback, but it is used only to authenticate the request and is not attached to the stored feedback row.
 
 ## Weekly Digest Scheduling
 
@@ -202,13 +226,13 @@ Before production handling of sensitive health information, complete qualified s
 
 ## Roadmap Boundaries
 
-### Now — v1.0.2
+### Now — v1.0.3
 
 Local-first logging, 90-day Free history, Pro unlimited history, weekly summary/digest infrastructure, basic trends/correlations, What Changed?, Visit Brief, reminders, subscription management, export/delete, and basic read-only sharing.
 
 ### Next — Phase 2
 
-Ultra, multi-profile management, advanced caregiver permissions, AI appointment preparation, longitudinal analysis, advanced Visit Briefs, and more sophisticated sharing.
+Ultra, multi-profile management, advanced caregiver permissions, appointment preparation, longitudinal analysis, advanced Visit Briefs, and more sophisticated sharing.
 
 ### Not planned for initial product
 

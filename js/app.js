@@ -49,6 +49,11 @@
     const el = $("#tierNudge");
     if (!el) return;
     const days = S.totalDaysLogged();
+    if (!days) {
+      el.hidden = true;
+      el.textContent = "";
+      return;
+    }
     const next = S.nextTier();
     if (!next) {
       el.hidden = false;
@@ -87,6 +92,7 @@
     if (name === "calendar") renderCalendar();
     if (name === "patterns") renderPatterns();
     if (name === "report") renderReport();
+    if (name === "settings") renderSettings();
   }
 
   // ============================================================
@@ -102,6 +108,7 @@
   function renderDashboard() {
     const m = S.metrics();
     const pats = S.patterns();
+    const hasEntries = S.entries.length > 0;
 
     // Greeting uses the account's first name only (per v1.0.1 spec).
     $("#greeting").textContent = `${greetingText()}, ${displayName || S.settings.userName || "friend"} 👋`;
@@ -110,7 +117,7 @@
     renderTierNudge();
 
     // Streak (honors the "Show day streak" toggle)
-    const showStreak = !!S.settings.showStreak;
+    const showStreak = hasEntries && !!S.settings.showStreak;
     $("#streakCard").style.display = showStreak ? "flex" : "none";
     if (showStreak) {
       $("#streakDays").textContent = m.streakDays;
@@ -123,14 +130,19 @@
       }
     }
 
-    // Insight banner (top pattern) — honors the "Show AI insight" toggle.
-    const top = pats[0];
-    if (top && !!S.settings.showInsight) {
+    // Observation banner (top confirmed pattern) — honors the Home setting.
+    const top = pats.find((p) => !p.isEmerging);
+    if (hasEntries && top && !!S.settings.showInsight) {
       $("#insightText").textContent = top.detail;
       $("#insightBanner").hidden = false;
     } else {
       $("#insightBanner").hidden = true;
     }
+
+    // A first-time user sees guidance, never fabricated or zeroed health metrics.
+    $("#homeEmptyState").hidden = hasEntries;
+    $("#metricsGrid").hidden = !hasEntries;
+    $("#recentSection").hidden = !hasEntries;
 
     // Metric cards
     const metricValues = {
@@ -161,7 +173,7 @@
   function renderEntryList(container, entries) {
     container.innerHTML = "";
     if (!entries.length) {
-      container.innerHTML = `<div class="entry-row"><div class="entry-main"><p style="color:var(--text-tertiary);font-size:13px;margin:0">No entries yet. Tap the + button to log your first day.</p></div></div>`;
+      container.innerHTML = `<div class="home-empty-state compact"><div><h2>Your entries will appear here</h2><p>Track your first day to begin building your health history.</p></div></div>`;
       return;
     }
     entries.forEach((e) => container.appendChild(entryRowEl(e)));
@@ -263,7 +275,9 @@
     $("#patternDaysCount").textContent = daysCount;
     $("#patternSummary").textContent = confirmed > 0
       ? `${confirmed} confirmed pattern${confirmed > 1 ? "s" : ""} detected. Patterns update nightly as you log more.`
-      : "Log a few more days and your personal patterns will appear here.";
+      : daysCount
+        ? "Keep tracking and Pamet will show patterns when there is enough information."
+        : "Your observations will appear after you start tracking your details.";
 
     // Free plan shows at most FREE_LIMITS.patterns; Pro is unlimited.
     const limit = S.patternLimit();
@@ -273,7 +287,7 @@
       upgrade.hidden = false;
       upgrade.innerHTML = `
         <span class="uc-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M13 2L3 14h7l-1 8 10-12h-7z"/></svg></span>
-        <div class="uc-body"><p class="uc-title">${hiddenCount} more pattern${hiddenCount > 1 ? "s" : ""} available</p><p class="uc-sub">Upgrade to Pro for unlimited AI patterns.</p></div>
+        <div class="uc-body"><p class="uc-title">${hiddenCount} more pattern${hiddenCount > 1 ? "s" : ""} available</p><p class="uc-sub">Upgrade to Pro for unlimited Pamet patterns.</p></div>
         <button class="uc-btn" id="patternsUpgradeBtn">Upgrade</button>`;
     } else {
       upgrade.hidden = true;
@@ -282,6 +296,9 @@
 
     const list = $("#patternList");
     list.innerHTML = "";
+    if (!pats.length) {
+      list.innerHTML = `<div class="home-empty-state compact"><div><h2>No observations yet</h2><p>Pamet needs a few entries before it can show meaningful patterns.</p></div></div>`;
+    }
     pats.slice(0, limit).forEach((p) => {
       const c = PAT_COLORS[p.colorName] || PAT_COLORS.neutral;
       const card = document.createElement("div");
@@ -315,7 +332,7 @@
       <div class="report-body">
         ${reportSection("Overview", r.overview.map(rowHtml).join(""))}
         ${r.breakdown.length ? reportSection("Symptom breakdown", r.breakdown.map(rowHtml).join("")) : ""}
-        ${r.patterns.length ? reportSection("AI-identified patterns (for physician review)", r.patterns.map((p) => {
+        ${r.patterns.length ? reportSection("Pamet observations (for physician review)", r.patterns.map((p) => {
           const c = PAT_COLORS[p.colorName] || PAT_COLORS.neutral;
           return `<div class="report-bullet"><span class="bullet" style="color:${c}">•</span><span>${esc(p.title)} (${Math.round(p.confidence*100)}% confidence): ${esc(p.detail)}</span></div>`;
         }).join("")) : ""}
@@ -364,7 +381,7 @@
     let body = `Pamet Symptom Report\n${r.rangeLabel}\n\n`;
     body += "OVERVIEW\n" + r.overview.map(([k, v]) => `• ${k}: ${v}`).join("\n") + "\n\n";
     if (r.breakdown.length) body += "SYMPTOM BREAKDOWN\n" + r.breakdown.map(([k, v]) => `• ${k}: ${v}`).join("\n") + "\n\n";
-    if (r.patterns.length) body += "AI PATTERNS\n" + r.patterns.map((p) => `• ${p.title} (${Math.round(p.confidence*100)}%): ${p.detail}`).join("\n") + "\n";
+    if (r.patterns.length) body += "PAMET OBSERVATIONS\n" + r.patterns.map((p) => `• ${p.title} (${Math.round(p.confidence*100)}%): ${p.detail}`).join("\n") + "\n";
     const subject = encodeURIComponent(`Pamet symptom report — ${r.rangeLabel}`);
     window.location.href = `mailto:?subject=${subject}&body=${encodeURIComponent(body)}`;
   }
@@ -386,7 +403,7 @@
       <div class="hero"><h1>Symptom report</h1><p>${esc(r.rangeLabel)} · Generated by Pamet · For medical use</p></div>
       <h2>Overview</h2><table>${rows(r.overview)}</table>
       ${r.breakdown.length ? `<h2>Symptom breakdown</h2><table>${rows(r.breakdown)}</table>` : ""}
-      ${r.patterns.length ? `<h2>AI-identified patterns</h2>` + r.patterns.map((p) => `<div class="b">• <strong>${esc(p.title)} (${Math.round(p.confidence*100)}%)</strong> — ${esc(p.detail)}</div>`).join("") : ""}
+      ${r.patterns.length ? `<h2>Pamet observations</h2>` + r.patterns.map((p) => `<div class="b">• <strong>${esc(p.title)} (${Math.round(p.confidence*100)}%)</strong> — ${esc(p.detail)}</div>`).join("") : ""}
       ${r.medications.length ? `<h2>Medications noted</h2><table>${rows(r.medications)}</table>` : ""}
       ${r.notes.length ? `<h2>Patient notes</h2>` + r.notes.map((n) => `<div class="q">"${esc(n.notes)}" — ${esc(n.date)}</div>`).join("") : ""}
       </body></html>`);
@@ -398,9 +415,12 @@
   // ============================================================
   // LOG SHEET
   // ============================================================
+  const NO_SYMPTOMS = "__no_symptoms__";
   const logState = { symptoms: new Set(), severity: 4, sleepHours: 7, stressLevel: 5, waterGlasses: 6, energyLevel: 5, mood: "", activity: "", meds: new Set(), notes: "" };
 
   function openLog() {
+    $("#logSuccess").hidden = true;
+    $("#logFormError").hidden = true;
     $("#logBackdrop").classList.add("open");
     document.body.style.overflow = "hidden";
   }
@@ -413,11 +433,25 @@
     // Symptoms (multi)
     const sg = $("#symptomGrid");
     sg.innerHTML = "";
-    S.allSymptoms().forEach((s) => {
+    [[NO_SYMPTOMS, "No symptoms today"], ...S.allSymptoms().map((s) => [s, s])].forEach(([value, label]) => {
       const b = document.createElement("button");
-      b.className = "sym-btn" + (logState.symptoms.has(s) ? " selected" : "");
-      b.textContent = s;
-      b.addEventListener("click", () => { toggleSet(logState.symptoms, s); b.classList.toggle("selected"); });
+      b.type = "button";
+      b.className = "sym-btn" + (logState.symptoms.has(value) ? " selected" : "");
+      b.textContent = label;
+      b.addEventListener("click", () => {
+        if (value === NO_SYMPTOMS) {
+          logState.symptoms.clear();
+          logState.symptoms.add(NO_SYMPTOMS);
+          $("#severityRange").value = 0;
+          logState.severity = 0;
+          $("#severityValue").textContent = "0/10";
+        } else {
+          logState.symptoms.delete(NO_SYMPTOMS);
+          toggleSet(logState.symptoms, value);
+        }
+        buildLogForm();
+        $("#logFormError").hidden = true;
+      });
       sg.appendChild(b);
     });
 
@@ -485,10 +519,22 @@
   }
 
   function saveEntry() {
+    const error = $("#logFormError");
+    const missing = [];
+    if (!logState.symptoms.size) missing.push("how you feel");
+    if (!logState.mood) missing.push("your mood");
+    if (!logState.activity) missing.push("your activity");
+    if (missing.length) {
+      error.textContent = `Before saving, choose ${missing.join(", ")}.`;
+      error.hidden = false;
+      return;
+    }
+    error.hidden = true;
+    const symptomFree = logState.symptoms.has(NO_SYMPTOMS);
     const entry = {
       date: new Date().toISOString(),
-      symptoms: [...logState.symptoms],
-      severity: logState.severity,
+      symptoms: symptomFree ? [] : [...logState.symptoms],
+      severity: symptomFree ? 0 : logState.severity,
       sleepHours: logState.sleepHours,
       stressLevel: logState.stressLevel,
       waterGlasses: logState.waterGlasses,
@@ -506,7 +552,7 @@
     resetLogForm();
     refreshAll();
     setTimeout(closeLog, 900);
-    toast("Entry saved ✓", "success");
+    toast("Entry saved — Pamet is updating your patterns.", "success");
   }
 
   // ============================================================
@@ -524,21 +570,23 @@
     setTierBadge($("#settingsTier"), S.tier());
 
     // Toggles (incl. new v1.0.1 options)
-    const map = { setDarkMode: "isDarkMode", setShowStreak: "showStreak", setShowInsight: "showInsight", setDailyReminder: "dailyReminder", setPatternAlerts: "patternAlerts", setStreakReminders: "streakReminders", setWeeklyDigest: "weeklyDigest", setAiPatterns: "aiPatterns", setE2e: "e2eEncryption", setCaregiver: "caregiverAccess", setPrimaryCare: "primaryCareAccess", setShareData: "shareData" };
+    const map = { setDarkMode: "isDarkMode", setShowStreak: "showStreak", setShowInsight: "showInsight", setDailyReminder: "dailyReminder", setPatternAlerts: "patternAlerts", setStreakReminders: "streakReminders", setWeeklyDigest: "weeklyDigest", setAiPatterns: "aiPatterns", setE2e: "e2eEncryption", setCaregiver: "caregiverAccess", setPrimaryCare: "primaryCareAccess" };
     Object.entries(map).forEach(([id, key]) => { const el = $("#" + id); if (el) el.checked = !!s[key]; });
 
     // Custom symptoms
     const list = $("#customSymptomList");
-    list.innerHTML = "";
-    (s.customSymptoms || []).forEach((sym) => {
-      const li = document.createElement("li");
-      li.innerHTML = `<span>${esc(sym)}</span>`;
-      const rm = document.createElement("button");
-      rm.className = "remove"; rm.textContent = "✕"; rm.title = "Remove";
-      rm.addEventListener("click", () => { S.removeCustomField("symptoms", sym); renderSettings(); buildLogForm(); });
-      li.appendChild(rm);
-      list.appendChild(li);
-    });
+    if (list) {
+      list.innerHTML = "";
+      (s.customSymptoms || []).forEach((sym) => {
+        const li = document.createElement("li");
+        li.innerHTML = `<span>${esc(sym)}</span>`;
+        const rm = document.createElement("button");
+        rm.className = "remove"; rm.textContent = "✕"; rm.title = "Remove";
+        rm.addEventListener("click", () => { S.removeCustomField("symptoms", sym); renderSettings(); buildLogForm(); });
+        li.appendChild(rm);
+        list.appendChild(li);
+      });
+    }
 
     // Plan comparison + CTA
     renderPlan();
@@ -607,6 +655,8 @@
   }
   function showWelcome() {
     $("#welcome").classList.remove("hidden");
+    $("#registerForm").hidden = true;
+    $("#loginForm").hidden = false;
   }
 
   function init() {
@@ -618,8 +668,8 @@
     }
 
     // Toggle login / register forms
-    $("#showRegister").addEventListener("click", (e) => { e.preventDefault(); $("#loginForm").hidden = true; $("#registerForm").hidden = false; });
-    $("#showLogin").addEventListener("click", (e) => { e.preventDefault(); $("#registerForm").hidden = true; $("#loginForm").hidden = false; });
+    $("#showRegister").addEventListener("click", (e) => { e.preventDefault(); $("#registerForm").reset(); $("#loginForm").hidden = true; $("#registerForm").hidden = false; });
+    $("#showLogin").addEventListener("click", (e) => { e.preventDefault(); $("#registerForm").reset(); $("#registerForm").hidden = true; $("#loginForm").hidden = false; });
 
     const setFormError = (msg) => { let el = $(".form-error"); if (!el) { el = document.createElement("p"); el.className = "form-error"; $("#welcome").appendChild(el); } el.textContent = msg || ""; };
 
@@ -649,6 +699,7 @@
     // Tab bar
     $$(".tab[data-tab]").forEach((t) => t.addEventListener("click", () => setTab(t.dataset.tab)));
     $("#openLog").addEventListener("click", openLog);
+    $("#emptyLogEntry").addEventListener("click", openLog);
 
     // in-content nav links (dashboard -> patterns/calendar)
     $$("[data-nav]").forEach((b) => b.addEventListener("click", () => setTab(b.dataset.nav)));
@@ -663,6 +714,7 @@
     $("#closeLog").addEventListener("click", closeLog);
     $("#logBackdrop").addEventListener("click", (e) => { if (e.target.id === "logBackdrop") closeLog(); });
     $("#saveEntry").addEventListener("click", saveEntry);
+    $("#notesInput").addEventListener("input", (e) => { logState.notes = e.target.value; });
 
     // "+" custom-field buttons in the log sheet
     $("#addSymptomPlus").addEventListener("click", () => addCustomField("symptoms"));
@@ -683,13 +735,13 @@
     $("#downloadPdf").addEventListener("click", downloadPdf);
 
     // Settings toggles (incl. new v1.0.1 options)
-    const toggleMap = { setDarkMode: "isDarkMode", setShowStreak: "showStreak", setShowInsight: "showInsight", setDailyReminder: "dailyReminder", setPatternAlerts: "patternAlerts", setStreakReminders: "streakReminders", setWeeklyDigest: "weeklyDigest", setAiPatterns: "aiPatterns", setE2e: "e2eEncryption", setCaregiver: "caregiverAccess", setPrimaryCare: "primaryCareAccess", setShareData: "shareData" };
+    const toggleMap = { setDarkMode: "isDarkMode", setShowStreak: "showStreak", setShowInsight: "showInsight", setDailyReminder: "dailyReminder", setPatternAlerts: "patternAlerts", setStreakReminders: "streakReminders", setWeeklyDigest: "weeklyDigest", setAiPatterns: "aiPatterns", setE2e: "e2eEncryption", setCaregiver: "caregiverAccess", setPrimaryCare: "primaryCareAccess" };
     Object.entries(toggleMap).forEach(([id, key]) => {
       const el = $("#" + id);
       if (el) el.addEventListener("change", (e) => {
         S.setSetting(key, e.target.checked);
         if (key === "isDarkMode") applyTheme();
-        if (key === "showStreak" || key === "showInsight") renderDashboard();
+        if (key === "showStreak" || key === "showInsight" || key === "aiPatterns") renderDashboard();
       });
     });
 
@@ -747,6 +799,11 @@
 
     // Build the log form once
     buildLogForm();
+
+    // PWA shortcut: open the log sheet only after an authenticated launch.
+    if (A.isAuthed() && new URLSearchParams(window.location.search).get("action") === "log") {
+      setTimeout(openLog, 0);
+    }
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
