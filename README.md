@@ -128,6 +128,8 @@ Pamet uses **Warm Clinical Minimalism**: warm and personal enough to feel like a
 
 Pamet remains **local-first** for journal entries. v1.0.3 uses a Node.js backend only for functionality that cannot safely be implemented as browser-only JavaScript:
 
+Production deployments track the protected `main` branch so only reviewed, merged releases are promoted to `pamet.wasmer.app`.
+
 - Stripe subscriptions and verified entitlements
 - Registration and weekly-digest email delivery
 - Secure, expiring caregiver/provider shares
