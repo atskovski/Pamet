@@ -1,0 +1,82 @@
+/* Pamet v1.0.3 — first-use, feedback, and responsive mark refinements */
+.home-empty-state {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px;
+  border: 1px dashed #BFD1C8;
+  border-radius: var(--radius-card);
+  background: color-mix(in srgb, var(--card-bg) 88%, var(--pamet-warm-gray));
+  color: var(--text-primary);
+}
+.home-empty-state > div { flex: 1; min-width: 0; }
+.home-empty-state h2 { margin: 0 0 5px; font-size: 17px; font-weight: 650; }
+.home-empty-state p { margin: 0; color: var(--text-secondary); font-size: 13px; line-height: 1.5; }
+.home-empty-state .btn { flex: 0 0 auto; }
+.home-empty-mark {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: #EDF7F1;
+  color: var(--pamet-teal);
+  font-size: 23px;
+}
+.home-empty-state.compact { padding: 16px; }
+.recent-entry-list { margin-top: 12px; }
+
+.feedback-setting { display: grid; gap: 12px; }
+.feedback-setting-head { padding-bottom: 0; }
+.feedback-open { flex: 0 0 auto; padding: 8px 10px; font-size: 12px; }
+.feedback-form {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 11px;
+  background: var(--pamet-warm-gray);
+}
+body.dark .feedback-form { background: #183435; }
+.feedback-form > p { margin: 0; color: var(--text-secondary); font-size: 12px; line-height: 1.5; }
+.feedback-form label { display: grid; gap: 6px; color: var(--text-secondary); font-size: 12px; font-weight: 600; }
+.feedback-form select,
+.feedback-form textarea {
+  width: 100%;
+  border: 1px solid var(--border-color);
+  border-radius: 9px;
+  background: var(--card-bg);
+  color: var(--text-primary);
+  padding: 10px;
+  font: inherit;
+}
+.feedback-form textarea { min-height: 96px; resize: vertical; }
+.feedback-form fieldset { margin: 0; padding: 0; border: 0; }
+.feedback-form legend { margin-bottom: 6px; color: var(--text-secondary); font-size: 12px; font-weight: 600; }
+.rating-row { display: flex; gap: 7px; }
+.rating-row label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 34px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--card-bg);
+  cursor: pointer;
+}
+.rating-row input { margin: 0 4px 0 0; }
+.feedback-actions { display: flex; gap: 9px; }
+.feedback-actions > * { flex: 1; }
+.feedback-status { color: #245C45; }
+.feedback-status.error { color: var(--pamet-berry); }
+.brand-mark img { object-fit: contain; }
+.welcome-brand .brand-mark { width: 52px; height: 52px; }
+
+@media (max-width: 520px) {
+  .home-empty-state { align-items: flex-start; flex-wrap: wrap; }
+  .home-empty-state .btn { width: 100%; }
+  .home-empty-mark { flex: 0 0 auto; }
+  .feedback-setting-head { align-items: flex-start; }
+  .feedback-open { white-space: nowrap; }
+}

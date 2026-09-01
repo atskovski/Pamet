@@ -68,6 +68,7 @@ body.dark {
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 
 html, body {
   margin: 0;
@@ -405,6 +406,7 @@ body.dark .chip.selected { color: var(--text-primary); }
 .success-banner { display: flex; align-items: center; gap: 12px; padding: 14px; background: var(--sage-light); border-radius: 12px; border: 1.5px solid color-mix(in srgb, var(--sage-green) 40%, transparent); color: var(--sage-dark); font-size: 13px; font-weight: 600; }
 body.dark .success-banner { color: var(--text-primary); }
 .success-check { width: 24px; height: 24px; border-radius: 50%; background: var(--sage-green); color: #fff; display: grid; place-items: center; font-size: 12px; font-weight: 800; flex: 0 0 auto; }
+.log-form-error { margin: -4px 0 0; color: var(--rose-pink); font-size: 13px; line-height: 1.45; }
 
 /* Toast */
 .toast { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%) translateY(20px); background: var(--ink-primary); color: #fff; padding: 12px 18px; border-radius: 12px; font-size: 13px; opacity: 0; pointer-events: none; transition: all .25s; z-index: 80; white-space: nowrap; }
@@ -431,6 +433,7 @@ body.dark .toast { background: #fff; color: var(--ink-primary); }
 .welcome-brand .brand-name { font-size: 28px; }
 .welcome-tagline { margin: -6px 0 0; color: var(--text-tertiary); font-size: 14px; }
 .welcome-form { display: flex; flex-direction: column; gap: 12px; }
+.welcome-form[hidden] { display: none !important; }
 .welcome-title { font-family: var(--serif); font-size: 22px; color: var(--text-primary); margin: 0 0 4px; }
 .field { display: flex; flex-direction: column; gap: 6px; }
 .field > span { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
