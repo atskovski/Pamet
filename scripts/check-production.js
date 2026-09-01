@@ -21,6 +21,7 @@ check(server.includes("app.get('/api/ready'") && server.includes("app.get('/api/
 check((secureServer.match(/app\.listen/g) || []).length === 1 && !secureServer.includes('/api/stripe/webhook'), 'The runtime wrapper must not duplicate application handlers.');
 check(!app.includes('S.setPlan("pro")'), 'The browser must never grant its own paid entitlement.');
 check(app.includes('/^[=+\\-@]/') && app.includes('S.exportAllData().profiles'), 'Exports must cover every profile and neutralize spreadsheet formulas.');
+check(app.includes('if (addSymptomButton && newSymptomInput)'), 'Startup must tolerate the retired custom-symptom settings card.');
 check(billing.includes('checkoutAttemptId') && billing.includes('crypto.randomUUID()'), 'Checkout requests must include an idempotency attempt ID.');
 check(auth.includes('ROUNDS=600000') && auth.includes('global.crypto.getRandomValues') && !auth.includes('Math.random().toString(16)'), 'Password hashing and credentials must use production-strength Web Crypto.');
 check(!share.includes('contribute') && share.includes("d.permission==='download'"), 'Share permissions must be limited to implemented view/download behavior.');

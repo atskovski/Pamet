@@ -795,16 +795,20 @@
     });
 
     // Custom symptoms (settings)
-    $("#addSymptomBtn").addEventListener("click", () => {
-      const v = $("#newSymptomInput").value.trim();
-      if (v) {
-        const ok = S.addCustomField("symptoms", v);
-        $("#newSymptomInput").value = "";
-        renderSettings(); buildLogForm();
-        toast(ok ? "Symptom added ✓" : `Free plan allows ${S.FREE_LIMITS.customPerCategory} custom symptoms`, ok ? "success" : undefined);
-      }
-    });
-    $("#newSymptomInput").addEventListener("keydown", (e) => { if (e.key === "Enter") $("#addSymptomBtn").click(); });
+    const addSymptomButton = $("#addSymptomBtn");
+    const newSymptomInput = $("#newSymptomInput");
+    if (addSymptomButton && newSymptomInput) {
+      addSymptomButton.addEventListener("click", () => {
+        const v = newSymptomInput.value.trim();
+        if (v) {
+          const ok = S.addCustomField("symptoms", v);
+          newSymptomInput.value = "";
+          renderSettings(); buildLogForm();
+          toast(ok ? "Symptom added ✓" : `Free plan allows ${S.FREE_LIMITS.customPerCategory} custom symptoms`, ok ? "success" : undefined);
+        }
+      });
+      newSymptomInput.addEventListener("keydown", (e) => { if (e.key === "Enter") addSymptomButton.click(); });
+    }
 
     // Plan upgrade / downgrade
     // The billing layer owns this action. Client-side state must never grant an entitlement.
