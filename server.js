@@ -6,7 +6,7 @@ const express = require('express');
 const mysql = require('mysql2/promise');
 const Stripe = require('stripe');
 
-const VERSION = '2.0.1';
+const VERSION = '1.0.4';
 const PORT = Number(process.env.PORT || 8080);
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const APP = (process.env.APP_BASE_URL || `http://localhost:${PORT}`).replace(/\/$/, '');
@@ -20,10 +20,10 @@ const expectedPrices = {
   pro: { monthly: { amount: 699, interval: 'month' }, annual: { amount: 5999, interval: 'year' } },
   ultra: { monthly: { amount: 1299, interval: 'month' }, annual: { amount: 9999, interval: 'year' } }
 };
-const ultraEnabled = String(process.env.ULTRA_ENABLED || '').toLowerCase() === 'true';
 const priceValidationCache = new Map();
 let pool;
 let poolInitialization;
+const metrics = new Map();
 
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
@@ -43,6 +43,20 @@ const uuidOk = (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a
 const timezoneOk = (value) => { try { new Intl.DateTimeFormat('en-US', { timeZone: value }).format(); return true; } catch { return false; } };
 const secretEqual = (left, right) => { const a = Buffer.from(sha(left)); const b = Buffer.from(sha(right)); return a.length === b.length && crypto.timingSafeEqual(a, b); };
 const serializedObject = (value, maxBytes = 200 * 1024) => { if (!plainObject(value)) return null; const json = JSON.stringify(value); return Buffer.byteLength(json, 'utf8') <= maxBytes ? json : null; };
+const metricRoute = (req) => req.route && req.route.path ? String(req.route.path) : (req.path.startsWith('/api/') ? req.path.replace(/[0-9a-f]{8}-[0-9a-f-]{27,}/ig, ':id').replace(/\/api\/share\/[^/]+/, '/api/share/:token') : 'static');
+function recordMetric(method, route, status, durationMs) {
+  const key = `${method}|${route}|${status}`;
+  const value = metrics.get(key) || { count: 0, durationMs: 0 };
+  value.count += 1; value.durationMs += durationMs; metrics.set(key, value);
+}
+function operationalEvent(event) {
+  const line = JSON.stringify({ service: 'pamet', version: VERSION, at: new Date().toISOString(), ...event });
+  console.log(line);
+  if (process.env.LOG_DRAIN_URL) fetch(process.env.LOG_DRAIN_URL, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', ...(process.env.LOG_DRAIN_TOKEN ? { Authorization: `Bearer ${process.env.LOG_DRAIN_TOKEN}` } : {}) },
+    body: line, signal: AbortSignal.timeout(3000)
+  }).catch(() => {});
+}
 
 function databaseOptions() {
   if (process.env.DATABASE_URL) return process.env.DATABASE_URL;
@@ -170,7 +184,8 @@ async function priceIsValid(plan, interval) {
   if (cached && cached.expiresAt > Date.now()) return cached.valid;
   const expected = expectedPrices[plan][interval];
   const price = await stripe.prices.retrieve(priceId);
-  const valid = !!(price.active && price.currency === 'usd' && price.unit_amount === expected.amount && price.recurring && price.recurring.interval === expected.interval);
+  const liveModeOk = NODE_ENV !== 'production' || price.livemode === true;
+  const valid = !!(liveModeOk && price.active && price.currency === 'usd' && price.unit_amount === expected.amount && price.recurring && price.recurring.interval === expected.interval);
   priceValidationCache.set(priceId, { valid, expiresAt: Date.now() + 5 * 60 * 1000 });
   return valid;
 }
@@ -184,6 +199,7 @@ async function customer(user) {
 }
 
 app.use((req, res, next) => {
+  const started = process.hrtime.bigint();
   req.requestId = req.headers['x-request-id'] || crypto.randomUUID();
   res.setHeader('X-Request-Id', req.requestId);
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -194,6 +210,13 @@ app.use((req, res, next) => {
   res.setHeader('Content-Security-Policy', "default-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com https://*.js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://*.stripe.com; connect-src 'self' https://api.stripe.com https://*.stripe.com https://link.com https://*.link.com; frame-src https://js.stripe.com https://*.js.stripe.com https://hooks.stripe.com https://link.com https://*.link.com");
   if (NODE_ENV === 'production') res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   if (req.path.startsWith('/api/') || req.path === '/share.html') res.setHeader('Cache-Control', 'no-store');
+  res.once('finish', () => {
+    if (!req.path.startsWith('/api/')) return;
+    const durationMs = Number(process.hrtime.bigint() - started) / 1e6;
+    const route = metricRoute(req);
+    recordMetric(req.method, route, res.statusCode, durationMs);
+    operationalEvent({ event: 'http.request', requestId: req.requestId, method: req.method, route, status: res.statusCode, durationMs: Number(durationMs.toFixed(1)) });
+  });
   next();
 });
 
@@ -226,6 +249,17 @@ app.use(express.json({ limit: '256kb', strict: true }));
 
 app.get('/api/health', (req, res) => res.json({ ok: true, version: VERSION }));
 app.get('/api/ready', async (req, res) => { try { const connection = await db(); await connection.query('SELECT 1'); res.json({ ok: true, version: VERSION }); } catch { res.status(503).json({ ok: false, version: VERSION }); } });
+app.get('/api/metrics', (req, res) => {
+  const secret = readBearer(req);
+  if (!process.env.METRICS_SECRET || !secret || !secretEqual(secret, process.env.METRICS_SECRET)) return res.status(401).type('text/plain').send('Unauthorized\n');
+  const lines = ['# HELP pamet_http_requests_total Completed API requests.', '# TYPE pamet_http_requests_total counter', '# HELP pamet_http_request_duration_ms_sum Total API request duration in milliseconds.', '# TYPE pamet_http_request_duration_ms_sum counter'];
+  for (const [key, value] of metrics) {
+    const [method, route, status] = key.split('|');
+    const labels = `method="${method}",route="${route.replace(/["\\]/g, '')}",status="${status}"`;
+    lines.push(`pamet_http_requests_total{${labels}} ${value.count}`, `pamet_http_request_duration_ms_sum{${labels}} ${value.durationMs.toFixed(3)}`);
+  }
+  res.type('text/plain; version=0.0.4').send(`${lines.join('\n')}\n`);
+});
 
 app.post('/api/account/bootstrap', limits.bootstrap, async (req, res, next) => {
   try {
@@ -290,11 +324,29 @@ app.post('/api/feedback', limits.feedback, auth, async (req, res, next) => {
     if (rating !== null && (!Number.isInteger(rating) || rating < 1 || rating > 5)) return res.status(400).json({ error: 'Rating must be between 1 and 5.' });
     const connection = await db();
     await connection.execute('INSERT INTO pamet_feedback(id,category,rating,message,app_version,screen) VALUES(?,?,?,?,?,?)', [crypto.randomUUID(), category, rating, message, appVersion, screen]);
+    if (process.env.FEEDBACK_WEBHOOK_URL) {
+      fetch(process.env.FEEDBACK_WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(process.env.FEEDBACK_WEBHOOK_TOKEN ? { Authorization: `Bearer ${process.env.FEEDBACK_WEBHOOK_TOKEN}` } : {}) },
+        body: JSON.stringify({ category, rating, message, appVersion, screen, createdAt: new Date().toISOString() }),
+        signal: AbortSignal.timeout(5000)
+      }).catch((error) => console.warn('feedback_route_failed', { message: error.message }));
+    }
     res.status(201).json({ saved: true });
   } catch (error) { next(error); }
 });
 
-app.get('/api/billing/config', (req, res) => res.json({ publishableKey: process.env.STRIPE_PUBLISHABLE_KEY || '', proEnabled: !!(stripe && prices.pro.monthly && prices.pro.annual), ultraEnabled: !!(ultraEnabled && stripe && prices.ultra.monthly && prices.ultra.annual), emailEnabled: !!(process.env.RESEND_API_KEY && process.env.EMAIL_FROM) }));
+app.get('/api/billing/config', async (req, res) => {
+  const configured = (plan) => !!(stripe && prices[plan].monthly && prices[plan].annual);
+  const valid = async (plan) => configured(plan) && (await Promise.all(['monthly', 'annual'].map((interval) => priceIsValid(plan, interval)))).every(Boolean);
+  try {
+    const [proEnabled, ultraEnabled] = await Promise.all([valid('pro'), valid('ultra')]);
+    res.json({ publishableKey: process.env.STRIPE_PUBLISHABLE_KEY || '', proEnabled, ultraEnabled, emailEnabled: !!(process.env.RESEND_API_KEY && process.env.EMAIL_FROM) });
+  } catch (error) {
+    console.warn('stripe_catalog_validation_failed', { message: error.message });
+    res.json({ publishableKey: process.env.STRIPE_PUBLISHABLE_KEY || '', proEnabled: false, ultraEnabled: false, emailEnabled: !!(process.env.RESEND_API_KEY && process.env.EMAIL_FROM) });
+  }
+});
 app.get('/api/billing/status', auth, (req, res) => res.json({ user: publicUser(req.user) }));
 
 app.post('/api/billing/create-subscription', limits.billing, auth, async (req, res, next) => {
@@ -304,7 +356,6 @@ app.post('/api/billing/create-subscription', limits.billing, auth, async (req, r
     const interval = req.body.interval;
     const checkoutAttemptId = clean(req.body.checkoutAttemptId, 64);
     if (!['pro', 'ultra'].includes(plan) || !['monthly', 'annual'].includes(interval) || !attemptIdOk(checkoutAttemptId)) return res.status(400).json({ error: 'A valid plan, interval, and checkout attempt are required.' });
-    if (plan === 'ultra' && !ultraEnabled) return res.status(409).json({ error: 'Ultra is not available for purchase yet.' });
     const price = prices[plan][interval];
     if (!price) return res.status(503).json({ error: 'Stripe price is not configured.' });
     if (!(await priceIsValid(plan, interval))) return res.status(503).json({ error: 'The configured Stripe price does not match this Pamet plan.' });
@@ -386,6 +437,31 @@ app.post('/api/jobs/weekly-digest', limits.cron, async (req, res, next) => {
       } catch (error) { console.warn('digest_email_failed', { userId: user.id, message: error.message }); }
     }
     res.json({ attempted: users.length, sent });
+  } catch (error) { next(error); }
+});
+
+app.post('/api/jobs/stripe-reconcile', limits.cron, async (req, res, next) => {
+  try {
+    const secret = readBearer(req);
+    if (!process.env.CRON_SECRET || !secret || !secretEqual(secret, process.env.CRON_SECRET)) return res.status(401).json({ error: 'Unauthorized.' });
+    if (!stripe) return res.status(503).json({ error: 'Stripe is not configured.' });
+    const connection = await db();
+    const [users] = await connection.execute('SELECT id,stripe_subscription_id,plan,subscription_status FROM pamet_users WHERE stripe_subscription_id IS NOT NULL');
+    let corrected = 0;
+    const failures = [];
+    for (const user of users) {
+      try {
+        const subscription = await stripe.subscriptions.retrieve(user.stripe_subscription_id, { expand: ['pending_setup_intent', 'default_payment_method'] });
+        const item = subscription.items && subscription.items.data && subscription.items.data[0];
+        const expectedPlan = subscriptionEntitled(subscription) ? planForPrice(item && item.price && item.price.id) : 'free';
+        if (expectedPlan !== user.plan || subscription.status !== user.subscription_status) corrected += 1;
+        await syncSubscription(subscription);
+      } catch (error) {
+        failures.push({ userId: String(user.id), code: clean(error.code || 'stripe_error', 40) });
+      }
+    }
+    await audit(null, 'billing.reconciliation_completed', { checked: users.length, corrected, failed: failures.length });
+    res.json({ checked: users.length, corrected, failed: failures.length, failures });
   } catch (error) { next(error); }
 });
 

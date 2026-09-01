@@ -1,11 +1,12 @@
 {
   "name": "pamet",
-  "version": "2.0.1",
+  "version": "1.0.4",
   "private": true,
   "description": "Pamet — privacy-first personal health journal",
   "main": "secure-server.js",
   "scripts": {
     "start": "node secure-server.js",
+    "test": "node --test tests/*.test.js",
     "check": "node --check server.js && node --check secure-server.js && node --check js/auth.js && node --check js/store.js && node --check js/app.js && node --check js/v1.0.3.js && node --check js/feedback-v1.0.3.js && node --check js/phase2.js && node scripts/check-release.js && node scripts/check-store.js && node scripts/check-phase2.js && node scripts/check-production.js && node scripts/check-http.js"
   },
   "engines": { "node": ">=20" },

@@ -1,4 +1,4 @@
--- Pamet Phase 2 / v2.0.1 database schema. server.js also creates these tables automatically.
+-- Pamet v1.0.4 database schema. server.js also creates these tables automatically in development.
 CREATE TABLE IF NOT EXISTS pamet_users (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
   local_user_id VARCHAR(128) NOT NULL UNIQUE,

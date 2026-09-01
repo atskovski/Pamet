@@ -1,6 +1,6 @@
 # Pamet — Personal Health Journal
 
-**Version 2.0.1 — Phase 2 production hardening** · **Your health history, finally useful.**
+**Version 1.0.4 — advanced plans and production hardening** · **Your health history, finally useful.**
 
 Pamet is a privacy-first personal health journal designed to help people consistently document symptoms, medications, lifestyle factors, and user-provided medical information, then turn those observations into useful, understandable health history.
 
@@ -82,9 +82,9 @@ Pamet contains **no advertising on any plan**.
 | Multiple separate profiles | — | — | ✓ |
 | Advanced Visit Brief | — | — | ✓ |
 
-**Pro is the recommended plan for most individual users.** Its annual option saves about 28%. Ultra is intentionally positioned as a stretch tier for families, caregivers, and people preparing for more complex care conversations. Ultra purchasing requires its Stripe price IDs and `ULTRA_ENABLED=true` in the deployment.
+**Pro is the recommended plan for most individual users.** Its annual option saves about 28%. Ultra is intentionally positioned as a stretch tier for families, caregivers, and people preparing for more complex care conversations. A tier is purchasable only when both of its Stripe price IDs pass Pamet's live catalog validation.
 
-## Phase 2 Highlights
+## v1.0.4 Highlights
 
 - Ten useful starting choices in each logging category: physical symptoms, emotional feelings, activity, and medication types.
 - Paired **+ / −** controls in every category; removing a custom option identifies it by name and requires confirmation.
@@ -139,7 +139,7 @@ Pamet uses **Warm Clinical Minimalism**: warm and personal enough to feel like a
 
 ## Architecture
 
-Pamet remains **local-first** for journal entries. Phase 2 uses a Node.js backend only for functionality that cannot safely be implemented as browser-only JavaScript:
+Pamet remains **local-first** for journal entries. The backend is used only for functionality that cannot safely be implemented as browser-only JavaScript:
 
 Production deployments track the protected `main` branch so only reviewed, merged releases are promoted to `pamet.wasmer.app`.
 
@@ -192,7 +192,7 @@ npm start
 
 ## Optional Email Setup
 
-Email remains disabled unless both Resend environment variables are configured. Phase 2 does not require email for core logging, feedback, billing, or installability.
+Email remains disabled unless both Resend environment variables are configured. Email is not required for core logging, feedback, billing, or installability.
 
 ```text
 RESEND_API_KEY=
@@ -243,13 +243,13 @@ Before production handling of sensitive health information, complete qualified s
 
 ## Roadmap Boundaries
 
-### Now — v1.0.3
+### Now — v1.0.4
 
 Local-first logging, 90-day Free history, Pro unlimited history, weekly summary/digest infrastructure, basic trends/correlations, What Changed?, Visit Brief, reminders, subscription management, export/delete, and basic read-only sharing.
 
-### Next — Phase 2
+### Next — v1.0.5+
 
-Ultra, multi-profile management, advanced caregiver permissions, appointment preparation, longitudinal analysis, advanced Visit Briefs, and more sophisticated sharing.
+Account recovery and remote session revocation, multi-device encrypted sync, FHIR-lite portability, centralized observability, and externally reviewed accessibility/security/compliance controls. See `PRODUCTION_READINESS.md` for launch gates.
 
 ### Not planned for initial product
 

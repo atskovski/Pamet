@@ -5,4 +5,4 @@
 const app = require('./server');
 const port = Number(process.env.PORT || 8080);
 
-app.listen(port, () => console.log(`Pamet v2.0.1 listening securely on ${port}`));
+app.listen(port, () => console.log(`Pamet v1.0.4 listening securely on ${port}`));

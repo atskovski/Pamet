@@ -1,0 +1,23 @@
+name: Pamet Stripe entitlement reconciliation
+
+on:
+  schedule:
+    - cron: '17 7 * * *'
+  workflow_dispatch:
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Reconcile Stripe subscriptions with Pamet entitlements
+        env:
+          PAMET_APP_URL: ${{ secrets.PAMET_APP_URL }}
+          PAMET_CRON_SECRET: ${{ secrets.PAMET_CRON_SECRET }}
+        run: |
+          test -n "$PAMET_APP_URL"
+          test -n "$PAMET_CRON_SECRET"
+          curl --fail-with-body --silent --show-error \
+            -X POST "$PAMET_APP_URL/api/jobs/stripe-reconcile" \
+            -H "Authorization: Bearer $PAMET_CRON_SECRET" \
+            -H "Content-Type: application/json" \
+            --data '{}'

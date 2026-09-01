@@ -1,4 +1,4 @@
-/* Pamet Phase 2 — profiles, appointment preparation, longitudinal summaries, and advanced sharing. */
+/* Pamet v1.0.4 — profiles, appointment preparation, longitudinal summaries, and advanced sharing. */
 (function () {
   "use strict";
   const S = window.PametStore;
@@ -127,7 +127,7 @@
   function injectSettings() {
     const profileCard = $("#screen-settings .profile-card");
     if (!profileCard) return;
-    const footer = $(".footer-line"); if (footer) footer.textContent = "Pamet v2.0.1 · Your health history, finally useful.";
+    const footer = $(".footer-line"); if (footer) footer.textContent = "Pamet v1.0.4 · Your health history, finally useful.";
     let switcher = $("#phase2ProfileSwitcher");
     if (!switcher) { switcher = document.createElement("section"); switcher.id = "phase2ProfileSwitcher"; switcher.className = "settings-card phase2-profile-switcher"; profileCard.insertAdjacentElement("afterend", switcher); }
     switcher.innerHTML = `<div><p class="settings-section">Active profile</p><strong>${esc(S.activeProfile.name)}</strong><span>${esc(S.activeProfile.relationship)}</span></div><button type="button" class="btn btn-ghost" id="phase2ManageProfiles">${ultra() ? "Manage" : "Ultra"}</button>`;
@@ -145,7 +145,7 @@
   }, true);
 
   document.title = "Pamet — Track, understand, prepare";
-  const footer = $(".footer-line"); if (footer) footer.textContent = "Pamet v2.0.1 · Your health history, finally useful.";
+  const footer = $(".footer-line"); if (footer) footer.textContent = "Pamet v1.0.4 · Your health history, finally useful.";
   injectSettings();
   new MutationObserver(() => enhancePlanModal()).observe(document.body, { childList: true, subtree: true });
   $$(".tab[data-tab='settings']").forEach((tab) => tab.addEventListener("click", () => setTimeout(injectSettings, 20)));

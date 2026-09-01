@@ -1,6 +1,6 @@
-/* Pamet — service worker (Phase 2 / v2.0.1): static shell only; API/share data is never cached. */
-const CACHE="pamet-shell-v201-2";
-const SHELL=["/","/index.html","/css/styles.css?v=2012","/css/brand-v1.0.3.css?v=2012","/css/release-v1.0.3.css?v=2012","/css/phase2.css?v=2012","/js/store.js?v=2012","/js/auth.js?v=2012","/js/app.js?v=2012","/js/v1.0.3.js?v=2012","/js/feedback-v1.0.3.js?v=2012","/js/phase2.js?v=2012","/manifest.webmanifest","/assets/pamet-mark.svg","/assets/icon-192.png","/assets/icon-512.png","/assets/icon-maskable-512.png"];
+/* Pamet v1.0.4 service worker: static shell only; API/share data is never cached. */
+const CACHE="pamet-shell-v104-0";
+const SHELL=["/","/index.html","/css/styles.css?v=1040","/css/brand-v1.0.3.css?v=1040","/css/release-v1.0.3.css?v=1040","/css/phase2.css?v=1040","/js/store.js?v=1040","/js/auth.js?v=1040","/js/app.js?v=1040","/js/v1.0.3.js?v=1040","/js/feedback-v1.0.3.js?v=1040","/js/phase2.js?v=1040","/manifest.webmanifest","/assets/pamet-mark.svg","/assets/icon-192.png","/assets/icon-512.png","/assets/icon-maskable-512.png"];
 const PATHS=new Set(SHELL.map(path=>new URL(path,self.location.origin).pathname));
 self.addEventListener("install",e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())));
 self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));

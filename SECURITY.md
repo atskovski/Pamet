@@ -1,6 +1,6 @@
 # Pamet Security and Privacy Notes
 
-Pamet handles sensitive personal health observations. This document records engineering boundaries for the v2.0.1 web implementation; it is not a legal privacy policy, security certification, or representation of HIPAA compliance.
+Pamet handles sensitive personal health observations. This document records engineering boundaries for the v1.0.4 web implementation; it is not a legal privacy policy, security certification, or representation of HIPAA compliance.
 
 ## Design boundaries
 
@@ -32,7 +32,7 @@ Transactional email uses the configured email provider only when enabled. Weekly
 
 ## Sharing
 
-Caregiver and provider sharing is user-initiated in v2.0.1. Pro links are view-only; Ultra links may also allow the recipient to print/save the shared summary.
+Caregiver and provider sharing is user-initiated in v1.0.4. Pro links are view-only; Ultra links may also allow the recipient to print/save the shared summary.
 
 - Share tokens use cryptographically secure randomness.
 - Only token hashes are stored server-side.
@@ -46,6 +46,6 @@ The backend stores account metadata, subscription state, digest preference/aggre
 
 ## Production review
 
-The v2.0.1 runtime now applies a static-file allowlist, CSP, HSTS, frame protection, request IDs, body limits, handler validation, generic production errors, endpoint rate limits, database readiness checks, and automated HTTP security smoke tests.
+The v1.0.4 runtime applies a static-file allowlist, CSP, HSTS, frame protection, request IDs, body limits, handler validation, generic production errors, endpoint rate limits, database readiness checks, and automated HTTP security tests.
 
 Before representing Pamet as legally or operationally production-ready for sensitive health data, complete an independent security/privacy review plus database encryption and restore drills, centralized redacted logging, distributed rate limiting, incident response, retention enforcement, vendor/data-processing agreements, and applicable legal/regulatory analysis. Multi-device identity, recovery, MFA/passkeys, and session revocation require a reviewed server-side identity provider.

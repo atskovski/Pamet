@@ -14,7 +14,7 @@ function check(condition, message) { if (!condition) throw new Error(message); }
 function luminance(hex) { const values = hex.match(/../g).map((part) => parseInt(part, 16) / 255).map((value) => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4); return .2126 * values[0] + .7152 * values[1] + .0722 * values[2]; }
 function contrast(a, b) { const first = luminance(a), second = luminance(b); return (Math.max(first, second) + .05) / (Math.min(first, second) + .05); }
 
-check(html.includes('css/phase2.css') && html.includes('js/phase2.js'), 'Phase 2 assets must load.');
+check(html.includes('css/phase2.css') && html.includes('js/phase2.js'), 'The v1.0.4 advanced-feature assets must load.');
 check(['removeSymptomMinus','removeMoodMinus','removeActivityMinus','removeMedMinus'].every((id) => html.includes(`id="${id}"`)), 'Every log category must expose a remove control.');
 check(store.includes('const SYMPTOMS = ["Headache","Migraine","Fatigue","Back pain","Joint pain","Nausea","Dizziness","Stomach pain","Brain fog","Shortness of breath"]'), 'The researched ten-symptom starter set must remain stable.');
 check(store.includes('pamet_profiles_v2') && store.includes('addProfile(name') && store.includes('switchProfile(id)'), 'Ultra profiles must have separate local persistence.');
@@ -24,6 +24,6 @@ check(theme.includes('--app-background: #1B3434') && theme.includes('--border-co
 check(contrast('F7FAF8', '294846') >= 4.5 && contrast('D9E5E0', '294846') >= 4.5 && contrast('82A19B', '294846') >= 3, 'Dark text and control boundaries must meet WCAG AA contrast targets.');
 check(server.includes("app.delete('/api/account', auth") && server.includes('stripe.subscriptions.cancel'), 'Account deletion must remove backend data and cancel active billing.');
 check(server.includes('permission_level') && schema.includes('permission_level'), 'Advanced sharing permissions must be persisted by the backend.');
-check(server.includes("const VERSION = '2.0.1'"), 'The health endpoint must report v2.0.1.');
+check(server.includes("const VERSION = '1.0.4'"), 'The health endpoint must report v1.0.4.');
 
-console.log('Pamet Phase 2 checks passed.');
+console.log('Pamet v1.0.4 advanced-feature checks passed.');

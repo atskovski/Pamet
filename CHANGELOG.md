@@ -2,10 +2,18 @@
 
 This file is the repository-only system of record for product and engineering changes. It is **not rendered inside the Pamet application**.
 
-## [2.0.1] — 2026-09-01
+## [1.0.4] — 2026-09-01
+
+This release normalizes the advanced-plan work that was temporarily labeled 2.0.x into the compatible v1 release line. The next release begins at v1.0.5.
 
 ### Production hardening
 
+- Normalized the release line to v1.0.4 and documented semantic versioning beginning with v1.0.5.
+- Removed the redundant Ultra feature flag; Pro and Ultra availability now depends on their own monthly/annual price IDs passing live Stripe catalog validation.
+- Added daily Stripe entitlement reconciliation for recovery from missed or delayed webhook delivery.
+- Added behavior-level HTTP tests and dependency auditing to the pull-request/main CI workflow.
+- Added optional privacy-minimal feedback webhook routing and explicit browser-data, insight-safety, and production-readiness documentation.
+- Reworked the plan comparison into a concise, scroll-safe Pro/Ultra view with five clearly separated features and Pro positioned as the recommended tier.
 - Consolidated the runtime into one Express application and removed duplicate billing/webhook implementations.
 - Replaced repository-root static serving with explicit app-asset routes, preventing source, schema, lockfile, and configuration-example disclosure.
 - Added CSP, HSTS, frame/content-type/referrer/permissions protections, request IDs, no-store API responses, strict JSON/body limits, safe production errors, and endpoint rate limits.
@@ -22,7 +30,7 @@ This file is the repository-only system of record for product and engineering ch
 - Made database initialization single-flight with a safe cold-start retry and failed-pool cleanup.
 - Separated production schema migration from request startup; production readiness now performs a connection check instead of DDL.
 
-## [2.0.0] — 2026-09-01
+### Advanced plan capabilities
 
 ### Added
 
@@ -32,11 +40,11 @@ This file is the repository-only system of record for product and engineering ch
 - Added Ultra appointment preparation, 90-day longitudinal comparisons with visible data-strength context, and Advanced Visit Brief generation.
 - Added Ultra advanced sharing with profile scope, view/download permissions, configurable expiration, optional notes, revocation, and backend permission metadata.
 - Added a complete authenticated backend account-deletion endpoint that cancels an active Stripe subscription and deletes account, audit, and cascade-linked sharing data.
-- Added automated Phase 2 assertions for defaults, removal controls, profiles, advanced tools, account deletion, permission persistence, service-worker versioning, and dark-mode contrast.
+- Added automated v1.0.4 assertions for defaults, removal controls, profiles, advanced tools, account deletion, permission persistence, service-worker versioning, and dark-mode contrast.
 
 ### Changed
 
-- Version changed from **v1.0.3** to **v2.0.0** for the Phase 2 feature release.
+- Version changed incrementally from **v1.0.3** to **v1.0.4** for this compatible feature and hardening release.
 - Reworked dark mode into layered teal surfaces with 9.47:1 primary-text contrast, 7.70:1 secondary-text contrast, and at least 3:1 meaningful control-boundary contrast.
 - Settings help controls now prevent accidental toggle changes, support keyboard activation, expose expanded state, and close when users click elsewhere.
 - CSV and JSON export are available to every plan as a data-portability and trust requirement.
@@ -109,7 +117,7 @@ This file is the repository-only system of record for product and engineering ch
 - “Create your account” is hidden on devices where a Pamet account already exists.
 - **Your plan** now follows the product architecture: Free — Track, Pro — Understand, Ultra — Prepare.
 - Pro pricing changed to **$6.99/month** and **$59.99/year**; annual is preferred and communicates approximately 28% savings.
-- Ultra pricing is represented as **$12.99/month** and **$99.99/year**, but purchasing is disabled by default until Phase 2 functionality is ready.
+- Ultra pricing is **$12.99/month** and **$99.99/year**. Checkout is available only when both live Stripe price IDs pass server-side catalog validation.
 - Caregiver Access and Primary Care Access now require a paid entitlement before configuration.
 - Weekly digest changed from an unimplemented local-only preference to an explicit server-backed opt-in.
 - Existing v1.0.1 users with the old default-on weekly digest are migrated to off until they affirmatively opt in.

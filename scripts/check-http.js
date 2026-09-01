@@ -13,7 +13,7 @@ async function check(condition, message) { if (!condition) throw new Error(messa
   try {
     const health = await fetch(`${base}/api/health`);
     const body = await health.json();
-    await check(health.ok && body.version === '2.0.1', 'Health handler must report v2.0.1.');
+    await check(health.ok && body.version === '1.0.4', 'Health handler must report v1.0.4.');
     await check(health.headers.get('x-content-type-options') === 'nosniff', 'Security headers must be present.');
     await check(health.headers.get('content-security-policy')?.includes("default-src 'self'"), 'CSP must be present.');
     await check(health.headers.get('strict-transport-security')?.includes('max-age='), 'HSTS must be present in production.');

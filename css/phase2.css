@@ -1,4 +1,4 @@
-/* Pamet Phase 2 — accessible dark palette and advanced feature surfaces. */
+/* Pamet v1.0.4 — accessible dark palette and advanced feature surfaces. */
 body.dark {
   --app-background: #1B3434;
   --surface-secondary: #314F4D;
@@ -87,6 +87,14 @@ body.dark .pamet-billing-toggle button.active { background: #3D7359; color: #FFF
 .phase2-recommended-plan { position: relative; border-color: var(--pamet-sage); box-shadow: inset 0 0 0 1px var(--pamet-sage); }
 .phase2-plan-label { display: inline-block; margin-bottom: 8px; padding: 3px 7px; border-radius: 7px; background: #E7F6ED; color: #245C45; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
 .phase2-plan-label.stretch { background: #EEF6FA; color: #284E64; }
+.pamet-compare-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
+.pamet-compare-card { display: flex; flex-direction: column; min-width: 0; padding: 16px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--card-bg); }
+.pamet-compare-card.recommended { border-color: var(--pamet-sage); box-shadow: inset 0 0 0 1px var(--pamet-sage); }
+.pamet-compare-card h3 { margin: 0; font-size: 17px; }
+.pamet-compare-card > p { min-height: 54px; margin: 5px 0 0; color: var(--text-secondary); font-size: 12px; line-height: 1.45; }
+.pamet-compare-card .price { margin-top: 10px; color: var(--pamet-teal); font-size: 14px; font-weight: 700; }
+.pamet-compare-card ul { flex: 1; margin: 12px 0 16px; padding-left: 18px; color: var(--text-secondary); font-size: 12px; line-height: 1.55; }
+body.dark .pamet-compare-card .price { color: #AEE3C4; }
 body.dark .phase2-plan-label { background: #3D7359; color: #FFFFFF; }
 body.dark .phase2-plan-label.stretch { background: #345B68; color: #E4F3F8; }
-@media(max-width:560px){.phase2-tool-grid{grid-template-columns:1fr}.phase2-stat-grid{grid-template-columns:1fr}}
+@media(max-width:560px){.phase2-tool-grid,.phase2-stat-grid,.pamet-compare-grid{grid-template-columns:1fr}.pamet-compare-card>p{min-height:0}}
