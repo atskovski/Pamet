@@ -2,6 +2,32 @@
 
 This file is the repository-only system of record for product and engineering changes. It is **not rendered inside the Pamet application**.
 
+## [1.0.3] — 2026-09-01
+
+### Added
+
+- Added a first-use Home state: “Your health history starts here. Entries and observations will appear here once you track your details.”
+- Added an explicit **No symptoms today** logging choice and required symptom status, mood, and activity before an entry can be saved.
+- Added a privacy-minimal **Help improve Pamet** form. It stores category, optional 1–5 rating, message, app version, screen, and timestamp in `pamet_feedback`; it stores no account identifier or health entry.
+- Added automated checks for fresh-store emptiness, migration of legacy sample entries, auth form visibility, empty dashboard state, feedback storage boundaries, and PWA installability.
+- Added complete PWA icon sizes, a maskable icon, app shortcut, and a v1.0.3 static-shell cache.
+
+### Changed
+
+- Version changed incrementally from **v1.0.2** to **v1.0.3**.
+- First-time users no longer receive sample health entries, counts, streaks, symptoms, observations, or recent-entry content. Legacy `seed-*` sample records are removed while real entries are preserved.
+- Dashboard metrics, the observation banner, and the Recent entries section remain hidden until the user has recorded an entry.
+- Replaced user-facing AI-first language with **Pamet pattern detection**, **Pamet observations**, and **Pamet pattern summary**.
+- Entry confirmation now reads: “Entry saved! Pamet is updating your patterns.” and remains hidden until a valid entry is saved.
+- The account-creation form remains hidden until **Don’t have an account? Create one** is selected; name fields no longer show sample names.
+- Refined the Pamet mark for clear reproduction from 16 px through install-icon sizes and regenerated 192 px, 512 px, and maskable assets.
+
+### Privacy / Data handling
+
+- Feedback submission requires a valid Pamet device credential in transit to reduce abuse, but the credential, user ID, email, IP address, journal entries, symptoms, medications, and notes are not written to `pamet_feedback`.
+- The feedback table has no foreign key to `pamet_users` and no account column.
+- Service-worker caching remains limited to static assets and bypasses all `/api/` requests.
+
 ## [1.0.2] — 2026-08-31
 
 ### Added
@@ -24,6 +50,8 @@ This file is the repository-only system of record for product and engineering ch
 ### Changed
 
 - Version changed from **v1.0.1** to **v1.0.2**.
+- The v1.0.2 brand stylesheet and runtime are now loaded directly so the production UI cannot remain on the v1.0.1 fallback experience.
+- Hidden authentication forms now remain hidden even when the shared form layout declares `display: flex`.
 - Authentication sessions changed from `sessionStorage` to persistent `localStorage`; users remain signed in until explicit logout.
 - Existing v1.0.1 session state is migrated when possible.
 - PBKDF2 iterations increased for new/changed local passwords.

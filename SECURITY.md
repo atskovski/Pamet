@@ -1,6 +1,6 @@
 # Pamet Security and Privacy Notes
 
-Pamet handles sensitive personal health observations. This document records engineering boundaries for the v1.0.2 web implementation; it is not a legal privacy policy, security certification, or representation of HIPAA compliance.
+Pamet handles sensitive personal health observations. This document records engineering boundaries for the v1.0.3 web implementation; it is not a legal privacy policy, security certification, or representation of HIPAA compliance.
 
 ## Design boundaries
 
@@ -30,7 +30,7 @@ Transactional email uses the configured email provider only when enabled. Weekly
 
 ## Sharing
 
-Caregiver and provider sharing is user-initiated and read-only in v1.0.2.
+Caregiver and provider sharing is user-initiated and read-only in v1.0.3.
 
 - Share tokens use cryptographically secure randomness.
 - Only token hashes are stored server-side.

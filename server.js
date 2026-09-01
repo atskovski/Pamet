@@ -29,6 +29,7 @@ async function schema(){
   await pool.query(`CREATE TABLE IF NOT EXISTS pamet_users (id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,local_user_id VARCHAR(128) NOT NULL UNIQUE,device_key_hash CHAR(64) NOT NULL UNIQUE,email VARCHAR(254) NOT NULL UNIQUE,first_name VARCHAR(100) NOT NULL DEFAULT '',last_name VARCHAR(100) NOT NULL DEFAULT '',timezone VARCHAR(100) NOT NULL DEFAULT 'UTC',plan VARCHAR(16) NOT NULL DEFAULT 'free',subscription_status VARCHAR(32) NOT NULL DEFAULT 'none',stripe_customer_id VARCHAR(128) NULL UNIQUE,stripe_subscription_id VARCHAR(128) NULL UNIQUE,weekly_digest_enabled BOOLEAN NOT NULL DEFAULT FALSE,latest_digest_json JSON NULL,confirmation_email_sent_at DATETIME NULL,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,INDEX idx_digest(weekly_digest_enabled)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
   await pool.query(`CREATE TABLE IF NOT EXISTS pamet_sharing_invites (id CHAR(36) PRIMARY KEY,user_id BIGINT UNSIGNED NOT NULL,kind VARCHAR(20) NOT NULL,name VARCHAR(100) NOT NULL,email VARCHAR(254) NOT NULL,organization VARCHAR(120) NOT NULL DEFAULT '',status VARCHAR(20) NOT NULL DEFAULT 'active',share_token_hash CHAR(64) NOT NULL UNIQUE,snapshot_json JSON NOT NULL,expires_at DATETIME NOT NULL,revoked_at DATETIME NULL,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY(user_id) REFERENCES pamet_users(id) ON DELETE CASCADE,INDEX idx_share(user_id,kind,status)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
   await pool.query(`CREATE TABLE IF NOT EXISTS pamet_audit_log (id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,user_id BIGINT UNSIGNED NULL,event_type VARCHAR(80) NOT NULL,event_json JSON NULL,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,INDEX idx_audit(user_id,created_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS pamet_feedback (id CHAR(36) PRIMARY KEY,category VARCHAR(24) NOT NULL,rating TINYINT UNSIGNED NULL,message VARCHAR(1000) NOT NULL,app_version VARCHAR(16) NOT NULL,screen VARCHAR(40) NOT NULL,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,INDEX idx_feedback_created(created_at),INDEX idx_feedback_category(category)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
 }
 async function audit(userId,type,data={}){try{const p=await db();await p.execute('INSERT INTO pamet_audit_log(user_id,event_type,event_json) VALUES(?,?,?)',[userId||null,type,JSON.stringify(data)])}catch{}}
 async function mail(to,subject,body){
@@ -50,11 +51,27 @@ app.use((req,res,next)=>{res.setHeader('X-Content-Type-Options','nosniff');res.s
 async function auth(req,res,next){
   try{const a=String(req.headers.authorization||''),k=a.startsWith('Bearer ')?a.slice(7).trim():'';if(k.length<40)return res.status(401).json({error:'Authentication required.'});const p=await db(),[rows]=await p.execute('SELECT * FROM pamet_users WHERE device_key_hash=? LIMIT 1',[sha(k)]);if(!rows.length)return res.status(401).json({error:'Authentication required.'});req.user=rows[0];next()}catch(e){next(e)}
 }
-app.get('/api/health',(req,res)=>res.json({ok:true,version:'1.0.2'}));
+app.get('/api/health',(req,res)=>res.json({ok:true,version:'1.0.3'}));
 app.post('/api/account/bootstrap',async(req,res,next)=>{
   try{const local=clean(req.body.localUserId,128),key=clean(req.body.deviceKey,256),email=clean(req.body.email,254).toLowerCase(),first=clean(req.body.firstName,100),last=clean(req.body.lastName,100),tz=clean(req.body.timezone||'UTC',100);if(!local||key.length<40||!emailOk(email))return res.status(400).json({error:'A valid local Pamet account is required.'});const p=await db(),kh=sha(key),[rows]=await p.execute('SELECT * FROM pamet_users WHERE local_user_id=? OR email=?',[local,email]);let u=rows.find(x=>x.local_user_id===local),created=false;if(u){if(u.device_key_hash!==kh)return res.status(403).json({error:'This device credential does not match the account.'});await p.execute('UPDATE pamet_users SET email=?,first_name=?,last_name=?,timezone=? WHERE id=?',[email,first,last,tz,u.id])}else{if(rows.some(x=>x.email===email))return res.status(409).json({error:'This email is already linked to another Pamet installation.'});const [r]=await p.execute('INSERT INTO pamet_users(local_user_id,device_key_hash,email,first_name,last_name,timezone) VALUES(?,?,?,?,?,?)',[local,kh,email,first,last,tz]);const [fresh]=await p.execute('SELECT * FROM pamet_users WHERE id=?',[r.insertId]);u=fresh[0];created=true}const [fresh]=await p.execute('SELECT * FROM pamet_users WHERE id=?',[u.id]);u=fresh[0];let emailSent=false;if((created||!u.confirmation_email_sent_at)&&process.env.RESEND_API_KEY){try{emailSent=await mail(u.email,'Welcome to Pamet',`<h1 style="font-size:22px">Thanks for registering with Pamet.</h1><p>Welcome${u.first_name?' '+html(u.first_name):''}. Your account is ready.</p><p>Start with small entries and build a health history you can understand and bring to your next appointment.</p><p><a href="${APP}" style="display:inline-block;background:#4CAF7A;color:#0B2D24;text-decoration:none;font-weight:700;padding:11px 18px;border-radius:10px">Open Pamet</a></p>`);if(emailSent)await p.execute('UPDATE pamet_users SET confirmation_email_sent_at=NOW() WHERE id=?',[u.id])}catch{}}await audit(u.id,created?'account.created':'account.bootstrap',{emailSent});res.json({user:publicUser(u),emailSent})}catch(e){next(e)}
 });
-app.get('/api/billing/config',(req,res)=>res.json({publishableKey:process.env.STRIPE_PUBLISHABLE_KEY||'',proEnabled:!!(stripe&&prices.pro.monthly&&prices.pro.annual),ultraEnabled:!!(ultraEnabled&&stripe&&prices.ultra.monthly&&prices.ultra.annual)}));
+app.post('/api/feedback',auth,async(req,res,next)=>{
+  try{
+    const allowed=new Set(['idea','usability','bug','other']);
+    const category=allowed.has(req.body.category)?req.body.category:'other';
+    const message=clean(req.body.message,1000);
+    const rawRating=req.body.rating;
+    const rating=rawRating===null||rawRating===undefined||rawRating===''?null:Number(rawRating);
+    const appVersion=clean(req.body.appVersion||'1.0.3',16);
+    const screen=clean(req.body.screen||'settings',40);
+    if(message.length<10)return res.status(400).json({error:'Please enter at least 10 characters of feedback.'});
+    if(rating!==null&&(!Number.isInteger(rating)||rating<1||rating>5))return res.status(400).json({error:'Rating must be between 1 and 5.'});
+    const p=await db();
+    await p.execute('INSERT INTO pamet_feedback(id,category,rating,message,app_version,screen) VALUES(?,?,?,?,?,?)',[crypto.randomUUID(),category,rating,message,appVersion,screen]);
+    res.status(201).json({saved:true});
+  }catch(e){next(e)}
+});
+app.get('/api/billing/config',(req,res)=>res.json({publishableKey:process.env.STRIPE_PUBLISHABLE_KEY||'',proEnabled:!!(stripe&&prices.pro.monthly&&prices.pro.annual),ultraEnabled:!!(ultraEnabled&&stripe&&prices.ultra.monthly&&prices.ultra.annual),emailEnabled:!!(process.env.RESEND_API_KEY&&process.env.EMAIL_FROM)}));
 app.get('/api/billing/status',auth,(req,res)=>res.json({user:publicUser(req.user)}));
 async function customer(u){if(u.stripe_customer_id)return u.stripe_customer_id;const c=await stripe.customers.create({email:u.email,name:[u.first_name,u.last_name].filter(Boolean).join(' '),metadata:{pamet_user_id:String(u.id)}});const p=await db();await p.execute('UPDATE pamet_users SET stripe_customer_id=? WHERE id=?',[c.id,u.id]);return c.id}
 app.post('/api/billing/create-subscription',auth,async(req,res,next)=>{
@@ -77,5 +94,5 @@ app.get('/api/share/:token',async(req,res,next)=>{try{const raw=clean(req.params
 app.use(['/db','/.github'],(req,res)=>res.status(404).end());
 app.use(express.static(path.join(__dirname),{dotfiles:'ignore',extensions:['html']}));
 app.use((err,req,res,next)=>{console.error(err);if(res.headersSent)return next(err);res.status(500).json({error:process.env.NODE_ENV==='production'?'Pamet could not complete that request.':err.message})});
-if(require.main===module)app.listen(PORT,()=>console.log(`Pamet v1.0.2 listening on ${PORT}`));
+if(require.main===module)app.listen(PORT,()=>console.log(`Pamet v1.0.3 listening on ${PORT}`));
 module.exports=app;

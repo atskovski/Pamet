@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="theme-color" content="#C4673A" />
-  <title>Pamet — Symptom Journal</title>
+  <meta name="theme-color" content="#0F3D3E" />
+  <meta name="description" content="Your health history, finally useful. Track what you feel, see what changes, and bring the story to your doctor." />
+  <title>Pamet — Your health history, finally useful</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Georgia&display=swap" rel="stylesheet" />
@@ -14,11 +15,13 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <link rel="apple-touch-icon" href="assets/icon-192.png" />
   <link rel="stylesheet" href="css/styles.css" />
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%23C4673A'/%3E%3Ctext x='50' y='68' font-size='58' text-anchor='middle' fill='%23FAF0EA' font-family='Georgia'%3EP%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="css/brand-v1.0.3.css" data-pamet-brand-v103 />
+  <link rel="stylesheet" href="css/release-v1.0.3.css" />
+  <link rel="icon" href="assets/pamet-mark.svg" type="image/svg+xml" />
 </head>
 <body>
 
-  <!-- ============ WELCOME / AUTH (v1.0.1) ============ -->
+  <!-- ============ WELCOME / AUTH (v1.0.3) ============ -->
   <div class="welcome" id="welcome">
     <div class="welcome-inner">
       <div class="welcome-brand">
@@ -33,15 +36,15 @@
         <label class="field"><span>Email</span><input class="text-input" type="email" id="loginEmail" placeholder="you@example.com" autocomplete="username" required /></label>
         <label class="field"><span>Password</span><input class="text-input" type="password" id="loginPassword" placeholder="Your password" autocomplete="current-password" required /></label>
         <button class="btn btn-primary btn-block" type="submit">Log in</button>
-        <p class="welcome-switch">New here? <a href="#" id="showRegister">Create an account</a></p>
+        <p class="welcome-switch">Don’t have an account? <a href="#" id="showRegister">Create one</a></p>
       </form>
 
       <!-- Register -->
       <form class="welcome-form" id="registerForm" hidden>
         <h2 class="welcome-title">Create your account</h2>
         <div class="field-row">
-          <label class="field"><span>First name</span><input class="text-input" id="regFirstName" placeholder="Chris" autocomplete="given-name" required /></label>
-          <label class="field"><span>Last name</span><input class="text-input" id="regLastName" placeholder="P." autocomplete="family-name" /></label>
+          <label class="field"><span>First name</span><input class="text-input" id="regFirstName" autocomplete="given-name" required /></label>
+          <label class="field"><span>Last name <small>(optional)</small></span><input class="text-input" id="regLastName" autocomplete="family-name" /></label>
         </div>
         <label class="field"><span>Email</span><input class="text-input" type="email" id="regEmail" placeholder="you@example.com" autocomplete="username" required /></label>
         <label class="field"><span>Password</span><input class="text-input" type="password" id="regPassword" placeholder="6+ characters" autocomplete="new-password" minlength="6" required /></label>
@@ -75,7 +78,7 @@
           <div class="content-col">
 
             <div class="dash-header">
-              <h1 class="greeting" id="greeting">Good morning, Alex 👋 <span class="tier-badge" id="greetTier" hidden></span></h1>
+              <h1 class="greeting" id="greeting">Good morning, friend 👋 <span class="tier-badge" id="greetTier" hidden></span></h1>
               <p class="today-date" id="todayDate"></p>
               <p class="tier-nudge" id="tierNudge" hidden></p>
             </div>
@@ -94,13 +97,22 @@
             <div class="insight-banner" id="insightBanner" hidden>
               <span class="insight-dot"></span>
               <div class="insight-body">
-                <p class="insight-kicker">AI INSIGHT — HIGH CONFIDENCE</p>
+                <p class="insight-kicker">OBSERVATION — BASED ON YOUR LOGS</p>
                 <p class="insight-text" id="insightText"></p>
                 <button class="link-btn" data-nav="patterns">View all patterns →</button>
               </div>
             </div>
 
-            <div class="metrics-grid">
+            <section class="home-empty-state" id="homeEmptyState" hidden>
+              <span class="home-empty-mark" aria-hidden="true">＋</span>
+              <div>
+                <h2>Your health history starts here</h2>
+                <p>Entries and observations will appear here once you track your details.</p>
+              </div>
+              <button class="btn btn-primary" id="emptyLogEntry" type="button">Log your first entry</button>
+            </section>
+
+            <div class="metrics-grid" id="metricsGrid" hidden>
               <article class="metric-card" data-metric="symptomDays">
                 <span class="metric-icon" style="--icon-bg:var(--warm-light)"><svg class="icon" viewBox="0 0 24 24"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg></span>
                 <div class="metric-value" data-value>--</div>
@@ -122,17 +134,18 @@
               <article class="metric-card" data-metric="patterns">
                 <span class="metric-icon" style="--icon-bg:var(--sage-light)"><svg class="icon" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v1a3 3 0 0 0-3 3v1a3 3 0 0 0-2 3c0 1.5 1 2.8 2 3v1a3 3 0 0 0 3 3h6a3 3 0 0 0 3-3v-1c1-.2 2-1.5 2-3a3 3 0 0 0-2-3V9a3 3 0 0 0-3-3V5a3 3 0 0 0-3-3z"/></svg></span>
                 <div class="metric-value" data-value>--</div>
-                <div class="metric-labels"><span data-label>AI patterns</span><span data-sublabel>confirmed</span></div>
-                <span class="metric-badge" data-badge="AI active" style="--badge:var(--sage-green)"></span>
+                <div class="metric-labels"><span data-label>Pamet patterns</span><span data-sublabel>confirmed</span></div>
+                <span class="metric-badge" data-badge="Pamet active" style="--badge:var(--sage-green)"></span>
               </article>
             </div>
 
-            <div class="section-head">
-              <h2 class="section-title">Recent entries</h2>
-              <button class="link-btn" data-nav="calendar">View all</button>
-            </div>
-
-            <div class="entry-list" id="recentEntries"></div>
+            <section id="recentSection" hidden>
+              <div class="section-head">
+                <h2 class="section-title">Recent entries</h2>
+                <button class="link-btn" data-nav="calendar">View all</button>
+              </div>
+              <div class="entry-list recent-entry-list" id="recentEntries"></div>
+            </section>
 
           </div>
         </div>
@@ -170,11 +183,11 @@
       <section class="screen" id="screen-patterns">
         <div class="scroll-area">
           <div class="content-col">
-            <h2 class="screen-title">AI Patterns</h2>
+            <h2 class="screen-title">Insights</h2>
             <div class="insight-banner patterns-banner">
               <span class="insight-dot"></span>
               <div class="insight-body">
-                <p class="insight-kicker">AI ANALYSIS — <span id="patternDaysCount"></span> DAYS OF DATA</p>
+                <p class="insight-kicker">PAMET PATTERN SUMMARY — <span id="patternDaysCount"></span> DAYS OF DATA</p>
                 <p class="insight-text" id="patternSummary"></p>
               </div>
             </div>
@@ -209,7 +222,7 @@
               <span class="avatar" id="userAvatar">A</span>
               <div class="profile-text">
                 <div class="profile-name-row">
-                  <input class="name-input" id="userNameInput" value="Alex" aria-label="Your name" />
+                  <input class="name-input" id="userNameInput" value="" aria-label="Your name" />
                   <span class="tier-badge" id="settingsTier" hidden></span>
                 </div>
                 <p class="plan-line"><span id="settingsEmail">you@example.com</span> · <span id="planLineText">Free plan</span></p>
@@ -224,32 +237,36 @@
             <div class="settings-card">
               <p class="settings-section">Home screen</p>
               <label class="setting-row"><span class="setting-label"><svg class="icon sm" viewBox="0 0 24 24"><path d="M13 2L3 14h7l-1 8 10-12h-7z"/></svg> Show day streak <span class="help" data-help="Show or hide the day-streak card at the top of Home. Turn off to keep the home screen uncluttered.">?</span></span><input type="checkbox" class="switch" id="setShowStreak" /></label>
-              <label class="setting-row"><span class="setting-label"><svg class="icon sm" viewBox="0 0 24 24"><path d="M12 3a9 9 0 0 0-9 9c0 2.4 1 4.6 2.5 6.2L4 21h4l1-2 3 2 3-2 1 2h4l-1.5-2.8C20 16.6 21 14.4 21 12a9 9 0 0 0-9-9z"/></svg> Show AI insight <span class="help" data-help="Show or hide the AI insight banner on Home. Your patterns are still detected and available in the Patterns tab.">?</span></span><input type="checkbox" class="switch" id="setShowInsight" /></label>
+              <label class="setting-row"><span class="setting-label"><svg class="icon sm" viewBox="0 0 24 24"><path d="M12 3a9 9 0 0 0-9 9c0 2.4 1 4.6 2.5 6.2L4 21h4l1-2 3 2 3-2 1 2h4l-1.5-2.8C20 16.6 21 14.4 21 12a9 9 0 0 0-9-9z"/></svg> Show Pamet observations <span class="help" data-help="Show or hide observations on Home. Your patterns remain available in Insights.">?</span></span><input type="checkbox" class="switch" id="setShowInsight" /></label>
             </div>
 
             <div class="settings-card">
               <p class="settings-section">Notifications</p>
               <label class="setting-row"><span class="setting-label"><svg class="icon sm" viewBox="0 0 24 24"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></svg> Daily reminder (8pm) <span class="help" data-help="A gentle nudge every evening so you don't forget to log your day.">?</span></span><input type="checkbox" class="switch" id="setDailyReminder" /></label>
-              <label class="setting-row"><span class="setting-label"><svg class="icon sm" viewBox="0 0 24 24"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg> New pattern alerts <span class="help" data-help="Notify you the moment the AI confirms a new pattern in your data.">?</span></span><input type="checkbox" class="switch" id="setPatternAlerts" /></label>
+              <label class="setting-row"><span class="setting-label"><svg class="icon sm" viewBox="0 0 24 24"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg> New pattern alerts <span class="help" data-help="Notify you when Pamet confirms a new pattern in your entries.">?</span></span><input type="checkbox" class="switch" id="setPatternAlerts" /></label>
               <label class="setting-row"><span class="setting-label"><svg class="icon sm" viewBox="0 0 24 24"><path d="M12 2c1 3-2 5-2 8a4 4 0 0 0 8 0c0-1 0-2-1-3 0 2-2 2-2 1 0-2 1-4-3-6z"/></svg> Streak reminders <span class="help" data-help="Remind you if your logging streak is about to break.">?</span></span><input type="checkbox" class="switch" id="setStreakReminders" /></label>
               <label class="setting-row"><span class="setting-label"><svg class="icon sm" viewBox="0 0 24 24"><path d="M4 4h16v16H4z M4 6l8 6 8-6"/></svg> Weekly digest email <span class="help" data-help="A weekly summary of your trends and any new patterns, sent by email.">?</span></span><input type="checkbox" class="switch" id="setWeeklyDigest" /></label>
             </div>
 
             <div class="settings-card">
-              <p class="settings-section">AI &amp; Privacy</p>
-              <label class="setting-row"><span class="setting-label"><svg class="icon sm" viewBox="0 0 24 24"><path d="M12 3a9 9 0 0 0-9 9c0 2.4 1 4.6 2.5 6.2L4 21h4l1-2 3 2 3-2 1 2h4l-1.5-2.8C20 16.6 21 14.4 21 12a9 9 0 0 0-9-9z"/></svg> AI pattern detection <span class="help" data-help="Lets Pamet look for correlations in your entries. Everything is computed on-device — your data never leaves your browser.">?</span></span><input type="checkbox" class="switch" id="setAiPatterns" /></label>
+              <p class="settings-section">Patterns &amp; Privacy</p>
+              <label class="setting-row"><span class="setting-label"><svg class="icon sm" viewBox="0 0 24 24"><path d="M12 3a9 9 0 0 0-9 9c0 2.4 1 4.6 2.5 6.2L4 21h4l1-2 3 2 3-2 1 2h4l-1.5-2.8C20 16.6 21 14.4 21 12a9 9 0 0 0-9-9z"/></svg> Pamet pattern detection <span class="help" data-help="Lets Pamet look for relationships in your entries on this device. Pamet observes; it does not diagnose.">?</span></span><input type="checkbox" class="switch" id="setAiPatterns" /></label>
               <label class="setting-row"><span class="setting-label"><svg class="icon sm" viewBox="0 0 24 24"><path d="M5 11h14v10H5z M8 11V7a4 4 0 0 1 8 0v4"/></svg> End-to-end encryption <span class="help" data-help="Your entries are encrypted before they're stored, so only you can read them.">?</span></span><input type="checkbox" class="switch" id="setE2e" /></label>
               <label class="setting-row"><span class="setting-label"><svg class="icon sm" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 21v-2a4 4 0 0 0-3-3.9"/></svg> Caregiver access <span class="help" data-help="Let a trusted caregiver view your journal and patterns.">?</span></span><input type="checkbox" class="switch" id="setCaregiver" /></label>
               <label class="setting-row"><span class="setting-label"><svg class="icon sm" viewBox="0 0 24 24"><path d="M12 3v18M3 12h18"/></svg> Primary Care Access <span class="help" data-help="Pro only. Shares your journal and doctor report directly with your primary-care doctor's portal.">?</span></span><input type="checkbox" class="switch" id="setPrimaryCare" /></label>
-              <label class="setting-row"><span class="setting-label"><svg class="icon sm" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg> Improve AI (anonymous) <span class="help" data-help="Optionally share anonymized, aggregate stats to help make Pamet smarter for everyone. Never your personal data.">?</span></span><input type="checkbox" class="switch" id="setShareData" /></label>
-            </div>
-
-            <div class="settings-card">
-              <p class="settings-section">Custom symptoms</p>
-              <ul class="custom-symptom-list" id="customSymptomList"></ul>
-              <div class="add-symptom-row">
-                <input class="text-input" id="newSymptomInput" placeholder="Add custom symptom..." />
-                <button class="link-btn" id="addSymptomBtn">Add</button>
+              <div class="feedback-setting">
+                <div class="setting-row feedback-setting-head">
+                  <span class="setting-label"><svg class="icon sm" viewBox="0 0 24 24"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/></svg> Help improve Pamet <span class="help" data-help="Share optional product feedback. Pamet does not attach your entries, symptoms, notes, or account details.">?</span></span>
+                  <button class="btn btn-ghost feedback-open" id="openFeedback" type="button">Share feedback</button>
+                </div>
+                <form class="feedback-form" id="feedbackForm" hidden>
+                  <p>Only the category, rating, message, app version, and screen are stored. Pamet does not attach account or journal data. Please don’t include medical or account details in your message.</p>
+                  <label>Category<select id="feedbackCategory" required><option value="idea">Idea</option><option value="usability">Usability</option><option value="bug">Something isn’t working</option><option value="other">Other</option></select></label>
+                  <fieldset><legend>Overall experience (optional)</legend><div class="rating-row" role="radiogroup" aria-label="Overall experience"><label><input type="radio" name="feedbackRating" value="1" />1</label><label><input type="radio" name="feedbackRating" value="2" />2</label><label><input type="radio" name="feedbackRating" value="3" />3</label><label><input type="radio" name="feedbackRating" value="4" />4</label><label><input type="radio" name="feedbackRating" value="5" />5</label></div></fieldset>
+                  <label>Feedback<textarea id="feedbackMessage" maxlength="1000" minlength="10" required placeholder="What would make Pamet more useful? Please don’t include medical or account details."></textarea></label>
+                  <div class="feedback-actions"><button class="btn btn-ghost" id="cancelFeedback" type="button">Cancel</button><button class="btn btn-primary" type="submit">Send feedback</button></div>
+                  <p class="feedback-status" id="feedbackStatus" role="status" hidden></p>
+                </form>
               </div>
             </div>
 
@@ -268,7 +285,7 @@
               <button class="data-btn danger" id="deleteAccount">Delete account</button>
             </div>
 
-            <p class="footer-line">Pamet v1.0.1 · Made with care ❤️</p>
+            <p class="footer-line">Pamet v1.0.3 · Your health history, finally useful.</p>
           </div>
         </div>
       </section>
@@ -296,7 +313,7 @@
 
           <div class="success-banner" id="logSuccess" hidden>
             <span class="success-check">✓</span>
-            <span>Entry saved! AI is updating your patterns.</span>
+            <span>Entry saved! Pamet is updating your patterns.</span>
           </div>
 
           <div class="section-card">
@@ -314,7 +331,7 @@
           </div>
 
           <div class="section-card">
-            <p class="section-kicker">Context — helps the AI</p>
+            <p class="section-kicker">Context — helps Pamet find patterns</p>
             <div class="slider-row"><span class="slider-label">Sleep last night</span><input type="range" min="2" max="12" step="1" value="7" class="range" data-field="sleepHours" /><span class="range-value" data-out="sleepHours">7h</span></div>
             <div class="slider-row"><span class="slider-label">Stress level</span><input type="range" min="0" max="10" step="1" value="5" class="range" data-field="stressLevel" /><span class="range-value" data-out="stressLevel">5/10</span></div>
             <div class="slider-row"><span class="slider-label">Water intake</span><input type="range" min="0" max="12" step="1" value="6" class="range" data-field="waterGlasses" /><span class="range-value" data-out="waterGlasses">6 glasses</span></div>
@@ -339,10 +356,11 @@
           <div class="section-card">
             <p class="section-kicker">Notes</p>
             <div class="notes-wrap">
-              <textarea class="notes-input" id="notesInput" placeholder="When did it start? What were you doing? Any food, activity, or stress involved? The more detail, the better the AI can find patterns."></textarea>
+              <textarea class="notes-input" id="notesInput" placeholder="When did it start? What were you doing? Add any context that could help Pamet notice changes over time."></textarea>
             </div>
           </div>
 
+          <p class="log-form-error" id="logFormError" role="alert" hidden></p>
           <button class="btn btn-primary btn-block" id="saveEntry">Save this entry</button>
 
         </div>
@@ -353,8 +371,10 @@
 
   <script src="js/store.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/v1.0.3.js" data-pamet-v103></script>
+  <script src="js/feedback-v1.0.3.js"></script>
   <script>
-    // Register the service worker for offline use + installability (v1.0.1).
+    // Register the service worker for offline use + installability (v1.0.3).
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {
         navigator.serviceWorker.register('sw.js').catch(function () { /* offline-only environments */ });
