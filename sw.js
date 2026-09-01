@@ -1,51 +1,7 @@
-/* ============================================================
-   Pamet — service worker (v1.0.1)
-   App-shell caching for offline use + installability.
-   - Precaches the app shell (HTML/CSS/JS/icons/manifest).
-   - Serves a network-first strategy for the shell so updates
-     land quickly, falling back to cache when offline.
-   - Never caches user data (that lives in localStorage / backend).
-   ============================================================ */
-const CACHE = "pamet-shell-v1";
-
-const SHELL = [
-  "/index.html",
-  "/css/styles.css",
-  "/js/store.js",
-  "/js/auth.js",
-  "/js/app.js",
-  "/manifest.webmanifest",
-  "/assets/icon-192.png",
-  "/assets/icon-512.png"
-];
-
-self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting())
-  );
-});
-
-self.addEventListener("activate", (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
-    ).then(() => self.clients.claim())
-  );
-});
-
-self.addEventListener("fetch", (event) => {
-  const req = event.request;
-  // Only handle same-origin GETs.
-  if (req.method !== "GET" || !req.url.startsWith(self.location.origin)) return;
-
-  // Network-first, cache-fallback for the app shell.
-  event.respondWith(
-    fetch(req)
-      .then((res) => {
-        const copy = res.clone();
-        caches.open(CACHE).then((cache) => cache.put(req, copy)).catch(() => {});
-        return res;
-      })
-      .catch(() => caches.match(req).then((hit) => hit || caches.match("/index.html")))
-  );
-});
+/* Pamet — service worker (v1.0.2): static shell only; API/share data is never cached. */
+const CACHE="pamet-shell-v102";
+const SHELL=["/index.html","/css/styles.css","/css/brand-v1.0.2.css","/js/store.js","/js/auth.js","/js/app.js","/js/v1.0.2.js","/manifest.webmanifest","/assets/pamet-mark.svg"];
+const PATHS=new Set(SHELL);
+self.addEventListener("install",e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())));
+self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
+self.addEventListener("fetch",e=>{const r=e.request;if(r.method!=="GET"||!r.url.startsWith(self.location.origin))return;const u=new URL(r.url);if(u.pathname.startsWith("/api/"))return;const nav=r.mode==="navigate",shell=PATHS.has(u.pathname);if(!nav&&!shell)return;e.respondWith(fetch(r).then(res=>{if(res?.ok&&shell){const copy=res.clone();caches.open(CACHE).then(c=>c.put(r,copy)).catch(()=>{})}return res}).catch(()=>shell?caches.match(r):nav?caches.match("/index.html"):Response.error()))});
