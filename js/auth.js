@@ -1,4 +1,4 @@
-/* Pamet local-first auth — v1.0.2 */
+/* Pamet local-first auth — v1.0.3 */
 (function(global){
   "use strict";
   const USER_KEY="pamet_user_v1",SESSION_KEY="pamet_session_v2",LEGACY_SESSION_KEY="pamet_session_v1",ROUNDS=120000;
@@ -31,6 +31,6 @@
     async changePassword(oldPassword,newPassword){const u=loadUser();if(!u)throw new Error("No account found.");const check=await derive(oldPassword,u.salt,u.iterations||ROUNDS);if(check.hash!==u.hash)throw new Error("Current password is incorrect.");const salt=randomHex(16),d=await derive(newPassword,salt);u.salt=salt;u.hash=d.hash;u.iterations=d.iterations;u.algo=d.algo;saveUser(u)}
   };
   global.PametAuth=Auth;
-  global.addEventListener("DOMContentLoaded",()=>{if(!document.querySelector('link[data-pamet-brand-v102]')){const l=document.createElement("link");l.rel="stylesheet";l.href="css/brand-v1.0.2.css";l.dataset.pametBrandV102="true";document.head.appendChild(l)}});
-  global.addEventListener("load",()=>{if(!document.querySelector('script[data-pamet-v102]')){const s=document.createElement("script");s.src="js/v1.0.2.js";s.dataset.pametV102="true";document.body.appendChild(s)}});
+  global.addEventListener("DOMContentLoaded",()=>{if(!document.querySelector('link[data-pamet-brand-v103]')){const l=document.createElement("link");l.rel="stylesheet";l.href="css/brand-v1.0.3.css";l.dataset.pametBrandV103="true";document.head.appendChild(l)}});
+  global.addEventListener("load",()=>{if(!document.querySelector('script[data-pamet-v103]')){const s=document.createElement("script");s.src="js/v1.0.3.js";s.dataset.pametV103="true";document.body.appendChild(s)}});
 })(window);
