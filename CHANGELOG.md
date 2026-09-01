@@ -48,6 +48,7 @@ This file is the repository-only system of record for product and engineering ch
 - Removed the unsupported **End-to-end encryption** toggle. v1.0.1 stored entries in browser storage and did not implement true end-to-end encryption.
 - Removed live caregiver alert expectations, missed-log caregiver notifications, and automated symptom escalation from the product direction.
 - Removed live doctor-portal claims from the current product experience.
+- Removed the **Stripe Setup** section from the public README; operational billing configuration remains outside the product-facing repository overview.
 
 ### Privacy / Security
 
