@@ -162,36 +162,6 @@ npm install
 npm start
 ```
 
-## Stripe Setup
-
-**Never commit Stripe secret keys.** Create recurring Stripe prices for:
-
-- Pro Monthly — **$6.99/month**
-- Pro Annual — **$59.99/year**
-- Optional future Ultra Monthly — **$12.99/month**
-- Optional future Ultra Annual — **$99.99/year**
-
-Configure these deployment secrets:
-
-```text
-STRIPE_PUBLISHABLE_KEY=
-STRIPE_SECRET_KEY=
-STRIPE_WEBHOOK_SECRET=
-STRIPE_PRICE_PRO_MONTHLY=
-STRIPE_PRICE_PRO_ANNUAL=
-STRIPE_PRICE_ULTRA_MONTHLY=
-STRIPE_PRICE_ULTRA_ANNUAL=
-ULTRA_ENABLED=false
-```
-
-Stripe webhook endpoint:
-
-```text
-POST https://<your-pamet-domain>/api/stripe/webhook
-```
-
-The browser never receives the Stripe secret key. Card credentials are collected by Stripe's **Payment Element**. Subscription access is granted from backend-verified Stripe state.
-
 ## Email Setup
 
 v1.0.2 uses Resend for transactional email:
