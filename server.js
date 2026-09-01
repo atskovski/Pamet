@@ -23,6 +23,7 @@ const expectedPrices = {
 const ultraEnabled = String(process.env.ULTRA_ENABLED || '').toLowerCase() === 'true';
 const priceValidationCache = new Map();
 let pool;
+let poolInitialization;
 
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
@@ -53,20 +54,35 @@ function databaseOptions() {
 
 async function db() {
   if (pool) return pool;
+  if (poolInitialization) return poolInitialization;
   if (!process.env.DATABASE_URL && !process.env.DB_HOST) throw new Error('Database is not configured.');
-  pool = mysql.createPool(databaseOptions());
-  await schema();
-  return pool;
+  poolInitialization = (async () => {
+    const candidate = mysql.createPool(databaseOptions());
+    try {
+      let lastError;
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        try { await schema(candidate); pool = candidate; return pool; }
+        catch (error) { lastError = error; if (attempt === 0) await new Promise((resolve) => setTimeout(resolve, 250)); }
+      }
+      throw lastError;
+    } catch (error) {
+      await candidate.end().catch(() => {});
+      throw error;
+    } finally {
+      poolInitialization = null;
+    }
+  })();
+  return poolInitialization;
 }
 
-async function schema() {
-  await pool.query(`CREATE TABLE IF NOT EXISTS pamet_users (id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,local_user_id VARCHAR(128) NOT NULL UNIQUE,device_key_hash CHAR(64) NOT NULL UNIQUE,email VARCHAR(254) NOT NULL UNIQUE,first_name VARCHAR(100) NOT NULL DEFAULT '',last_name VARCHAR(100) NOT NULL DEFAULT '',timezone VARCHAR(100) NOT NULL DEFAULT 'UTC',plan VARCHAR(16) NOT NULL DEFAULT 'free',subscription_status VARCHAR(32) NOT NULL DEFAULT 'none',stripe_customer_id VARCHAR(128) NULL UNIQUE,stripe_subscription_id VARCHAR(128) NULL UNIQUE,weekly_digest_enabled BOOLEAN NOT NULL DEFAULT FALSE,latest_digest_json JSON NULL,confirmation_email_sent_at DATETIME NULL,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,INDEX idx_digest(weekly_digest_enabled)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
-  await pool.query(`CREATE TABLE IF NOT EXISTS pamet_sharing_invites (id CHAR(36) PRIMARY KEY,user_id BIGINT UNSIGNED NOT NULL,kind VARCHAR(20) NOT NULL,name VARCHAR(100) NOT NULL,email VARCHAR(254) NOT NULL,organization VARCHAR(120) NOT NULL DEFAULT '',permission_level VARCHAR(24) NOT NULL DEFAULT 'view',profile_name VARCHAR(80) NOT NULL DEFAULT '',status VARCHAR(20) NOT NULL DEFAULT 'active',share_token_hash CHAR(64) NOT NULL UNIQUE,snapshot_json JSON NOT NULL,expires_at DATETIME NOT NULL,revoked_at DATETIME NULL,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY(user_id) REFERENCES pamet_users(id) ON DELETE CASCADE,INDEX idx_share(user_id,kind,status)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
-  await pool.query(`ALTER TABLE pamet_sharing_invites ADD COLUMN IF NOT EXISTS permission_level VARCHAR(24) NOT NULL DEFAULT 'view' AFTER organization`);
-  await pool.query(`ALTER TABLE pamet_sharing_invites ADD COLUMN IF NOT EXISTS profile_name VARCHAR(80) NOT NULL DEFAULT '' AFTER permission_level`);
-  await pool.query(`CREATE TABLE IF NOT EXISTS pamet_audit_log (id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,user_id BIGINT UNSIGNED NULL,event_type VARCHAR(80) NOT NULL,event_json JSON NULL,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,INDEX idx_audit(user_id,created_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
-  await pool.query(`CREATE TABLE IF NOT EXISTS pamet_feedback (id CHAR(36) PRIMARY KEY,category VARCHAR(24) NOT NULL,rating TINYINT UNSIGNED NULL,message VARCHAR(1000) NOT NULL,app_version VARCHAR(16) NOT NULL,screen VARCHAR(40) NOT NULL,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,INDEX idx_feedback_created(created_at),INDEX idx_feedback_category(category)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
-  await pool.query(`CREATE TABLE IF NOT EXISTS pamet_stripe_events (event_id VARCHAR(255) PRIMARY KEY,event_type VARCHAR(100) NOT NULL,processed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,INDEX idx_stripe_event_time(processed_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
+async function schema(connection) {
+  await connection.query(`CREATE TABLE IF NOT EXISTS pamet_users (id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,local_user_id VARCHAR(128) NOT NULL UNIQUE,device_key_hash CHAR(64) NOT NULL UNIQUE,email VARCHAR(254) NOT NULL UNIQUE,first_name VARCHAR(100) NOT NULL DEFAULT '',last_name VARCHAR(100) NOT NULL DEFAULT '',timezone VARCHAR(100) NOT NULL DEFAULT 'UTC',plan VARCHAR(16) NOT NULL DEFAULT 'free',subscription_status VARCHAR(32) NOT NULL DEFAULT 'none',stripe_customer_id VARCHAR(128) NULL UNIQUE,stripe_subscription_id VARCHAR(128) NULL UNIQUE,weekly_digest_enabled BOOLEAN NOT NULL DEFAULT FALSE,latest_digest_json JSON NULL,confirmation_email_sent_at DATETIME NULL,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,INDEX idx_digest(weekly_digest_enabled)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
+  await connection.query(`CREATE TABLE IF NOT EXISTS pamet_sharing_invites (id CHAR(36) PRIMARY KEY,user_id BIGINT UNSIGNED NOT NULL,kind VARCHAR(20) NOT NULL,name VARCHAR(100) NOT NULL,email VARCHAR(254) NOT NULL,organization VARCHAR(120) NOT NULL DEFAULT '',permission_level VARCHAR(24) NOT NULL DEFAULT 'view',profile_name VARCHAR(80) NOT NULL DEFAULT '',status VARCHAR(20) NOT NULL DEFAULT 'active',share_token_hash CHAR(64) NOT NULL UNIQUE,snapshot_json JSON NOT NULL,expires_at DATETIME NOT NULL,revoked_at DATETIME NULL,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY(user_id) REFERENCES pamet_users(id) ON DELETE CASCADE,INDEX idx_share(user_id,kind,status)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
+  await connection.query(`ALTER TABLE pamet_sharing_invites ADD COLUMN IF NOT EXISTS permission_level VARCHAR(24) NOT NULL DEFAULT 'view' AFTER organization`);
+  await connection.query(`ALTER TABLE pamet_sharing_invites ADD COLUMN IF NOT EXISTS profile_name VARCHAR(80) NOT NULL DEFAULT '' AFTER permission_level`);
+  await connection.query(`CREATE TABLE IF NOT EXISTS pamet_audit_log (id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,user_id BIGINT UNSIGNED NULL,event_type VARCHAR(80) NOT NULL,event_json JSON NULL,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,INDEX idx_audit(user_id,created_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
+  await connection.query(`CREATE TABLE IF NOT EXISTS pamet_feedback (id CHAR(36) PRIMARY KEY,category VARCHAR(24) NOT NULL,rating TINYINT UNSIGNED NULL,message VARCHAR(1000) NOT NULL,app_version VARCHAR(16) NOT NULL,screen VARCHAR(40) NOT NULL,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,INDEX idx_feedback_created(created_at),INDEX idx_feedback_category(category)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
+  await connection.query(`CREATE TABLE IF NOT EXISTS pamet_stripe_events (event_id VARCHAR(255) PRIMARY KEY,event_type VARCHAR(100) NOT NULL,processed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,INDEX idx_stripe_event_time(processed_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
 }
 
 async function audit(userId, type, data = {}) {
