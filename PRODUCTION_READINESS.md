@@ -22,6 +22,7 @@ Reviewed 2026-09-01. This is an engineering readiness record, not a compliance c
 Pamet fails safely when a required service is absent. Configure these as deployment secrets, never in Git:
 
 - MySQL: `DATABASE_URL`, or `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`; use `DB_SSL=true` and keep certificate validation enabled.
+- Apply `db/schema.sql` during deployment. Keep `AUTO_MIGRATE=false` in production so request cold starts never execute DDL.
 - Stripe: publishable/secret/webhook keys and the four price IDs. Ultra is exposed only when both Ultra IDs exist and `ULTRA_ENABLED=true`.
 - Email: `RESEND_API_KEY` and a verified `EMAIL_FROM`.
 - Scheduler: a high-entropy `CRON_SECRET` sent as a Bearer token.
@@ -53,5 +54,6 @@ These cannot be completed solely in this repository:
 npm ci
 npm audit --omit=dev
 npm run check
+# Apply db/schema.sql with the deployment's MySQL migration mechanism.
 NODE_ENV=production npm start
 ```

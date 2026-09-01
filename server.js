@@ -58,10 +58,11 @@ async function db() {
   if (!process.env.DATABASE_URL && !process.env.DB_HOST) throw new Error('Database is not configured.');
   poolInitialization = (async () => {
     const candidate = mysql.createPool(databaseOptions());
+    const migrate = process.env.AUTO_MIGRATE === 'true' || NODE_ENV !== 'production';
     try {
       let lastError;
       for (let attempt = 0; attempt < 2; attempt += 1) {
-        try { await schema(candidate); pool = candidate; return pool; }
+        try { if (migrate) await schema(candidate); else await candidate.query('SELECT 1'); pool = candidate; return pool; }
         catch (error) { lastError = error; if (attempt === 0) await new Promise((resolve) => setTimeout(resolve, 250)); }
       }
       throw lastError;
