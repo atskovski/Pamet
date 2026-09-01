@@ -6,6 +6,8 @@ const vm = require('vm');
 function loadStore(initial = {}) {
   const data = new Map(Object.entries(initial));
   const localStorage = {
+    get length() { return data.size; },
+    key(index) { return Array.from(data.keys())[index] ?? null; },
     getItem(key) { return data.has(key) ? data.get(key) : null; },
     setItem(key, value) { data.set(key, String(value)); },
     removeItem(key) { data.delete(key); }
@@ -42,5 +44,13 @@ legacy.store.addEntry({ date: new Date().toISOString(), symptoms: ['Fatigue'], s
 check(legacy.store.entries.length === 1, 'The active profile must accept its own entries.');
 legacy.store.switchProfile('primary');
 check(legacy.store.entries.length === 1 && legacy.store.entries[0].id === 'real-1', 'Switching profiles must restore the primary profile history.');
+const exported = legacy.store.exportAllData();
+check(exported.format === 'pamet-export-v2' && exported.profiles.length === 2, 'Data export must include every profile.');
+check(exported.profiles.every((profile) => profile.entries.length === 1), 'Data export must include every profile history.');
+
+legacy.data.set('pamet_weekly_digest_consent_v102', 'yes');
+legacy.store.wipeAll();
+check(!legacy.data.has('pamet_weekly_digest_consent_v102'), 'Account wipe must remove auxiliary Pamet preferences.');
+check(legacy.store.profiles.length === 1 && legacy.store.entries.length === 0, 'Account wipe must reinitialize one empty primary profile.');
 
 console.log('Pamet store checks passed.');

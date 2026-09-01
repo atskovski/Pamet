@@ -1,17 +1,17 @@
 # Pamet Security and Privacy Notes
 
-Pamet handles sensitive personal health observations. This document records engineering boundaries for the v1.0.3 web implementation; it is not a legal privacy policy, security certification, or representation of HIPAA compliance.
+Pamet handles sensitive personal health observations. This document records engineering boundaries for the v2.0.1 web implementation; it is not a legal privacy policy, security certification, or representation of HIPAA compliance.
 
 ## Design boundaries
 
-- Health journal entries remain local-first in browser storage.
+- Health journal entries remain local-first in browser `localStorage`. They are not currently encrypted at rest by Pamet, so the application does not claim end-to-end encryption.
 - Passwords are never sent to the Pamet backend.
 - Server services receive only what they require to perform billing, email, or explicitly initiated sharing.
 - Pamet does not perform emergency monitoring, diagnosis, medication recommendations, or clinical escalation.
 
 ## Authentication
 
-The current account gate is local to the device. Passwords are salted and PBKDF2-hashed. A persistent local session keeps users signed in until explicit logout.
+The current account gate is local to the device. Passwords are salted and PBKDF2-HMAC-SHA-256 hashed with 600,000 iterations. Legacy hashes are upgraded after a successful login. A persistent local session keeps users signed in until explicit logout.
 
 Optional server services use a random installation credential. The browser sends that credential over HTTPS; the backend stores only its SHA-256 hash.
 
@@ -23,6 +23,8 @@ Before multi-device accounts or password recovery are introduced, migrate to a r
 - Payment card fields are rendered by Stripe Payment Element.
 - Subscription entitlements are granted from server-verified Stripe state, not local UI state.
 - Stripe webhook signatures are verified using the raw request body.
+- Checkout and customer creation use idempotency keys; webhook event IDs are claimed in the database before processing.
+- Configured Stripe price IDs are verified against the approved USD amounts and billing intervals before subscription creation.
 
 ## Email
 
@@ -30,7 +32,7 @@ Transactional email uses the configured email provider only when enabled. Weekly
 
 ## Sharing
 
-Caregiver and provider sharing is user-initiated and read-only in v1.0.3.
+Caregiver and provider sharing is user-initiated in v2.0.1. Pro links are view-only; Ultra links may also allow the recipient to print/save the shared summary.
 
 - Share tokens use cryptographically secure randomness.
 - Only token hashes are stored server-side.
@@ -44,4 +46,6 @@ The backend stores account metadata, subscription state, digest preference/aggre
 
 ## Production review
 
-Before production handling of sensitive health data, complete a professional security/privacy review covering threat modeling, database encryption, backups, logging/redaction, retention/deletion, incident response, access controls, dependency scanning, rate limiting, abuse controls, data-processing agreements, and applicable legal/regulatory requirements.
+The v2.0.1 runtime now applies a static-file allowlist, CSP, HSTS, frame protection, request IDs, body limits, handler validation, generic production errors, endpoint rate limits, database readiness checks, and automated HTTP security smoke tests.
+
+Before representing Pamet as legally or operationally production-ready for sensitive health data, complete an independent security/privacy review plus database encryption and restore drills, centralized redacted logging, distributed rate limiting, incident response, retention enforcement, vendor/data-processing agreements, and applicable legal/regulatory analysis. Multi-device identity, recovery, MFA/passkeys, and session revocation require a reviewed server-side identity provider.

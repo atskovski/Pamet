@@ -1,4 +1,4 @@
--- Pamet Phase 2 / v2.0.0 database schema. server.js also creates these tables automatically.
+-- Pamet Phase 2 / v2.0.1 database schema. server.js also creates these tables automatically.
 CREATE TABLE IF NOT EXISTS pamet_users (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
   local_user_id VARCHAR(128) NOT NULL UNIQUE,
@@ -45,6 +45,14 @@ CREATE TABLE IF NOT EXISTS pamet_audit_log (
   event_json JSON NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_audit (user_id, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Webhook events are recorded before processing so Stripe retries cannot apply twice.
+CREATE TABLE IF NOT EXISTS pamet_stripe_events (
+  event_id VARCHAR(128) NOT NULL PRIMARY KEY,
+  event_type VARCHAR(100) NOT NULL,
+  processed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_stripe_event_processed (processed_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Product feedback is intentionally detached from account and health data.

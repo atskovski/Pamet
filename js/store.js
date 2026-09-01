@@ -25,9 +25,9 @@
     dailyReminder: true,
     patternAlerts: true,
     streakReminders: false,
-    weeklyDigest: true,
+    weeklyDigest: false,
     aiPatterns: true,
-    e2eEncryption: true,
+    e2eEncryption: false,
     caregiverAccess: false,
     primaryCareAccess: false,
     showStreak: true,
@@ -321,6 +321,17 @@
     get settings() { return this._settings; },
     get profiles() { return this._profiles.slice(); },
     get activeProfile() { return this._profiles.find((profile) => profile.id === this._activeProfileId) || this._profiles[0]; },
+    entriesForProfile(profileId) { return loadEntries(profileId).slice(); },
+    exportAllData() {
+      const { plan, ...settings } = this._settings;
+      return {
+        format: "pamet-export-v2",
+        exportedAt: new Date().toISOString(),
+        activeProfileId: this._activeProfileId,
+        profiles: this._profiles.map((profile) => ({ ...profile, entries: loadEntries(profile.id) })),
+        settings
+      };
+    },
 
     persistEntries() { saveRaw(this._entries); },
     persistSettings() { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(this._settings)); } catch (e) {} },
@@ -419,8 +430,17 @@
     wipeAll() {
       this._entries = [];
       this._settings = { ...DEFAULT_SETTINGS };
-      this._profiles.forEach((profile) => { try { localStorage.removeItem(entryKey(profile.id)); } catch (e) {} });
-      try { localStorage.removeItem(LEGACY_ENTRY_KEY); localStorage.removeItem(PROFILES_KEY); localStorage.removeItem(ACTIVE_PROFILE_KEY); } catch (e) {}
+      try {
+        const keys = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith("pamet_") && !["pamet_user_v1", "pamet_session_v2"].includes(key)) keys.push(key);
+        }
+        keys.forEach((key) => localStorage.removeItem(key));
+      } catch (e) {
+        this._profiles.forEach((profile) => { try { localStorage.removeItem(entryKey(profile.id)); } catch (error) {} });
+        try { localStorage.removeItem(LEGACY_ENTRY_KEY); localStorage.removeItem(PROFILES_KEY); localStorage.removeItem(ACTIVE_PROFILE_KEY); } catch (error) {}
+      }
       this._profiles = [{ id: PRIMARY_PROFILE_ID, name: "My profile", relationship: "Self", createdAt: new Date().toISOString() }];
       this._activeProfileId = PRIMARY_PROFILE_ID; currentProfileId = PRIMARY_PROFILE_ID;
       this.persistEntries(); this.persistSettings(); this.persistProfiles();

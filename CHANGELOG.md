@@ -2,6 +2,22 @@
 
 This file is the repository-only system of record for product and engineering changes. It is **not rendered inside the Pamet application**.
 
+## [2.0.1] — 2026-09-01
+
+### Production hardening
+
+- Consolidated the runtime into one Express application and removed duplicate billing/webhook implementations.
+- Replaced repository-root static serving with explicit app-asset routes, preventing source, schema, lockfile, and configuration-example disclosure.
+- Added CSP, HSTS, frame/content-type/referrer/permissions protections, request IDs, no-store API responses, strict JSON/body limits, safe production errors, and endpoint rate limits.
+- Added dependency readiness, Stripe price-catalog validation, checkout/customer idempotency, concurrency-safe webhook event processing, and trial entitlement verification.
+- Removed the browser self-upgrade path; paid entitlements now come from backend-verified Stripe state.
+- Made backend account deletion authoritative before local erasure so failed Stripe/cloud cleanup cannot strand remote data.
+- Upgraded local password derivation to PBKDF2-HMAC-SHA-256 with 600,000 iterations and automatic legacy-hash migration.
+- Expanded CSV/JSON portability across all profiles and protected CSV exports against formula execution.
+- Removed the inaccurate end-to-end-encryption setting and clarified local-storage boundaries.
+- Added implemented view/download share behavior, strict share validation, invitation rollback on email failure, and revocation auditing.
+- Added production static assertions and HTTP security smoke tests.
+
 ## [2.0.0] — 2026-09-01
 
 ### Added
@@ -20,7 +36,7 @@ This file is the repository-only system of record for product and engineering ch
 - Reworked dark mode into layered teal surfaces with 9.47:1 primary-text contrast, 7.70:1 secondary-text contrast, and at least 3:1 meaningful control-boundary contrast.
 - Settings help controls now prevent accidental toggle changes, support keyboard activation, expose expanded state, and close when users click elsewhere.
 - CSV and JSON export are available to every plan as a data-portability and trust requirement.
-- Password changes now require at least eight characters and use a dedicated confirmation form.
+- Password changes now require at least ten characters and use a dedicated confirmation form.
 - Free history is a 90-day rolling view while export continues to include the user's complete locally stored history.
 - Pro is presented as **Most popular** and remains the recommended individual tier; Ultra is labeled for families and care teams.
 

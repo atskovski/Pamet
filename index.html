@@ -48,7 +48,7 @@
           <label class="field"><span>Last name <small>(optional)</small></span><input class="text-input" id="regLastName" autocomplete="family-name" /></label>
         </div>
         <label class="field"><span>Email</span><input class="text-input" type="email" id="regEmail" placeholder="you@example.com" autocomplete="username" required /></label>
-        <label class="field"><span>Password</span><input class="text-input" type="password" id="regPassword" placeholder="6+ characters" autocomplete="new-password" minlength="6" required /></label>
+        <label class="field"><span>Password</span><input class="text-input" type="password" id="regPassword" placeholder="10+ characters" autocomplete="new-password" minlength="10" maxlength="128" required /></label>
         <button class="btn btn-primary btn-block" type="submit">Create account</button>
         <p class="welcome-switch">Already have an account? <a href="#" id="showLogin">Log in</a></p>
       </form>
@@ -252,7 +252,6 @@
             <div class="settings-card">
               <p class="settings-section">Patterns &amp; Privacy</p>
               <label class="setting-row"><span class="setting-label"><svg class="icon sm" viewBox="0 0 24 24"><path d="M12 3a9 9 0 0 0-9 9c0 2.4 1 4.6 2.5 6.2L4 21h4l1-2 3 2 3-2 1 2h4l-1.5-2.8C20 16.6 21 14.4 21 12a9 9 0 0 0-9-9z"/></svg> Pamet pattern detection <span class="help" data-help="Lets Pamet look for relationships in your entries on this device. Pamet observes; it does not diagnose.">?</span></span><input type="checkbox" class="switch" id="setAiPatterns" /></label>
-              <label class="setting-row"><span class="setting-label"><svg class="icon sm" viewBox="0 0 24 24"><path d="M5 11h14v10H5z M8 11V7a4 4 0 0 1 8 0v4"/></svg> End-to-end encryption <span class="help" data-help="Your entries are encrypted before they're stored, so only you can read them.">?</span></span><input type="checkbox" class="switch" id="setE2e" /></label>
               <label class="setting-row"><span class="setting-label"><svg class="icon sm" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 21v-2a4 4 0 0 0-3-3.9"/></svg> Caregiver access <span class="help" data-help="Create a secure, expiring summary link for a trusted caregiver. You can revoke access at any time.">?</span></span><input type="checkbox" class="switch" id="setCaregiver" /></label>
               <label class="setting-row"><span class="setting-label"><svg class="icon sm" viewBox="0 0 24 24"><path d="M12 3v18M3 12h18"/></svg> Primary Care Access <span class="help" data-help="Create a secure, expiring Visit Brief link for your care team. This is sharing, not a live doctor portal.">?</span></span><input type="checkbox" class="switch" id="setPrimaryCare" /></label>
               <div class="feedback-setting">
@@ -286,7 +285,7 @@
               <button class="data-btn danger" id="deleteAccount">Delete account</button>
             </div>
 
-            <p class="footer-line">Pamet v2.0.0 · Your health history, finally useful.</p>
+            <p class="footer-line">Pamet v2.0.1 · Your health history, finally useful.</p>
           </div>
         </div>
       </section>
@@ -357,7 +356,7 @@
           <div class="section-card">
             <p class="section-kicker">Notes</p>
             <div class="notes-wrap">
-              <textarea class="notes-input" id="notesInput" placeholder="When did it start? What were you doing? Add any context that could help Pamet notice changes over time."></textarea>
+              <textarea class="notes-input" id="notesInput" maxlength="5000" placeholder="When did it start? What were you doing? Add any context that could help Pamet notice changes over time."></textarea>
             </div>
           </div>
 

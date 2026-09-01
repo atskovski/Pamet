@@ -35,8 +35,8 @@ check(
   'The retired Custom symptoms settings card must not be rendered.'
 );
 check(
-  html.includes('Pamet v2.0.0 · Your health history, finally useful.'),
-  'The visible footer must identify Pamet v2.0.0.'
+  html.includes('Pamet v2.0.1 · Your health history, finally useful.'),
+  'The visible footer must identify Pamet v2.0.1.'
 );
 check(
   html.includes('Don’t have an account?') && /id="registerForm" hidden/.test(html),
@@ -63,7 +63,7 @@ check(
   'Settings must use Pamet pattern and product-feedback language.'
 );
 check(
-  server.includes("app.post('/api/feedback',auth") && server.includes('pamet_feedback'),
+  server.includes("app.post('/api/feedback', limits.feedback, auth") && server.includes('pamet_feedback'),
   'Product feedback must be authenticated in transit and stored without account fields.'
 );
 check(
@@ -71,7 +71,7 @@ check(
   'The PWA manifest must include standalone display and phone-sized icons.'
 );
 check(
-  worker.includes('pamet-shell-v200') && !worker.slice(0, worker.indexOf('const PATHS')).includes('/api/'),
+  worker.includes('pamet-shell-v201') && !worker.slice(0, worker.indexOf('const PATHS')).includes('/api/'),
   'The Phase 2 service worker must use a fresh cache and never list API data in the shell.'
 );
 

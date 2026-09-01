@@ -22,8 +22,8 @@ check(app.includes('S.removeCustomField(category, value)') && app.includes('conf
 check(phase2.includes('Appointment preparation') && phase2.includes('Longitudinal analysis') && phase2.includes('Advanced Visit Brief') && phase2.includes('Advanced sharing'), 'All Ultra preparation tools must be implemented.');
 check(theme.includes('--app-background: #1B3434') && theme.includes('--border-color: #82A19B') && theme.includes('--text-primary: #F7FAF8'), 'The accessible layered dark palette must remain active.');
 check(contrast('F7FAF8', '294846') >= 4.5 && contrast('D9E5E0', '294846') >= 4.5 && contrast('82A19B', '294846') >= 3, 'Dark text and control boundaries must meet WCAG AA contrast targets.');
-check(server.includes("app.delete('/api/account',auth") && server.includes('stripe.subscriptions.cancel'), 'Account deletion must remove backend data and cancel active billing.');
+check(server.includes("app.delete('/api/account', auth") && server.includes('stripe.subscriptions.cancel'), 'Account deletion must remove backend data and cancel active billing.');
 check(server.includes('permission_level') && schema.includes('permission_level'), 'Advanced sharing permissions must be persisted by the backend.');
-check(server.includes("version:'2.0.0'"), 'The health endpoint must report v2.0.0.');
+check(server.includes("const VERSION = '2.0.1'"), 'The health endpoint must report v2.0.1.');
 
 console.log('Pamet Phase 2 checks passed.');

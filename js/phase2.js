@@ -95,6 +95,7 @@
     const report = S.report(), data = periodSummary(90);
     const printWindow = window.open("", "_blank");
     if (!printWindow) return toast("Allow pop-ups to open the Visit Brief.", true);
+    printWindow.opener = null;
     const rows = (items) => items.map((item) => `<tr><th>${esc(item[0])}</th><td>${esc(item[1])}</td></tr>`).join("");
     printWindow.document.write(`<!doctype html><html><head><title>Pamet Advanced Visit Brief</title><style>body{font-family:Arial,sans-serif;color:#263638;margin:36px auto;max-width:760px;padding:0 20px}header{border-bottom:4px solid #4CAF7A;padding-bottom:16px}h1{color:#0F3D3E;margin:0}h2{font-size:18px;margin-top:26px}table{width:100%;border-collapse:collapse}th,td{text-align:left;vertical-align:top;border-bottom:1px solid #DDE3DF;padding:9px}th{width:38%}.notice{background:#EEF6FA;border:1px solid #CFE1EE;padding:12px;border-radius:10px;font-size:12px}.meta{color:#5B6B73;font-size:12px}@media print{button{display:none}}</style></head><body><header><h1>Advanced Visit Brief</h1><p>${esc(S.activeProfile.name)} · ${esc(report.rangeLabel)}</p></header><div class="notice">Generated from information recorded by the user for discussion with a healthcare professional. This is not a diagnosis or clinical assessment.</div><h2>Overview</h2><table>${rows(report.overview || [])}</table><h2>90-day comparison</h2><table>${rows(data.names.map((name) => [name, `${data.currentCounts[name] || 0} recent vs ${data.previousCounts[name] || 0} previous logged days`]))}</table>${report.medications?.length ? `<h2>Medications recorded</h2><table>${rows(report.medications)}</table>` : ""}${report.notes?.length ? `<h2>Recent notes</h2>${report.notes.slice(0, 8).map((note) => `<p><strong>${esc(note.date)}</strong><br>${esc(note.notes)}</p>`).join("")}` : ""}<p class="meta">Created ${esc(new Date().toLocaleString())}. Pamet observes; Pamet does not diagnose.</p><button onclick="window.print()">Print / Save PDF</button></body></html>`);
     printWindow.document.close();
@@ -110,7 +111,7 @@
   }
 
   function changePasswordDialog() {
-    const root = modal(`<div class="pamet-modal-head"><div><h2 class="pamet-modal-title">Change password</h2><p class="pamet-modal-sub">Your password protects this device-local Pamet account.</p></div><button class="pamet-close" data-close aria-label="Close">×</button></div><form id="phase2PasswordForm" class="pamet-form"><label>Current password<input id="phase2OldPassword" type="password" autocomplete="current-password" required></label><label>New password<input id="phase2NewPassword" type="password" autocomplete="new-password" minlength="8" required></label><label>Confirm new password<input id="phase2ConfirmPassword" type="password" autocomplete="new-password" minlength="8" required></label><div class="pamet-form-actions"><button type="button" class="btn btn-ghost" data-close>Cancel</button><button class="btn btn-primary">Update password</button></div></form>`);
+    const root = modal(`<div class="pamet-modal-head"><div><h2 class="pamet-modal-title">Change password</h2><p class="pamet-modal-sub">Your password protects this device-local Pamet account.</p></div><button class="pamet-close" data-close aria-label="Close">×</button></div><form id="phase2PasswordForm" class="pamet-form"><label>Current password<input id="phase2OldPassword" type="password" autocomplete="current-password" required maxlength="128"></label><label>New password<input id="phase2NewPassword" type="password" autocomplete="new-password" minlength="10" maxlength="128" required></label><label>Confirm new password<input id="phase2ConfirmPassword" type="password" autocomplete="new-password" minlength="10" maxlength="128" required></label><div class="pamet-form-actions"><button type="button" class="btn btn-ghost" data-close>Cancel</button><button class="btn btn-primary">Update password</button></div></form>`);
     root.querySelector("#phase2PasswordForm").addEventListener("submit", async (event) => { event.preventDefault(); const next = root.querySelector("#phase2NewPassword").value; if (next !== root.querySelector("#phase2ConfirmPassword").value) return toast("New passwords do not match.", true); try { await A.changePassword(root.querySelector("#phase2OldPassword").value, next); root.innerHTML = ""; toast("Password changed."); } catch (error) { toast(error.message, true); } });
   }
 
@@ -126,7 +127,7 @@
   function injectSettings() {
     const profileCard = $("#screen-settings .profile-card");
     if (!profileCard) return;
-    const footer = $(".footer-line"); if (footer) footer.textContent = "Pamet v2.0.0 · Your health history, finally useful.";
+    const footer = $(".footer-line"); if (footer) footer.textContent = "Pamet v2.0.1 · Your health history, finally useful.";
     let switcher = $("#phase2ProfileSwitcher");
     if (!switcher) { switcher = document.createElement("section"); switcher.id = "phase2ProfileSwitcher"; switcher.className = "settings-card phase2-profile-switcher"; profileCard.insertAdjacentElement("afterend", switcher); }
     switcher.innerHTML = `<div><p class="settings-section">Active profile</p><strong>${esc(S.activeProfile.name)}</strong><span>${esc(S.activeProfile.relationship)}</span></div><button type="button" class="btn btn-ghost" id="phase2ManageProfiles">${ultra() ? "Manage" : "Ultra"}</button>`;
@@ -144,7 +145,7 @@
   }, true);
 
   document.title = "Pamet — Track, understand, prepare";
-  const footer = $(".footer-line"); if (footer) footer.textContent = "Pamet v2.0.0 · Your health history, finally useful.";
+  const footer = $(".footer-line"); if (footer) footer.textContent = "Pamet v2.0.1 · Your health history, finally useful.";
   injectSettings();
   new MutationObserver(() => enhancePlanModal()).observe(document.body, { childList: true, subtree: true });
   $$(".tab[data-tab='settings']").forEach((tab) => tab.addEventListener("click", () => setTimeout(injectSettings, 20)));

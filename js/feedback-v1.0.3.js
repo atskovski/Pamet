@@ -48,7 +48,7 @@
       category: document.querySelector("#feedbackCategory").value,
       rating: rating ? Number(rating.value) : null,
       message: document.querySelector("#feedbackMessage").value.trim(),
-      appVersion: "2.0.0",
+      appVersion: "2.0.1",
       screen: "settings"
     };
 
@@ -56,11 +56,13 @@
     setStatus("Sending…", false);
     try {
       const credential = A.getBackendCredential();
-      await fetch("/api/account/bootstrap", {
+      const { deviceKey, ...profile } = credential;
+      const bootstrap = await fetch("/api/account/bootstrap", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${credential.deviceKey}` },
-        body: JSON.stringify({ ...credential, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC" })
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${deviceKey}` },
+        body: JSON.stringify({ ...profile, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC" })
       });
+      if (!bootstrap.ok) throw new Error("Pamet could not verify this account before sending feedback.");
       await request("/api/feedback", { method: "POST", body: JSON.stringify(payload) });
       form.reset();
       setStatus("Thanks — your feedback was saved without account or health details.", false);
