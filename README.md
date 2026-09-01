@@ -1,74 +1,221 @@
-# Pamet — Web (v1.0.1)
+# Pamet — Personal Health Journal
 
-A faithful web port of the **Pamet** iOS symptom-journal app. Same warm terracotta / sage / rose design language, same five screens — rebuilt as a responsive, framework-free website that runs entirely in the browser.
+**Version 1.0.2** · **Your health history, finally useful.**
 
-## Run it
+Pamet is a privacy-first personal health journal designed to help people consistently document symptoms, medications, lifestyle factors, and user-provided medical information, then turn those observations into useful, understandable health history.
 
-It's a static site — no build step, no dependencies.
+> **Track what you feel. See what changes. Bring the story to your doctor.**
 
-**Option 1 — just open it:**
-Double-click `index.html`. Everything works from `file://` (data persists in your browser's localStorage).
+Pamet is observational, not diagnostic: **Pamet observes. Pamet does not diagnose.** It is not an emergency-monitoring system, clinical decision tool, or replacement for professional medical care.
 
-**Option 2 — local server (recommended):**
+## Executive Summary
+
+Most symptom trackers are good at collecting information but leave the user responsible for interpreting it. Pamet is designed around a clearer progression:
+
+- **Free — Track:** Build a reliable health history.
+- **Pro — Understand:** Identify trends, patterns, and relationships in that history.
+- **Ultra — Prepare:** Turn that history into useful information for appointments and coordinated care.
+
+**Track → Understand → Prepare**
+
+## Product Vision
+
+Create the most trusted personal health journal for turning everyday symptoms and health observations into information people can actually use.
+
+Pamet should help a person answer:
+
+- What have I been experiencing?
+- When did it change?
+- Is there a pattern?
+- What has changed since my last appointment?
+- What should I remember to tell my doctor?
+- Can I show my doctor a concise history instead of trying to remember everything?
+
+### Product Promise
+
+> **Don't just track your symptoms. Understand them.**
+
+The long-term vision is a longitudinal health-history layer: a structured record of what a person experiences between medical appointments that complements medical care rather than replacing it.
+
+## Product Principles
+
+1. **Pamet observes; it does not diagnose.** Trends and relationships are described as observations, not diagnoses or causal conclusions.
+2. **Logging must remain easy.** The core habit is capture, and meaningful entries should take seconds: **Three taps. That's the whole log.**
+3. **Build trust before monetizing.** Privacy language, data handling, subscription terms, cancellation, export, and deletion should be clear and non-manipulative.
+4. **Data accumulation creates value.** Free users receive enough history and functionality to experience real value before an upgrade is requested.
+
+## Core Product Architecture
+
+Pamet is organized around six areas:
+
+| Area | Purpose |
+| --- | --- |
+| **Today** | Fast logging of symptoms, medications, mood, sleep, activity, lifestyle factors, notes, and custom trackers. |
+| **History** | Timeline/calendar review, date filtering, symptom/medication/lifestyle history, notes, and record references. |
+| **Insights** | Trends, comparisons, **What Changed?**, correlation observations, and data-strength context. |
+| **Medical Records** | A structured home for user-provided health records. Clinical integrations are not implied by the MVP. |
+| **Reports** | Concise, doctor-ready summaries. The core artifact is the **Visit Brief**. |
+| **Care** | Explicit, revocable sharing with trusted people. Care is coordination, not continuous monitoring. |
+
+The core loop is **Log → Accumulate → Understand → Summarize → Share → Return**.
+
+## Plans
+
+Pamet contains **no advertising on any plan**.
+
+|  | Free — **Track** | Pro — **Understand** | Ultra — **Prepare** |
+| --- | --- | --- | --- |
+| Price | $0 | $6.99/mo or $59.99/yr | $12.99/mo or $99.99/yr |
+| Logging | Unlimited | Unlimited | Unlimited |
+| History | 90-day rolling view | Unlimited | Unlimited |
+| Weekly summary | ✓ | ✓ | ✓ |
+| Custom trackers | 3 | Unlimited | Unlimited |
+| Reminders | 1 | Unlimited | Unlimited |
+| Correlation insights | — | ✓ | ✓ |
+| Advanced trends / What Changed? | — | ✓ | Advanced |
+| Visit Briefs | 1/month | Unlimited | Unlimited |
+| Basic sharing | — | ✓ | ✓ |
+| Multiple caregivers / roles | — | — | ✓ |
+| AI appointment preparation | — | — | ✓ |
+| Longitudinal analysis | — | — | ✓ |
+
+**Pro annual is the preferred purchase option and saves about 28%.** Ultra is represented in the product architecture but is disabled for purchase by default until its Phase 2 features are ready.
+
+## v1.0.2 Highlights
+
+- Persistent sign-in across browser restarts until explicit logout.
+- Account creation is hidden on devices that already have a Pamet account.
+- New **Warm Clinical Minimalism** brand system using Deep Teal, Sage, Sky Blue, warm neutrals, Inter UI typography, restrained surfaces, and an organic Pamet mark.
+- **Custom symptoms** removed from Settings; custom fields remain managed from the Log flow.
+- **Caregiver access** and **Primary Care Access** are Pro-or-higher features with entitlement checks before access can be configured.
+- Caregiver/provider sharing uses explicit invitations, read-only snapshots, expiration, and revocation. It does **not** provide live monitoring or a live doctor portal.
+- **Weekly digest email** is explicit opt-in and uses the account email.
+- Registration confirmation email support.
+- Stripe web subscriptions with an in-app Payment Element, server-verified entitlements, webhook handling, seven-day trial support, and a customer billing portal.
+- **What Changed?** added as a signature Pro experience.
+- Pattern language rewritten to remain observational rather than causal or prescriptive.
+- Repository-only `CHANGELOG.md` added as the ongoing system of record.
+
+## Visual Identity
+
+Pamet uses **Warm Clinical Minimalism**: warm and personal enough to feel like a journal, credible enough for health information, and precise enough for insights.
+
+| Role | Color | Hex |
+| --- | --- | --- |
+| Brand primary | Deep Teal | `#0F3D3E` |
+| Primary action | Sage Green | `#4CAF7A` |
+| Information | Sky Blue | `#6EA8D8` |
+| Application background | Warm Gray | `#F4F5F2` |
+| Warm/editorial background | Soft Sand | `#F5EDE4` |
+| Secondary text | Slate | `#5B6B73` |
+| Primary text | Charcoal | `#263638` |
+| Accent | Terracotta | `#C1633D` |
+| Caution/change | Ochre | `#D9A441` |
+| Increased-symptom data accent | Muted Berry | `#8E3B4F` |
+
+**Inter** is the primary product typeface. A restrained serif may be used only for selective editorial moments. Color must never be the sole indicator of a trend, error, completion state, or permission state.
+
+## Architecture
+
+Pamet remains **local-first** for journal entries. v1.0.2 adds a Node.js backend only for functionality that cannot safely be implemented as browser-only JavaScript:
+
+- Stripe subscriptions and verified entitlements
+- Registration and weekly-digest email delivery
+- Secure, expiring caregiver/provider shares
+- Minimal account metadata needed to support those services
+
+Journal notes and full health history are **not automatically synchronized to the server**. Weekly digest data is an aggregate snapshot. Sharing uploads only the snapshot the user explicitly chooses to share.
+
+```text
+Pamet/
+├── index.html
+├── share.html
+├── css/styles.css
+├── css/brand-v1.0.2.css
+├── js/auth.js
+├── js/store.js
+├── js/app.js
+├── js/v1.0.2.js
+├── assets/pamet-mark.svg
+├── db/schema.sql
+├── server.js
+├── package.json
+├── manifest.webmanifest
+├── sw.js
+├── .env.example
+└── .github/workflows/weekly-digest.yml
+```
+
+## Run locally
+
+The core journal still works as a static local-first app:
+
 ```bash
-cd pamet-web
 python3 -m http.server 8099
-# then visit http://localhost:8099
 ```
 
-## What's included
+Full billing/email/sharing services require Node 20+, MySQL, and configured environment variables:
 
-| Screen | Features |
-|--------|----------|
-| **Welcome / Login** | Secured account gate (first name, last name, email + password). Only the **first name** shows on the Home greeting. |
-| **Home** | Time-aware greeting + honor-system badge, day-streak card (toggleable), live AI insight banner (toggleable), 4 metric cards, recent entries |
-| **Log** | Bottom-sheet form: symptom/mood/activity/medication chips with **"+" custom-field buttons** (scrollable), severity slider, sleep/stress/water/energy sliders, notes |
-| **Calendar** | Monthly grid with color-coded days (mild / significant / healthy), month navigation, per-day detail |
-| **Patterns** | AI pattern cards with confidence bars — **detected live from your actual entries**. Free is capped at 10; Pro is unlimited. |
-| **Report** | Doctor-ready report with overview, symptom breakdown, AI patterns, medications, notes + **Email** and **Download PDF** |
-| **Settings** | Dark mode, home-screen toggles (streak/insight), notifications, AI/privacy + **Primary Care Access**, custom symptoms, Free/Pro plan comparison, CSV/JSON export, change password, log out, delete account — each with a **? help tooltip** |
-
-## v1.0.1 — what's new
-
-- **Welcome / login screen.** A secured account gate appears before the app.
-- **Honor-system badges.** A small medical-medal badge (bronze → silver → gold → platinum → beast) appears next to your name, earned by total days logged.
-- **Free vs Pro plans.** You start on Free; upgrade to Pro in Settings. Free is capped at **10 AI patterns** and **5 custom fields per category**; Pro is unlimited.
-- **New settings.** "Show day streak" and "Show AI insight" toggles, a **Primary Care Access** toggle (Pro), and a **? help tooltip** next to every option.
-- **Custom fields anywhere.** "+" buttons in the Log sheet let you add custom symptoms, moods, activities, and medications (scrollable).
-- **Green confirmations.** Saves and key actions confirm in the app's sage-green palette.
-
-### Security note (auth)
-This is a **static, client-side app**. Your password is salted and hashed with **PBKDF2 (Web Crypto)** and stored in your browser — the plaintext is never saved. This is a **local privacy gate**, not server authentication. It works on `localhost` and HTTPS (e.g. GitHub Pages). For true multi-device accounts, a backend is required. When opened via `file://` (no Web Crypto), a lighter hash is used and the app shows a warning.
-
-## How it differs from the iOS app (in a good way)
-
-- **Real pattern detection.** The iOS app shipped with hardcoded sample patterns. This version runs a lightweight correlation engine on your stored entries, so the "AI Patterns" screen reflects *your* data and updates as you log.
-- **Real exports.** PDF (via print-to-PDF), CSV, and JSON export actually download.
-- **Live metrics.** Streak, averages, top symptom, and the doctor report are all computed from your entries.
-- **Persistence.** Entries and settings save to `localStorage` — your data survives refreshes, on your device.
-- **Dark mode** works and persists.
-
-## Structure
-
-```
-pamet-web/
-├── index.html        ← welcome/auth + all screens, tab bar, log sheet
-├── css/styles.css    ← palette, welcome/badges/tooltips/plan theming
-└── js/
-    ├── store.js      ← data model, tiers, plans, limits, pattern engine, metrics
-    ├── auth.js       ← local PBKDF2 account gate (register/login/session)
-    └── app.js        ← rendering + interactivity for every screen
+```bash
+cp .env.example .env
+npm install
+npm start
 ```
 
-## Design tokens
+## Email Setup
 
-All colors are CSS custom properties in `styles.css`, mirroring `Colors.swift`:
-`--warm-terracotta #C4673A`, `--sage-green #5C7A62`, `--rose-pink #C45C6A`, `--warm-amber #D4882A`, plus the ink/neutral and surface tones. Dark mode redefines the surface/ink tokens.
+v1.0.2 uses Resend for transactional email:
 
-## Notes & next steps
+```text
+RESEND_API_KEY=
+EMAIL_FROM=Pamet <hello@your-verified-domain.example>
+```
 
-- Data is local to the browser (no account server). For multi-device sync, point `store.js` persistence at a backend (Supabase/Firebase).
-- The pattern engine is intentionally simple and transparent. Swap `detectPatterns()` in `js/store.js` for a real ML call when you're ready.
-- Add a PWA manifest + service worker to make it installable on phones.
+Supported emails:
 
-Built with ❤️ as a companion to the Pamet iOS app.
+- Registration confirmation: “Thanks for registering with Pamet.”
+- Weekly digest: sent only after explicit opt-in to the account email.
+- Caregiver/provider invitation: secure expiring link to the selected read-only snapshot.
+
+Email subjects intentionally avoid symptom details.
+
+## Weekly Digest Scheduling
+
+The included GitHub Action calls the protected weekly job. Configure repository Action secrets:
+
+```text
+PAMET_APP_URL=https://pamet.wasmer.app
+PAMET_CRON_SECRET=<same value as deployment CRON_SECRET>
+```
+
+## Privacy and Security Boundaries
+
+- User passwords stay device-local and are PBKDF2-hashed; the backend does not receive the password.
+- Stripe plan state is verified server-side; the browser cannot self-upgrade a plan.
+- Sharing links are random, expiring, revocable, and stored only as token hashes server-side.
+- Weekly digest email subjects contain no symptom details.
+- Caregiver sharing is **coordination, not monitoring**. There are no live caregiver alerts, missed-log alerts, emergency detection, or automated symptom escalation.
+- Primary-care sharing is a read-only Visit Brief link, **not** a live clinician portal.
+- The old “End-to-end encryption” toggle is hidden because v1.0.1 did not implement true E2E encryption. That claim should not return until a real encryption architecture is built and reviewed.
+
+Before production handling of sensitive health information, complete qualified security, privacy, and legal review of the deployed architecture and claims.
+
+## Roadmap Boundaries
+
+### Now — v1.0.2
+
+Local-first logging, 90-day Free history, Pro unlimited history, weekly summary/digest infrastructure, basic trends/correlations, What Changed?, Visit Brief, reminders, subscription management, export/delete, and basic read-only sharing.
+
+### Next — Phase 2
+
+Ultra, multi-profile management, advanced caregiver permissions, AI appointment preparation, longitudinal analysis, advanced Visit Briefs, and more sophisticated sharing.
+
+### Not planned for initial product
+
+Live caregiver alerts, real-time symptom escalation, missed-log caregiver notifications, emergency detection, diagnosis, medication recommendations, definitive drug-interaction flagging, and a live doctor portal.
+
+---
+
+**Pamet**  
+**Your health history, finally useful.**  
+Track what you feel. See what changes. Bring the story to your doctor.

@@ -1,18 +1,16 @@
 {
-  "name": "Pamet — Symptom Journal",
+  "name": "Pamet — Personal Health Journal",
   "short_name": "Pamet",
-  "description": "Your personal symptom journal. Log daily, spot patterns, and share a doctor-ready report.",
+  "description": "Your health history, finally useful. Track what you feel, see what changes, and bring the story to your doctor.",
   "id": "/",
   "start_url": "/index.html",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#FDF8F3",
-  "theme_color": "#C4673A",
+  "background_color": "#F4F5F2",
+  "theme_color": "#0F3D3E",
   "categories": ["health", "productivity"],
   "icons": [
-    { "src": "/assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "/assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "/assets/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    { "src": "/assets/pamet-mark.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
   ]
 }

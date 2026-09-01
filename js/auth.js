@@ -1,162 +1,36 @@
-/* ============================================================
-   Pamet — local auth (v1.0.1)
-
-   Privacy-first, client-side account gate:
-   - Password is salted + hashed with PBKDF2 (Web Crypto) and the
-     hash is stored locally. The plaintext password is never stored.
-   - Works in secure contexts (localhost, HTTPS / GitHub Pages).
-   - In non-secure contexts (file://) Web Crypto is unavailable, so a
-     simple deterministic fallback hash is used and a warning is shown.
-
-   NOTE: this is a local privacy gate, not server-side auth. For real
-   multi-device accounts + strong security, a backend is required.
-   ============================================================ */
-(function (global) {
+/* Pamet local-first auth — v1.0.2 */
+(function(global){
   "use strict";
-
-  var USER_KEY = "pamet_user_v1";
-  var SESSION_KEY = "pamet_session_v1";
-  var PBKDF2_ITERATIONS = 60000;
-
-  // ---- Web Crypto availability (secure contexts only) ----
-  function subtle() {
-    return (global.crypto && global.crypto.subtle) ? global.crypto.subtle : null;
-  }
-
-  function randomHex(bytes) {
-    var arr = new Uint8Array(bytes);
-    if (global.crypto && global.crypto.getRandomValues) {
-      global.crypto.getRandomValues(arr);
-    } else {
-      for (var i = 0; i < bytes; i++) arr[i] = Math.floor(Math.random() * 256);
-    }
-    return Array.from(arr).map(function (b) { return b.toString(16).padStart(2, "0"); }).join("");
-  }
-
-  function utf8(s) { return new TextEncoder().encode(String(s)); }
-
-  // ---- Primary: PBKDF2 via Web Crypto ----
-  async function pbkdf2(password, saltHex, iterations) {
-    var salt = new Uint8Array(saltHex.match(/.{2}/g).map(function (b) { return parseInt(b, 16); }));
-    var key = await subtle().importKey("raw", utf8(password), "PBKDF2", false, ["deriveBits"]);
-    var bits = await subtle().deriveBits(
-      { name: "PBKDF2", hash: "SHA-256", salt: salt, iterations: iterations },
-      key, 256
-    );
-    return Array.from(new Uint8Array(bits)).map(function (b) { return b.toString(16).padStart(2, "0"); }).join("");
-  }
-
-  // ---- Fallback: iterated FNV-1a (non-secure contexts only) ----
-  function fnv1a(str, seed) {
-    var h = (seed >>> 0);
-    for (var i = 0; i < str.length; i++) {
-      h ^= str.charCodeAt(i);
-      h = Math.imul(h, 0x01000193) >>> 0;
-    }
-    return h.toString(16).padStart(8, "0");
-  }
-
-  function fallbackHash(password, saltHex) {
-    var h = "00000000";
-    for (var i = 0; i < 5000; i++) {
-      h = fnv1a(password + saltHex + h, parseInt(h.slice(0, 8), 16));
-    }
-    return h + fnv1a(saltHex + password + "pamet", 0x811c9dc5);
-  }
-
-  // Unified hash: uses PBKDF2 when available, else the fallback.
-  async function deriveHash(password, saltHex) {
-    if (subtle()) {
-      try { return { algo: "pbkdf2", iterations: PBKDF2_ITERATIONS, hash: await pbkdf2(password, saltHex, PBKDF2_ITERATIONS) }; }
-      catch (e) { /* fall through */ }
-    }
-    return { algo: "fnv1a", iterations: 0, hash: fallbackHash(password, saltHex) };
-  }
-
-  // ---- Storage ----
-  function loadUser() {
-    try { return JSON.parse(localStorage.getItem(USER_KEY)); } catch (e) { return null; }
-  }
-  function saveUser(u) { localStorage.setItem(USER_KEY, JSON.stringify(u)); }
-  function loadSession() {
-    try { return JSON.parse(sessionStorage.getItem(SESSION_KEY)); } catch (e) { return null; }
-  }
-
-  // ---- Public API ----
-  const Auth = {
-    isSecure: !!subtle(),
-
-    // Returns the stored user (without the hash for display) or null.
-    getUser() {
-      const u = loadUser();
-      if (!u) return null;
-      const { hash, iterations, ...rest } = u;
-      return rest;
-    },
-
-    hasAccount() { return !!loadUser(); },
-
-    // Create a new account.
-    async register({ firstName, lastName, email, password }) {
-      if (loadUser()) throw new Error("An account already exists on this device.");
-      const salt = randomHex(16);
-      const derived = await deriveHash(password, salt);
-      const user = {
-        firstName: (firstName || "").trim(),
-        lastName: (lastName || "").trim(),
-        email: (email || "").trim().toLowerCase(),
-        salt, hash: derived.hash, iterations: derived.iterations, algo: derived.algo,
-        plan: "free",
-        createdAt: new Date().toISOString()
-      };
-      saveUser(user);
-      this.startSession();
-      return user;
-    },
-
-    // Verify credentials. Returns the user or throws.
-    async login(email, password) {
-      const u = loadUser();
-      if (!u) throw new Error("No account found on this device.");
-      const normalized = (email || "").trim().toLowerCase();
-      if (normalized !== u.email) throw new Error("Email not recognized.");
-      const derived = await deriveHash(password, u.salt);
-      if (derived.hash !== u.hash) throw new Error("Incorrect password.");
-      this.startSession();
-      return u;
-    },
-
-    startSession() {
-      sessionStorage.setItem(SESSION_KEY, JSON.stringify({ token: randomHex(16), at: Date.now() }));
-    },
-
-    endSession() { sessionStorage.removeItem(SESSION_KEY); },
-
-    isAuthed() { return !!loadSession(); },
-
-    // Update profile fields (first/last name, email). Returns the user.
-    updateProfile({ firstName, lastName, email }) {
-      const u = loadUser();
-      if (!u) return null;
-      if (firstName !== undefined) u.firstName = ("" + firstName).trim();
-      if (lastName !== undefined) u.lastName = ("" + lastName).trim();
-      if (email !== undefined) u.email = ("" + email).trim().toLowerCase();
-      saveUser(u);
-      return u;
-    },
-
-    // Change password (kept in sync with the stored hash).
-    async changePassword(oldPassword, newPassword) {
-      const u = loadUser();
-      if (!u) throw new Error("No account found.");
-      const check = await deriveHash(oldPassword, u.salt);
-      if (check.hash !== u.hash) throw new Error("Current password is incorrect.");
-      const salt = randomHex(16);
-      const derived = await deriveHash(newPassword, salt);
-      u.salt = salt; u.hash = derived.hash; u.iterations = derived.iterations; u.algo = derived.algo;
-      saveUser(u);
-    }
+  const USER_KEY="pamet_user_v1",SESSION_KEY="pamet_session_v2",LEGACY_SESSION_KEY="pamet_session_v1",ROUNDS=120000;
+  const subtle=()=>global.crypto&&global.crypto.subtle?global.crypto.subtle:null;
+  function randomHex(n){const a=new Uint8Array(n);if(global.crypto?.getRandomValues)global.crypto.getRandomValues(a);else for(let i=0;i<n;i++)a[i]=Math.floor(Math.random()*256);return Array.from(a,b=>b.toString(16).padStart(2,"0")).join("")}
+  function uuid(){return global.crypto?.randomUUID?global.crypto.randomUUID():"local-"+randomHex(16)}
+  function utf8(v){return new TextEncoder().encode(String(v))}
+  async function pbkdf2(password,saltHex,iterations){const salt=new Uint8Array(saltHex.match(/.{2}/g).map(b=>parseInt(b,16))),key=await subtle().importKey("raw",utf8(password),"PBKDF2",false,["deriveBits"]),bits=await subtle().deriveBits({name:"PBKDF2",hash:"SHA-256",salt,iterations},key,256);return Array.from(new Uint8Array(bits),b=>b.toString(16).padStart(2,"0")).join("")}
+  function fnv(str,seed){let h=seed>>>0;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,0x01000193)>>>0}return h.toString(16).padStart(8,"0")}
+  function fallback(password,salt){let h="00000000";for(let i=0;i<5000;i++)h=fnv(password+salt+h,parseInt(h,16));return h+fnv(salt+password+"pamet",0x811c9dc5)}
+  async function derive(password,salt,iterations=ROUNDS){if(subtle()){try{return{algo:"pbkdf2",iterations,hash:await pbkdf2(password,salt,iterations)}}catch{}}return{algo:"fnv1a",iterations:0,hash:fallback(password,salt)}}
+  function loadUser(){try{return JSON.parse(localStorage.getItem(USER_KEY))}catch{return null}}
+  function saveUser(u){localStorage.setItem(USER_KEY,JSON.stringify(u))}
+  function migrateUser(){const u=loadUser();if(!u)return null;let changed=false;if(!u.id){u.id=uuid();changed=true}if(!u.deviceKey){u.deviceKey=randomHex(32);changed=true}if(changed)saveUser(u);return u}
+  function loadSession(){try{const s=JSON.parse(localStorage.getItem(SESSION_KEY));if(s?.token)return s}catch{}try{const old=JSON.parse(sessionStorage.getItem(LEGACY_SESSION_KEY));if(old?.token&&loadUser()){const s={token:old.token,at:old.at||Date.now(),migratedFrom:"v1.0.1"};localStorage.setItem(SESSION_KEY,JSON.stringify(s));sessionStorage.removeItem(LEGACY_SESSION_KEY);return s}}catch{}return null}
+  function emit(name,detail){try{global.dispatchEvent(new CustomEvent(name,{detail}))}catch{}}
+  async function bootstrapAccount(){const c=Auth.getBackendCredential();if(!c)return;try{await fetch("/api/account/bootstrap",{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${c.deviceKey}`},body:JSON.stringify({...c,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||"UTC"})})}catch{/* optional service: local journal still works */}}
+  migrateUser();
+  const Auth={
+    isSecure:!!subtle(),
+    getUser(){const u=migrateUser();if(!u)return null;const{hash,iterations,salt,deviceKey,...rest}=u;return rest},
+    getBackendCredential(){const u=migrateUser();return u?{localUserId:u.id,deviceKey:u.deviceKey,email:u.email,firstName:u.firstName||"",lastName:u.lastName||""}:null},
+    hasAccount(){return!!loadUser()},
+    async register({firstName,lastName,email,password}){if(loadUser())throw new Error("An account already exists on this device.");const salt=randomHex(16),d=await derive(password,salt),u={id:uuid(),deviceKey:randomHex(32),firstName:(firstName||"").trim(),lastName:(lastName||"").trim(),email:(email||"").trim().toLowerCase(),salt,hash:d.hash,iterations:d.iterations,algo:d.algo,plan:"free",createdAt:new Date().toISOString()};saveUser(u);this.startSession();emit("pamet:registered",this.getUser());setTimeout(bootstrapAccount,0);return u},
+    async login(email,password){const u=loadUser();if(!u)throw new Error("No account found on this device.");if((email||"").trim().toLowerCase()!==u.email)throw new Error("Email not recognized.");const d=await derive(password,u.salt,u.iterations||ROUNDS);if(d.hash!==u.hash)throw new Error("Incorrect password.");this.startSession();emit("pamet:login",this.getUser());setTimeout(bootstrapAccount,0);return u},
+    startSession(){localStorage.setItem(SESSION_KEY,JSON.stringify({token:randomHex(16),at:Date.now()}));try{sessionStorage.removeItem(LEGACY_SESSION_KEY)}catch{}},
+    endSession(){localStorage.removeItem(SESSION_KEY);try{sessionStorage.removeItem(LEGACY_SESSION_KEY)}catch{}emit("pamet:logout")},
+    isAuthed(){return!!loadUser()&&!!loadSession()},
+    updateProfile({firstName,lastName,email}){const u=loadUser();if(!u)return null;if(firstName!==undefined)u.firstName=String(firstName).trim();if(lastName!==undefined)u.lastName=String(lastName).trim();if(email!==undefined)u.email=String(email).trim().toLowerCase();saveUser(u);emit("pamet:profile-updated",this.getUser());setTimeout(bootstrapAccount,0);return u},
+    async changePassword(oldPassword,newPassword){const u=loadUser();if(!u)throw new Error("No account found.");const check=await derive(oldPassword,u.salt,u.iterations||ROUNDS);if(check.hash!==u.hash)throw new Error("Current password is incorrect.");const salt=randomHex(16),d=await derive(newPassword,salt);u.salt=salt;u.hash=d.hash;u.iterations=d.iterations;u.algo=d.algo;saveUser(u)}
   };
-
-  global.PametAuth = Auth;
+  global.PametAuth=Auth;
+  global.addEventListener("DOMContentLoaded",()=>{if(!document.querySelector('link[data-pamet-brand-v102]')){const l=document.createElement("link");l.rel="stylesheet";l.href="css/brand-v1.0.2.css";l.dataset.pametBrandV102="true";document.head.appendChild(l)}});
+  global.addEventListener("load",()=>{if(!document.querySelector('script[data-pamet-v102]')){const s=document.createElement("script");s.src="js/v1.0.2.js";s.dataset.pametV102="true";document.body.appendChild(s)}});
 })(window);
