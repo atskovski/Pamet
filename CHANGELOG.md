@@ -14,6 +14,9 @@ This file is the repository-only system of record for product and engineering ch
 - Added one-time emailed password reset with optional MFA, server password replacement, and revocation of existing sessions.
 - Restored the Create account action after deletion and centered the login password-protection message.
 - Rebuilt all shipped icon sizes from the approved folded-leaf vector master.
+- Replaced MySQL-version-specific `ADD COLUMN IF NOT EXISTS` migrations with information-schema checks, completed the controlled Wasmer schema migration, and locked automatic production migration back off.
+- Added an atomic MySQL distributed-rate-limit fallback for deployments without Redis/Valkey and verified the live authentication path no longer returns HTTP 503.
+- Configured production VAPID, metrics, cron, identity-encryption, and Ultra environment variables outside Git; retained verified-domain email, centralized alerting, and independent reviews as explicit launch gates.
 
 ## [1.1.0] — 2026-09-02
 
