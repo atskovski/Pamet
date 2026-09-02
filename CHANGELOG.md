@@ -2,6 +2,14 @@
 
 This file is the repository-only system of record for product and engineering changes. It is **not rendered inside the Pamet application**.
 
+## [1.0.5] — 2026-09-02
+
+- Rebuilt dark mode around neutral charcoal-teal surfaces, sky-blue information accents, sage reserved for affirmative actions, and stronger text/control contrast.
+- Replaced every app icon size with one vector-derived folded leaf mark matching the approved brand reference.
+- Added three rotating Pamet landscape scenes to authentication and moved login errors into the form with plain-language guidance.
+- Added consent-based 8pm reminders and new-observation alerts with browser notifications plus a reliable in-app fallback.
+- Renamed Ultra positioning to **Advanced care coordination**, removed the confusing Active profile card, minimized successful feedback forms, and refined plan-card sizing.
+
 ## [1.0.4] — 2026-09-01
 
 This release normalizes the advanced-plan work that was temporarily labeled 2.0.x into the compatible v1 release line. The next release begins at v1.0.5.

@@ -1,0 +1,51 @@
+/* Pamet v1.0.5 — calm landscape authentication and high-contrast neutral dark mode. */
+.welcome {
+  --login-scene: url("../assets/login-sunrise.jpg");
+  background-image: linear-gradient(90deg,rgba(7,34,36,.72),rgba(7,34,36,.34)),var(--login-scene)!important;
+  background-size: cover!important;
+  background-position: center!important;
+  padding: 24px;
+}
+.welcome-inner { width: min(440px,100%); margin-left: clamp(0px,8vw,120px); padding: 28px; border: 1px solid rgba(255,255,255,.34); border-radius: 22px; background: rgba(248,250,247,.91); box-shadow: 0 24px 70px rgba(4,25,27,.28); backdrop-filter: blur(18px); }
+.welcome-brand { justify-content: flex-start; }
+.welcome-tagline { margin-left: 0!important; margin-right: 0!important; color: #0F3D3E!important; }
+.form-error { margin: 0 0 12px; padding: 10px 12px; border: 1px solid #E7B8C1; border-radius: 10px; background: #FFF1F3; color: #7B2D3D; font-size: 12px; line-height: 1.45; }
+.welcome-secure { display: flex; align-items: center; gap: 6px; justify-content: flex-start; color: #53656B; }
+.notification-note { margin: -4px 52px 10px 34px; color: var(--text-tertiary); font-size: 11px; line-height: 1.45; }
+.pamet-notification { position: fixed; z-index: 8000; top: 18px; left: 50%; width: min(430px,calc(100vw - 28px)); transform: translateX(-50%); display: grid; gap: 3px; padding: 14px 44px 14px 16px; border: 1px solid #A9C9D8; border-radius: 13px; background: #F4FAFD; color: #173B4A; box-shadow: 0 16px 44px rgba(6,31,39,.22); }
+.pamet-notification strong { font-size: 14px; }.pamet-notification span { color: #45616C; font-size: 12px; line-height: 1.4; }.pamet-notification button { position: absolute; right: 10px; top: 9px; border: 0; background: transparent; color: inherit; font-size: 22px; cursor: pointer; }
+.plan-cta { width: auto; min-width: min(100%,320px); margin: 16px auto 2px; padding: 12px 22px; background: var(--pamet-teal); color: #fff; box-shadow: none; }
+.pamet-current-plan { background: #F7F9F7; }.pamet-plan-summary { columns: 2; column-gap: 28px; }
+.phase2-plan-label.advanced { background: #EAF3F8; color: #285B72; }
+
+body.dark {
+  --app-background: #182326;
+  --surface-secondary: #1F2C30;
+  --card-bg: #263438;
+  --border-color: #7C8F93;
+  --text-primary: #F5F8F7;
+  --text-secondary: #D5DEDC;
+  --text-tertiary: #B7C4C1;
+  --warm-light: #29383B;
+  --sage-light: #294037;
+  --rose-light: #49343A;
+  --amber-light: #493F2E;
+  --shadow-card: 0 1px 2px rgba(0,0,0,.2),0 8px 24px rgba(0,0,0,.18);
+  background: #10191C;
+}
+body.dark .topbar,body.dark .sheet { background: #182326; }
+body.dark .settings-card,body.dark .section-card,body.dark .metric-card,body.dark .entry-row,body.dark .cal-card,body.dark .pattern-card,body.dark .report-doc,body.dark .pamet-modal { background: #263438; border-color: #7C8F93; }
+body.dark .pamet-current-plan,body.dark .feedback-form,body.dark .phase2-tool-grid button { background: #1F2C30; border-color: #7C8F93; }
+body.dark .text-input,body.dark .notes-input,body.dark .pamet-form input,body.dark .pamet-form select,body.dark .feedback-form select,body.dark .feedback-form textarea { background: #18262A; border-color: #71858A; color: #F5F8F7; }
+body.dark .settings-section,body.dark .section-kicker { color: #9DC7DA; }
+body.dark .setting-label .icon,body.dark .tab.active { color: #77B6D4; }
+body.dark .btn-primary,body.dark .switch:checked,body.dark .tab-log .log-plus { background: #4CAF7A; color: #082D20; }
+body.dark .sym-btn,body.dark .chip { background: #303F43; border-color: #6B7D82; color: #F1F6F4; }
+body.dark .sym-btn.selected,body.dark .chip.selected { background: #365D4B; border-color: #84C9A5; color: #FFFFFF; }
+body.dark .help { background: #33454A; border-color: #71858A; color: #F5F8F7; }
+body.dark .data-btn,body.dark .link-btn { color: #8DCAE5; }
+body.dark .pamet-billing-toggle button { background: #1F2C30; color: #D5DEDC; border-color: #7C8F93; }
+body.dark .pamet-billing-toggle button.active { background: #284B5A; color: #F5FAFC; border-color: #74B5D1; }
+body.dark .pamet-plan-label.advanced,body.dark .phase2-plan-label.advanced { background: #284B5A; color: #DFF4FD; }
+body.dark .pamet-notification { background: #23373F; border-color: #6698AE; color: #F5F8F7; }body.dark .pamet-notification span{color:#D5DEDC}
+@media(max-width:600px){.welcome{padding:16px;background-position:62% center!important}.welcome-inner{margin:0;padding:22px}.pamet-plan-summary{columns:1}.notification-note{margin-right:12px}}

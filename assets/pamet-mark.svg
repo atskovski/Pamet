@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title description">
   <title id="title">Pamet mark</title>
-  <desc id="description">A green and blue leaf representing a growing health history.</desc>
+  <desc id="description">Pamet's folded green, teal, and sky-blue leaf mark.</desc>
   <defs>
     <clipPath id="mark-boundary">
       <rect x="6" y="6" width="52" height="52" rx="15" />
@@ -8,8 +8,9 @@
   </defs>
   <g clip-path="url(#mark-boundary)">
     <rect x="6" y="6" width="52" height="52" rx="15" fill="#4CAF7A" />
-    <path d="M6 43c10-5 20-3 31-8 10-4 17-12 21-23v46H6Z" fill="#6EA8D8" />
-    <path d="M15 53c3-14 10-27 32-35" fill="none" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" />
-    <path d="M21 49c7-8 16-10 27-16" fill="none" stroke="#0F3D3E" stroke-width="2.5" stroke-linecap="round" opacity=".78" />
+    <path d="M6 43c11-5 21-3 32-8 10-4 16-12 20-23v46H6Z" fill="#6EA8D8" />
+    <path d="M14 58c2-17 10-31 34-42-17 13-24 25-25 42Z" fill="#14778A" />
+    <path d="M15 54c4-16 13-28 34-38" fill="none" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" />
+    <path d="M24 49c7-7 15-10 25-16" fill="none" stroke="#0F3D3E" stroke-width="2.5" stroke-linecap="round" opacity=".9" />
   </g>
 </svg>

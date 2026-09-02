@@ -1,4 +1,4 @@
-/* Pamet v1.0.4 — profiles, appointment preparation, longitudinal summaries, and advanced sharing. */
+/* Pamet v1.0.5 — profiles, appointment preparation, longitudinal summaries, and advanced sharing. */
 (function () {
   "use strict";
   const S = window.PametStore;
@@ -120,23 +120,20 @@
     grid.dataset.phase2Enhanced = "true";
     const pro = grid.querySelector('[data-plan="pro"]'), ultraPlan = grid.querySelector('[data-plan="ultra"]');
     if (pro) { pro.classList.add("phase2-recommended-plan"); pro.insertAdjacentHTML("afterbegin", '<span class="phase2-plan-label">Most popular</span>'); }
-    if (ultraPlan) ultraPlan.insertAdjacentHTML("afterbegin", '<span class="phase2-plan-label stretch">For families &amp; care teams</span>');
+    if (ultraPlan) ultraPlan.insertAdjacentHTML("afterbegin", '<span class="phase2-plan-label advanced">Advanced care coordination</span>');
     const annual = $("[data-int='annual']", grid.parentElement); if (annual) annual.textContent = "Annual · Best value";
   }
 
   function injectSettings() {
     const profileCard = $("#screen-settings .profile-card");
     if (!profileCard) return;
-    const footer = $(".footer-line"); if (footer) footer.textContent = "Pamet v1.0.4 · Your health history, finally useful.";
-    let switcher = $("#phase2ProfileSwitcher");
-    if (!switcher) { switcher = document.createElement("section"); switcher.id = "phase2ProfileSwitcher"; switcher.className = "settings-card phase2-profile-switcher"; profileCard.insertAdjacentElement("afterend", switcher); }
-    switcher.innerHTML = `<div><p class="settings-section">Active profile</p><strong>${esc(S.activeProfile.name)}</strong><span>${esc(S.activeProfile.relationship)}</span></div><button type="button" class="btn btn-ghost" id="phase2ManageProfiles">${ultra() ? "Manage" : "Ultra"}</button>`;
-    switcher.querySelector("#phase2ManageProfiles").addEventListener("click", manageProfiles);
+    const footer = $(".footer-line"); if (footer) footer.textContent = "Pamet v1.0.5 · Your health history, finally useful.";
+    $("#phase2ProfileSwitcher")?.remove();
 
     let tools = $("#phase2UltraTools");
     if (!tools) { tools = document.createElement("section"); tools.id = "phase2UltraTools"; tools.className = "settings-card phase2-tools"; $("#planCompare").closest(".settings-card").insertAdjacentElement("afterend", tools); }
-    tools.innerHTML = `<p class="settings-section">Prepare with Ultra</p><p class="phase2-tools-copy">Tools for appointments, longer-term history, profiles, and coordinated care.</p><div class="phase2-tool-grid"><button type="button" data-phase2="prep"><strong>Appointment prep</strong><span>Build a visit discussion guide</span></button><button type="button" data-phase2="longitudinal"><strong>Longitudinal analysis</strong><span>Compare 90-day periods</span></button><button type="button" data-phase2="brief"><strong>Advanced Visit Brief</strong><span>Create a clinician-ready summary</span></button><button type="button" data-phase2="sharing"><strong>Advanced sharing</strong><span>Choose roles and expiration</span></button></div>`;
-    const handlers = { prep: appointmentPrep, longitudinal: longitudinalAnalysis, brief: advancedVisitBrief, sharing: advancedSharing };
+    tools.innerHTML = `<p class="settings-section">Prepare with Ultra</p><p class="phase2-tools-copy">Advanced care coordination for appointments, longer-term history, family profiles, and sharing.</p><div class="phase2-tool-grid"><button type="button" data-phase2="profiles"><strong>Manage profiles</strong><span>Keep each person's history separate</span></button><button type="button" data-phase2="prep"><strong>Appointment prep</strong><span>Build a visit discussion guide</span></button><button type="button" data-phase2="longitudinal"><strong>Longitudinal analysis</strong><span>Compare 90-day periods</span></button><button type="button" data-phase2="brief"><strong>Advanced Visit Brief</strong><span>Create a clinician-ready summary</span></button><button type="button" data-phase2="sharing"><strong>Advanced sharing</strong><span>Choose roles and expiration</span></button></div>`;
+    const handlers = { profiles: manageProfiles, prep: appointmentPrep, longitudinal: longitudinalAnalysis, brief: advancedVisitBrief, sharing: advancedSharing };
     tools.querySelectorAll("[data-phase2]").forEach((button) => button.addEventListener("click", handlers[button.dataset.phase2]));
   }
 
@@ -145,7 +142,7 @@
   }, true);
 
   document.title = "Pamet — Track, understand, prepare";
-  const footer = $(".footer-line"); if (footer) footer.textContent = "Pamet v1.0.4 · Your health history, finally useful.";
+  const footer = $(".footer-line"); if (footer) footer.textContent = "Pamet v1.0.5 · Your health history, finally useful.";
   injectSettings();
   new MutationObserver(() => enhancePlanModal()).observe(document.body, { childList: true, subtree: true });
   $$(".tab[data-tab='settings']").forEach((tab) => tab.addEventListener("click", () => setTimeout(injectSettings, 20)));

@@ -581,6 +581,7 @@
       notes: $("#notesInput").value.trim()
     };
     S.addEntry(entry);
+    window.dispatchEvent(new CustomEvent("pamet:entry-saved", { detail: { entry } }));
     // success feedback
     const banner = $("#logSuccess");
     banner.hidden = false;
@@ -699,7 +700,7 @@
     // Welcome / auth gate (v1.0.1)
     const secure = $("#welcomeSecure");
     if (secure) {
-      if (A.isSecure) secure.textContent = "🔒 Your password is salted and securely hashed on this device."
+      if (A.isSecure) secure.textContent = "🔒 Your password is protected and stays on this device."
       else { secure.textContent = "⚠️ Pamet requires HTTPS and a browser with Web Crypto support."; secure.classList.add("warn"); }
     }
 
@@ -707,7 +708,7 @@
     $("#showRegister").addEventListener("click", (e) => { e.preventDefault(); $("#registerForm").reset(); $("#loginForm").hidden = true; $("#registerForm").hidden = false; });
     $("#showLogin").addEventListener("click", (e) => { e.preventDefault(); $("#registerForm").reset(); $("#registerForm").hidden = true; $("#loginForm").hidden = false; });
 
-    const setFormError = (msg) => { let el = $(".form-error"); if (!el) { el = document.createElement("p"); el.className = "form-error"; $("#welcome").appendChild(el); } el.textContent = msg || ""; };
+    const setFormError = (msg) => { let el = $(".form-error"); if (!el) { el = document.createElement("p"); el.className = "form-error"; el.setAttribute("role", "alert"); $("#loginForm").insertBefore(el, $("#loginForm button[type='submit']")); } el.textContent = msg === "No account found on this device." ? "We couldn’t find a Pamet account saved in this browser. Create an account to get started, or use the browser where you previously signed up." : (msg || ""); el.hidden = !el.textContent; };
 
     $("#registerForm").addEventListener("submit", async (e) => {
       e.preventDefault(); setFormError("");

@@ -1,6 +1,6 @@
 # Pamet — Personal Health Journal
 
-**Version 1.0.4 — advanced plans and production hardening** · **Your health history, finally useful.**
+**Version 1.0.5 — visual refinement, notifications, and production hardening** · **Your health history, finally useful.**
 
 Pamet is a privacy-first personal health journal designed to help people consistently document symptoms, medications, lifestyle factors, and user-provided medical information, then turn those observations into useful, understandable health history.
 
@@ -82,10 +82,15 @@ Pamet contains **no advertising on any plan**.
 | Multiple separate profiles | — | — | ✓ |
 | Advanced Visit Brief | — | — | ✓ |
 
-**Pro is the recommended plan for most individual users.** Its annual option saves about 28%. Ultra is intentionally positioned as a stretch tier for families, caregivers, and people preparing for more complex care conversations. A tier is purchasable only when both of its Stripe price IDs pass Pamet's live catalog validation.
+**Pro is the recommended plan for most individual users.** Its annual option saves about 28%. Ultra is positioned as **Advanced care coordination** for families, caregivers, and people preparing for more complex care conversations. A tier is purchasable only when both of its Stripe price IDs pass Pamet's live catalog validation.
 
-## v1.0.4 Highlights
+## v1.0.5 Highlights
 
+- Three rotating, brand-aligned landscape scenes and a clearer authentication card with plain-language local-account guidance.
+- A neutral charcoal-teal dark palette with measurable WCAG AA text contrast, 3:1 control boundaries, sky-blue information accents, and sage reserved for affirmative actions.
+- Consent-based 8pm reminders and new-observation alerts. They use standard browser/PWA notifications when permission is granted and always retain an in-app fallback while Pamet is open.
+- One approved folded-leaf mark across the browser favicon, installed-app icons, notification icon, header, and authentication screen.
+- **Advanced care coordination** positioning for Ultra, a compact plan CTA, minimized successful feedback, and removal of the redundant Active profile settings card.
 - Ten useful starting choices in each logging category: physical symptoms, emotional feelings, activity, and medication types.
 - Paired **+ / −** controls in every category; removing a custom option identifies it by name and requires confirmation.
 - A lighter, layered dark palette with WCAG AA text contrast and 3:1 control-boundary contrast.
@@ -243,7 +248,7 @@ Before production handling of sensitive health information, complete qualified s
 
 ## Roadmap Boundaries
 
-### Now — v1.0.4
+### Now — v1.0.5
 
 Local-first logging, 90-day Free history, Pro unlimited history, weekly summary/digest infrastructure, basic trends/correlations, What Changed?, Visit Brief, reminders, subscription management, export/delete, and basic read-only sharing.
 

@@ -19,7 +19,6 @@
     form.hidden = !value;
     open.setAttribute("aria-expanded", String(value));
     if (value) document.querySelector("#feedbackMessage").focus();
-    else setStatus("", false);
   }
 
   async function request(path, options) {
@@ -48,7 +47,7 @@
       category: document.querySelector("#feedbackCategory").value,
       rating: rating ? Number(rating.value) : null,
       message: document.querySelector("#feedbackMessage").value.trim(),
-      appVersion: "1.0.4",
+      appVersion: "1.0.5",
       screen: "settings"
     };
 
@@ -66,6 +65,9 @@
       await request("/api/feedback", { method: "POST", body: JSON.stringify(payload) });
       form.reset();
       setStatus("Thanks — your feedback was saved without account or health details.", false);
+      form.hidden = true;
+      open.setAttribute("aria-expanded", "false");
+      open.textContent = "Share more feedback";
     } catch (error) {
       setStatus(error.message, true);
     } finally {

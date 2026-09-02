@@ -1,4 +1,4 @@
-# Pamet v1.0.4 Production Readiness Review
+# Pamet v1.0.5 Production Readiness Review
 
 Reviewed 2026-09-01. This is an engineering readiness record, not a compliance certification.
 

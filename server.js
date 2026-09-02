@@ -6,7 +6,7 @@ const express = require('express');
 const mysql = require('mysql2/promise');
 const Stripe = require('stripe');
 
-const VERSION = '1.0.4';
+const VERSION = '1.0.5';
 const PORT = Number(process.env.PORT || 8080);
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const APP = (process.env.APP_BASE_URL || `http://localhost:${PORT}`).replace(/\/$/, '');
