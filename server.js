@@ -255,10 +255,10 @@ app.use(express.json({ limit: '256kb', strict: true }));
 
 app.get('/api/health', (req, res) => res.json({ ok: true, version: VERSION }));
 app.get('/api/ready', async (req, res) => {
-  const checks = { database: false, distributedRateLimit: false, push: push.configured(), logDrain: !!process.env.LOG_DRAIN_URL, alerts: !!process.env.ALERT_WEBHOOK_URL, identityEncryption: /^[a-f0-9]{64}$/i.test(process.env.IDENTITY_ENCRYPTION_KEY || '') };
+  const checks = { database: false, distributedRateLimit: false, push: push.configured(), logDrain: !!process.env.LOG_DRAIN_URL, metrics: !!process.env.METRICS_SECRET, alerts: !!process.env.ALERT_WEBHOOK_URL, identityEncryption: /^[a-f0-9]{64}$/i.test(process.env.IDENTITY_ENCRYPTION_KEY || '') };
   try { const connection = await db(); await connection.query('SELECT 1'); await connection.query('SELECT 1 FROM pamet_devices LIMIT 0'); await connection.query('SELECT 1 FROM pamet_push_subscriptions LIMIT 0'); await connection.query('SELECT 1 FROM pamet_sync_blobs LIMIT 0'); checks.database = true; } catch {}
   const limiter = await rateLimitReady(); checks.distributedRateLimit = limiter.ready;
-  const required = ['database', 'distributedRateLimit', 'push', 'logDrain', 'alerts', 'identityEncryption'];
+  const required = ['database', 'distributedRateLimit', 'push', 'logDrain', 'metrics', 'alerts', 'identityEncryption'];
   const ok = required.every((name) => checks[name]);
   res.status(ok ? 200 : 503).json({ ok, version: VERSION, checks });
 });
