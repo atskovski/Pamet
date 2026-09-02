@@ -17,6 +17,7 @@ This file is the repository-only system of record for product and engineering ch
 - Replaced MySQL-version-specific `ADD COLUMN IF NOT EXISTS` migrations with information-schema checks, completed the controlled Wasmer schema migration, and locked automatic production migration back off.
 - Added an atomic MySQL distributed-rate-limit fallback for deployments without Redis/Valkey and verified the live authentication path no longer returns HTTP 503.
 - Configured production VAPID, metrics, cron, identity-encryption, and Ultra environment variables outside Git; retained verified-domain email, centralized alerting, and independent reviews as explicit launch gates.
+- Added direct Grafana Cloud OTLP/HTTP export for structured logs and request metrics with least-privilege deployment credentials and readiness integration.
 
 ## [1.1.0] — 2026-09-02
 

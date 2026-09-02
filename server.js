@@ -52,14 +52,48 @@ const timezoneOk = (value) => { try { new Intl.DateTimeFormat('en-US', { timeZon
 const secretEqual = (left, right) => { const a = Buffer.from(sha(left)); const b = Buffer.from(sha(right)); return a.length === b.length && crypto.timingSafeEqual(a, b); };
 const serializedObject = (value, maxBytes = 200 * 1024) => { if (!plainObject(value)) return null; const json = JSON.stringify(value); return Buffer.byteLength(json, 'utf8') <= maxBytes ? json : null; };
 const metricRoute = (req) => req.route && req.route.path ? String(req.route.path) : (req.path.startsWith('/api/') ? req.path.replace(/[0-9a-f]{8}-[0-9a-f-]{27,}/ig, ':id').replace(/\/api\/share\/[^/]+/, '/api/share/:token') : 'static');
+const otlpConfigured = () => /^https:\/\//i.test(process.env.GRAFANA_OTLP_ENDPOINT || '') && !!process.env.GRAFANA_OTLP_USERNAME && !!process.env.GRAFANA_OTLP_TOKEN;
+const otlpTime = () => String(BigInt(Date.now()) * 1000000n);
+const otlpResource = () => ({ attributes: [
+  { key: 'service.name', value: { stringValue: 'pamet' } },
+  { key: 'service.version', value: { stringValue: VERSION } },
+  { key: 'deployment.environment', value: { stringValue: NODE_ENV } }
+] });
+function sendOtlp(signal, payload) {
+  if (!otlpConfigured()) return;
+  const endpoint = process.env.GRAFANA_OTLP_ENDPOINT.replace(/\/$/, '');
+  const authorization = Buffer.from(`${process.env.GRAFANA_OTLP_USERNAME}:${process.env.GRAFANA_OTLP_TOKEN}`).toString('base64');
+  fetch(`${endpoint}/v1/${signal}`, { method: 'POST', headers: { Authorization: `Basic ${authorization}`, 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: AbortSignal.timeout(4000) })
+    .then((response) => { if (!response.ok) console.warn('otlp_export_rejected', { signal, status: response.status }); })
+    .catch((error) => console.warn('otlp_export_failed', { signal, message: error.message }));
+}
+function exportOtlpLog(event) {
+  const record = { timeUnixNano: otlpTime(), observedTimeUnixNano: otlpTime(), severityText: event.severity || (event.event === 'alert.raised' ? 'ERROR' : 'INFO'), body: { stringValue: JSON.stringify(event) } };
+  sendOtlp('logs', { resourceLogs: [{ resource: otlpResource(), scopeLogs: [{ scope: { name: 'pamet.server', version: VERSION }, logRecords: [record] }] }] });
+}
+function exportOtlpMetrics(method, route, status, durationMs) {
+  const timeUnixNano = otlpTime();
+  const attributes = [
+    { key: 'http.request.method', value: { stringValue: method } },
+    { key: 'http.route', value: { stringValue: route } },
+    { key: 'http.response.status_code', value: { intValue: String(status) } }
+  ];
+  sendOtlp('metrics', { resourceMetrics: [{ resource: otlpResource(), scopeMetrics: [{ scope: { name: 'pamet.server', version: VERSION }, metrics: [
+    { name: 'pamet.http.requests', unit: '{request}', sum: { aggregationTemporality: 1, isMonotonic: true, dataPoints: [{ attributes, timeUnixNano, asInt: '1' }] } },
+    { name: 'pamet.http.request.duration', unit: 'ms', gauge: { dataPoints: [{ attributes, timeUnixNano, asDouble: durationMs }] } }
+  ] }] }] });
+}
 function recordMetric(method, route, status, durationMs) {
   const key = `${method}|${route}|${status}`;
   const value = metrics.get(key) || { count: 0, durationMs: 0 };
   value.count += 1; value.durationMs += durationMs; metrics.set(key, value);
+  exportOtlpMetrics(method, route, status, durationMs);
 }
 function operationalEvent(event) {
-  const line = JSON.stringify({ service: 'pamet', version: VERSION, at: new Date().toISOString(), ...event });
+  const payload = { service: 'pamet', version: VERSION, at: new Date().toISOString(), ...event };
+  const line = JSON.stringify(payload);
   console.log(line);
+  exportOtlpLog(payload);
   if (process.env.LOG_DRAIN_URL) fetch(process.env.LOG_DRAIN_URL, {
     method: 'POST', headers: { 'Content-Type': 'application/json', ...(process.env.LOG_DRAIN_TOKEN ? { Authorization: `Bearer ${process.env.LOG_DRAIN_TOKEN}` } : {}) },
     body: line, signal: AbortSignal.timeout(3000)
@@ -308,7 +342,8 @@ app.use('/api', (req, res, next) => {
 
 app.get('/api/health', (req, res) => res.json({ ok: true, version: VERSION }));
 app.get('/api/ready', async (req, res) => {
-  const checks = { database: false, distributedRateLimit: false, push: push.configured(), email: !!(process.env.RESEND_API_KEY && process.env.EMAIL_FROM), logDrain: !!process.env.LOG_DRAIN_URL, metrics: !!process.env.METRICS_SECRET, alerts: !!process.env.ALERT_WEBHOOK_URL, identityEncryption: /^[a-f0-9]{64}$/i.test(process.env.IDENTITY_ENCRYPTION_KEY || '') };
+  const telemetry = otlpConfigured();
+  const checks = { database: false, distributedRateLimit: false, push: push.configured(), email: !!(process.env.RESEND_API_KEY && process.env.EMAIL_FROM), logDrain: !!process.env.LOG_DRAIN_URL || telemetry, metrics: !!process.env.METRICS_SECRET, alerts: !!process.env.ALERT_WEBHOOK_URL || telemetry, identityEncryption: /^[a-f0-9]{64}$/i.test(process.env.IDENTITY_ENCRYPTION_KEY || '') };
   try { const connection = await db(); await connection.query('SELECT 1'); await connection.query('SELECT 1 FROM pamet_devices LIMIT 0'); await connection.query('SELECT 1 FROM pamet_push_subscriptions LIMIT 0'); await connection.query('SELECT 1 FROM pamet_sync_blobs LIMIT 0'); checks.database = true; } catch {}
   const limiter = await rateLimitReady(); checks.distributedRateLimit = limiter.ready;
   const coreRequired = ['database', 'distributedRateLimit'];

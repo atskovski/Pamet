@@ -26,8 +26,8 @@ The v1.2.0 production architecture uses a bundled PWA client, an Express/MySQL b
 - The Wasmer MySQL schema is migrated with version-compatible, idempotent column checks; automatic runtime migrations are locked off after the controlled migration.
 - Database-backed distributed rate limiting, VAPID push signing, protected metrics, cron authentication, identity-secret encryption, and the Ultra deployment variable are configured outside Git.
 - Live authentication reaches the database and returns a normal invalid-credential response instead of HTTP 503.
-- Password-reset code is production-complete but outbound reset delivery remains intentionally unavailable until Resend has a verified Pamet sending domain and Wasmer receives `RESEND_API_KEY` plus `EMAIL_FROM`.
-- Centralized log/alert destinations and independent penetration, screen-reader accessibility, and HIPAA-adjacent legal reviews remain external launch gates rather than claims made by the codebase.
+- Password-reset delivery is configured through Resend. The deployment currently uses Resend's test sender; a verified Pamet sending domain is still required before sending to arbitrary production users.
+- Structured logs and request metrics are exported to Grafana Cloud over OTLP/HTTP with a least-privilege deployment token. Independent penetration, screen-reader accessibility, and HIPAA-adjacent legal reviews remain external launch gates rather than claims made by the codebase.
 
 ## Product Vision
 
@@ -105,6 +105,7 @@ Pamet contains **no advertising on any plan**.
 - Added server-authoritative capability claims, a persisted Ultra appointment workspace, explicit account-deletion cleanup, and Stripe customer deletion.
 - Renamed “Longitudinal analysis” to **Health history over time** and refined Ultra around visit preparation and care-team coordination.
 - Added a Wasmer-compatible idempotent MySQL migration path and an atomic database fallback for distributed rate limiting, eliminating the production authentication 503 without requiring a separate cache service.
+- Added direct Grafana Cloud OTLP/HTTP export for structured operational logs and request metrics, and connected telemetry availability to deployment readiness.
 
 ## v1.1.0 Highlights
 

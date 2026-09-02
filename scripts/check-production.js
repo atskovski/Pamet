@@ -41,5 +41,6 @@ check(schema.includes('pamet_sessions') && server.includes('HttpOnly; SameSite=L
 check(server.includes("app.post('/api/account/recovery/request'") && server.includes('identity.password_reset') && server.includes('password_hash=?,password_salt=?'), 'Password recovery must send an expiring email link and reset the server password verifier.');
 check(server.includes("app.get('/api/entitlements'") && server.includes("app.post('/api/appointments'"), 'Paid capabilities and Ultra appointment data must be enforced by the server.');
 check(server.includes('LOG_DRAIN_URL') && server.includes('ALERT_WEBHOOK_URL') && server.includes("app.get('/api/metrics'"), 'Logs, alerts, and protected metrics must expose production integrations.');
+check(server.includes('GRAFANA_OTLP_ENDPOINT') && server.includes("sendOtlp('logs'") && server.includes("sendOtlp('metrics'"), 'Grafana Cloud must receive OTLP logs and metrics through a least-privilege deployment token.');
 
 console.log('Pamet production hardening checks passed.');

@@ -33,7 +33,7 @@ Pamet fails safely when a required service is absent. Configure these as deploym
 - Distributed limits: `REDIS_URL` for a TLS-protected Redis/Valkey service.
 - Web Push: `VAPID_SUBJECT`, `VAPID_PUBLIC_KEY`, and `VAPID_PRIVATE_KEY`.
 - Identity: a randomly generated 32-byte `IDENTITY_ENCRYPTION_KEY` encoded as 64 hex characters.
-- Observability: `METRICS_SECRET`, `LOG_DRAIN_URL`, `LOG_DRAIN_TOKEN`, `ALERT_WEBHOOK_URL`, and optional `ALERT_WEBHOOK_TOKEN`.
+- Observability: either Grafana Cloud OTLP (`GRAFANA_OTLP_ENDPOINT`, `GRAFANA_OTLP_USERNAME`, and a least-privilege `GRAFANA_OTLP_TOKEN` with `logs:write` and `metrics:write`) or the generic drain/webhook variables (`LOG_DRAIN_URL`, `LOG_DRAIN_TOKEN`, `ALERT_WEBHOOK_URL`, and optional `ALERT_WEBHOOK_TOKEN`). Keep `METRICS_SECRET` for the protected Prometheus-compatible diagnostics endpoint.
 
 Approved Stripe catalog:
 
