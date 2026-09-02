@@ -63,7 +63,7 @@ This release normalizes the advanced-plan work that was temporarily labeled 2.0.
 ### Pricing decision
 
 - Retained Pro at **$6.99/month or $59.99/year** and Ultra at **$12.99/month or $99.99/year**.
-- Pro remains the value anchor for individual users. Ultra is intentionally a stretch tier based on multi-profile, care-coordination, and appointment-preparation value rather than additional logging limits.
+- Pro remains the value anchor for individual users. Ultra is positioned for advanced care coordination based on multi-profile, caregiver, and appointment-preparation value rather than additional logging limits.
 
 ### Preserved exclusions
 
