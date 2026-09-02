@@ -170,6 +170,16 @@ Pamet remains **local-first** for journal entries. The backend is used only for 
 
 Production deployments track the protected `main` branch so only reviewed, merged releases are promoted to `pamet.wasmer.app`.
 
+Pamet also has two private, fully native client repositories:
+
+- `Pamet-iOS`: SwiftUI, SwiftData, and URLSession
+- `Pamet-Android`: Kotlin, Jetpack Compose, Room, and OkHttp
+
+This repository remains the backend and mobile API source of truth. The versioned
+`contracts/mobile-api.json` contract is synchronized into both mobile repositories
+by GitHub Actions. Shared account, entitlement, privacy, and API changes therefore
+reach both clients without copying web-only presentation code into native apps.
+
 - Stripe subscriptions and verified entitlements
 - Registration and weekly-digest email delivery
 - Secure, expiring caregiver/provider shares
