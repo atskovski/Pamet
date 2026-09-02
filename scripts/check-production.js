@@ -25,6 +25,7 @@ check(server.includes('idempotencyKey') && server.includes('pamet_stripe_events'
 check(server.includes("app.get('/api/ready'") && server.includes("app.get('/api/health'"), 'Health and dependency readiness handlers are required.');
 check(server.includes('poolInitialization') && server.includes('await candidate.end()'), 'Database initialization must be single-flight and clean up failed pools.');
 check(server.includes("process.env.AUTO_MIGRATE === 'true'") && server.includes("candidate.query('SELECT 1')"), 'Production startup must separate schema migrations from request readiness.');
+check(server.includes('information_schema.COLUMNS') && !server.includes('ADD COLUMN IF NOT EXISTS'), 'Schema upgrades must support MySQL versions without ADD COLUMN IF NOT EXISTS.');
 check((secureServer.match(/app\.listen/g) || []).length === 1 && !secureServer.includes('/api/stripe/webhook'), 'The runtime wrapper must not duplicate application handlers.');
 check(!app.includes('S.setPlan("pro")'), 'The browser must never grant its own paid entitlement.');
 check(app.includes('/^[=+\\-@]/') && app.includes('S.exportAllData().profiles'), 'Exports must cover every profile and neutralize spreadsheet formulas.');
