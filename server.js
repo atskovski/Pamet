@@ -54,6 +54,7 @@ const serializedObject = (value, maxBytes = 200 * 1024) => { if (!plainObject(va
 const metricRoute = (req) => req.route && req.route.path ? String(req.route.path) : (req.path.startsWith('/api/') ? req.path.replace(/[0-9a-f]{8}-[0-9a-f-]{27,}/ig, ':id').replace(/\/api\/share\/[^/]+/, '/api/share/:token') : 'static');
 const otlpConfigured = () => /^https:\/\//i.test(process.env.GRAFANA_OTLP_ENDPOINT || '') && !!process.env.GRAFANA_OTLP_USERNAME && !!process.env.GRAFANA_OTLP_TOKEN;
 const otlpTime = () => String(BigInt(Date.now()) * 1000000n);
+const otlpStartTime = otlpTime();
 const otlpResource = () => ({ attributes: [
   { key: 'service.name', value: { stringValue: 'pamet' } },
   { key: 'service.version', value: { stringValue: VERSION } },
@@ -71,7 +72,7 @@ function exportOtlpLog(event) {
   const record = { timeUnixNano: otlpTime(), observedTimeUnixNano: otlpTime(), severityText: event.severity || (event.event === 'alert.raised' ? 'ERROR' : 'INFO'), body: { stringValue: JSON.stringify(event) } };
   sendOtlp('logs', { resourceLogs: [{ resource: otlpResource(), scopeLogs: [{ scope: { name: 'pamet.server', version: VERSION }, logRecords: [record] }] }] });
 }
-function exportOtlpMetrics(method, route, status, durationMs) {
+function exportOtlpMetrics(method, route, status, durationMs, requestCount) {
   const timeUnixNano = otlpTime();
   const attributes = [
     { key: 'http.request.method', value: { stringValue: method } },
@@ -79,15 +80,15 @@ function exportOtlpMetrics(method, route, status, durationMs) {
     { key: 'http.response.status_code', value: { intValue: String(status) } }
   ];
   sendOtlp('metrics', { resourceMetrics: [{ resource: otlpResource(), scopeMetrics: [{ scope: { name: 'pamet.server', version: VERSION }, metrics: [
-    { name: 'pamet.http.requests', unit: '{request}', sum: { aggregationTemporality: 1, isMonotonic: true, dataPoints: [{ attributes, timeUnixNano, asInt: '1' }] } },
-    { name: 'pamet.http.request.duration', unit: 'ms', gauge: { dataPoints: [{ attributes, timeUnixNano, asDouble: durationMs }] } }
+    { name: 'pamet.http.requests', unit: '1', sum: { aggregationTemporality: 2, isMonotonic: true, dataPoints: [{ attributes, startTimeUnixNano: otlpStartTime, timeUnixNano, asInt: String(requestCount) }] } },
+    { name: 'pamet.http.request.duration', unit: 'ms', gauge: { dataPoints: [{ attributes, startTimeUnixNano: otlpStartTime, timeUnixNano, asDouble: durationMs }] } }
   ] }] }] });
 }
 function recordMetric(method, route, status, durationMs) {
   const key = `${method}|${route}|${status}`;
   const value = metrics.get(key) || { count: 0, durationMs: 0 };
   value.count += 1; value.durationMs += durationMs; metrics.set(key, value);
-  exportOtlpMetrics(method, route, status, durationMs);
+  exportOtlpMetrics(method, route, status, durationMs, value.count);
 }
 function operationalEvent(event) {
   const payload = { service: 'pamet', version: VERSION, at: new Date().toISOString(), ...event };
