@@ -1,11 +1,12 @@
 {
   "name": "pamet",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
   "description": "Pamet — privacy-first personal health journal",
   "main": "secure-server.js",
   "scripts": {
     "start": "node secure-server.js",
+    "build": "esbuild js/main.js --bundle --minify --outfile=dist/pamet.min.js && esbuild css/main.css --bundle --minify --external:../assets/* --outfile=dist/pamet.min.css",
     "test": "node --test tests/*.test.js",
     "check": "node --check server.js && node --check secure-server.js && node --check lib/rate-limit.js && node --check lib/security.js && node --check lib/push.js && node --check js/auth.js && node --check js/store.js && node --check js/app.js && node --check js/v1.0.3.js && node --check js/feedback-v1.0.3.js && node --check js/phase2.js && node --check js/notifications-v1.1.0.js && node --check js/e2e-sync-v1.1.0.js && node --check js/security-v1.1.0.js && node --check js/release-v1.1.0.js && node scripts/check-release.js && node scripts/check-store.js && node scripts/check-phase2.js && node scripts/check-production.js && node scripts/check-http.js"
   },
@@ -18,5 +19,9 @@
     "redis": "^5.12.1",
     "stripe": "^18.5.0",
     "web-push": "^3.6.7"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.9",
+    "sharp": "^0.35.4"
   }
 }

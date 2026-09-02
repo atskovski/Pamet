@@ -13,17 +13,19 @@ async function check(condition, message) { if (!condition) throw new Error(messa
   try {
     const health = await fetch(`${base}/api/health`);
     const body = await health.json();
-    await check(health.ok && body.version === '1.1.0', 'Health handler must report v1.1.0.');
+    await check(health.ok && body.version === '1.2.0', 'Health handler must report v1.2.0.');
     await check(health.headers.get('x-content-type-options') === 'nosniff', 'Security headers must be present.');
     await check(health.headers.get('content-security-policy')?.includes("default-src 'self'"), 'CSP must be present.');
     await check(health.headers.get('strict-transport-security')?.includes('max-age='), 'HSTS must be present in production.');
 
-    for (const privatePath of ['/server.js', '/package.json', '/db/schema.sql', '/.env.example']) {
+    for (const privatePath of ['/server.js', '/package.json', '/db/schema.sql', '/.env.example', '/js/auth.js', '/css/styles.css']) {
       const response = await fetch(base + privatePath);
       await check(response.status === 404, `${privatePath} must not be public.`);
     }
     const home = await fetch(`${base}/`);
     await check(home.ok && (await home.text()).includes('<title>Pamet'), 'The application shell must be available.');
+    await check((await fetch(`${base}/dist/pamet.min.js?v=1200`)).ok, 'The production JavaScript bundle must be served.');
+    await check((await fetch(`${base}/dist/pamet.min.css?v=1200`)).ok, 'The production stylesheet must be served.');
     const malformed = await fetch(`${base}/api/account/bootstrap`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{' });
     await check(malformed.status === 400, 'Malformed JSON must produce a safe 400 response.');
     console.log('Pamet HTTP security smoke checks passed.');

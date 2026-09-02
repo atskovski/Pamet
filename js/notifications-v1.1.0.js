@@ -7,7 +7,7 @@
 
   function authHeaders() {
     const credential = window.PametAuth?.getBackendCredential?.();
-    return credential?.deviceKey ? { "Content-Type": "application/json", Authorization: `Bearer ${credential.deviceKey}` } : null;
+    return credential ? { "Content-Type": "application/json", ...(credential.deviceKey ? { Authorization: `Bearer ${credential.deviceKey}` } : {}) } : null;
   }
 
   function applicationKey(value) {
@@ -43,8 +43,11 @@
       notice.setAttribute("role", "status");
       document.body.appendChild(notice);
     }
-    notice.innerHTML = `<strong>${title}</strong><span>${body}</span><button type="button" aria-label="Dismiss notification">×</button>`;
-    notice.querySelector("button").onclick = () => notice.remove();
+    notice.replaceChildren();
+    const heading = document.createElement("strong"); heading.textContent = String(title || "Pamet");
+    const message = document.createElement("span"); message.textContent = String(body || "");
+    const dismiss = document.createElement("button"); dismiss.type = "button"; dismiss.setAttribute("aria-label", "Dismiss notification"); dismiss.textContent = "×";
+    notice.append(heading, message, dismiss); dismiss.onclick = () => notice.remove();
     setTimeout(() => notice.remove(), 12000);
   }
 

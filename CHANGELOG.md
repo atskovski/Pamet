@@ -2,6 +2,19 @@
 
 This file is the repository-only system of record for product and engineering changes. It is **not rendered inside the Pamet application**.
 
+## [1.2.0] — 2026-09-02
+
+- Replaced the layered production asset chain with one minified JavaScript bundle and one minified stylesheet.
+- Added cross-device email/password authentication, server-side scrypt verifiers, expiring HttpOnly sessions, session revocation, same-origin mutation checks, and a legacy-device migration boundary.
+- Added server-authoritative capability claims and persisted Ultra appointment records with clinician, time, reason, concerns, questions, and reminders.
+- Added explicit sharing/session deletion, Stripe customer removal, and deployment schema coverage for sessions and appointments.
+- Renamed “Longitudinal analysis” to **Health history over time** and refined Ultra around appointment preparation, Advanced Visit Briefs, multi-profile care, sharing, encrypted sync, and FHIR-ready export.
+- Made the Compare Pro and Ultra Plans action full-width, centered, and consistent with the plan card.
+- Added a cited competitive/product review covering Bearable, Daylio, Guava, plan positioning, feature semantics, and security boundaries.
+- Added one-time emailed password reset with optional MFA, server password replacement, and revocation of existing sessions.
+- Restored the Create account action after deletion and centered the login password-protection message.
+- Rebuilt all shipped icon sizes from the approved folded-leaf vector master.
+
 ## [1.1.0] — 2026-09-02
 
 - Added Redis/Valkey-backed distributed rate limiting with production fail-closed behavior and readiness reporting.

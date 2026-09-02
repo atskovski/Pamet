@@ -15,17 +15,17 @@ function check(condition, message) { if (!condition) throw new Error(message); }
 function luminance(hex) { const values = hex.match(/../g).map((part) => parseInt(part, 16) / 255).map((value) => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4); return .2126 * values[0] + .7152 * values[1] + .0722 * values[2]; }
 function contrast(a, b) { const first = luminance(a), second = luminance(b); return (Math.max(first, second) + .05) / (Math.min(first, second) + .05); }
 
-check(html.includes('css/phase2.css') && html.includes('js/phase2.js'), 'The v1.1.0 advanced-feature assets must load.');
+check(html.includes('dist/pamet.min.css?v=1200') && html.includes('dist/pamet.min.js?v=1200'), 'The v1.2.0 advanced-feature bundle must load.');
 check(['removeSymptomMinus','removeMoodMinus','removeActivityMinus','removeMedMinus'].every((id) => html.includes(`id="${id}"`)), 'Every log category must expose a remove control.');
 check(store.includes('const SYMPTOMS = ["Headache","Migraine","Fatigue","Back pain","Joint pain","Nausea","Dizziness","Stomach pain","Brain fog","Shortness of breath"]'), 'The researched ten-symptom starter set must remain stable.');
 check(store.includes('pamet_profiles_v2') && store.includes('addProfile(name') && store.includes('switchProfile(id)'), 'Ultra profiles must have separate local persistence.');
 check(app.includes('S.removeCustomField(category, value)') && app.includes('confirm(`Remove “${value}”'), 'Custom-field removal must identify and confirm the selected item.');
-check(phase2.includes('Appointment preparation') && phase2.includes('Longitudinal analysis') && phase2.includes('Advanced Visit Brief') && phase2.includes('Advanced sharing'), 'All Ultra preparation tools must be implemented.');
+check(phase2.includes('Appointment workspace') && phase2.includes('Health history over time') && phase2.includes('Advanced Visit Brief') && phase2.includes('Advanced sharing'), 'All Ultra preparation tools must be implemented in plain language.');
 check(releaseTheme.includes('--app-background: #182326') && releaseTheme.includes('--border-color: #7C8F93') && releaseTheme.includes('--text-primary: #F5F8F7'), 'The v1.1.0 neutral dark palette must remain active.');
 check(contrast('F5F8F7', '263438') >= 4.5 && contrast('D5DEDC', '263438') >= 4.5 && contrast('7C8F93', '263438') >= 3, 'Dark text and control boundaries must meet WCAG AA contrast targets.');
 check(!phase2.includes('Active profile') && phase2.includes('Advanced care coordination'), 'Settings must omit the redundant active-profile card and use professional Ultra positioning.');
 check(server.includes("app.delete('/api/account', auth") && server.includes('stripe.subscriptions.cancel'), 'Account deletion must remove backend data and cancel active billing.');
 check(server.includes('permission_level') && schema.includes('permission_level'), 'Advanced sharing permissions must be persisted by the backend.');
-check(server.includes("const VERSION = '1.1.0'"), 'The health endpoint must report v1.1.0.');
+check(server.includes("const VERSION = '1.2.0'"), 'The health endpoint must report v1.2.0.');
 
-console.log('Pamet v1.1.0 advanced-feature checks passed.');
+console.log('Pamet v1.2.0 advanced-feature checks passed.');

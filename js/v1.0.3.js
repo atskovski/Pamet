@@ -6,14 +6,14 @@
   const PLANS={
     free:{name:"Free",position:"Track",price:"$0",summary:"Build your health history.",features:["Unlimited daily logging","90-day history","Weekly summary","3 custom trackers","1 reminder","1 Visit Brief/month"]},
     pro:{name:"Pro",position:"Understand",price:"$6.99/mo · $59.99/yr",summary:"Find patterns and trends in your health history.",features:["Unlimited history","Correlation insights","Advanced trends","What Changed?","Unlimited trackers","Unlimited reminders","Unlimited Visit Briefs","Basic sharing"]},
-    ultra:{name:"Ultra",position:"Prepare",price:"$12.99/mo · $99.99/yr",summary:"Turn your health history into better conversations with your care team.",features:["Everything in Pro","Multi-profile management","Multiple caregivers","Role-based permissions","Appointment preparation","Longitudinal analysis","Advanced Visit Briefs","Priority support"]}
+    ultra:{name:"Ultra",position:"Prepare",price:"$12.99/mo · $99.99/yr",summary:"Prepare for visits and coordinate care with a complete health story.",features:["Everything in Pro","Appointment workspace","Health history over time","Advanced Visit Briefs","Multiple profiles and care-team roles","Scheduled caregiver updates","Encrypted multi-device sync","FHIR-ready data export"]}
   };
   let cfg=null;
   const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   function toast(m,bad=false){let e=$('.pamet-toast');if(e)e.remove();e=document.createElement('div');e.className='pamet-toast'+(bad?' error':'');e.textContent=m;document.body.appendChild(e);setTimeout(()=>e.remove(),3500)}
   function cred(){return A.getBackendCredential?A.getBackendCredential():null}
   async function api(path,opt={}){const c=cred(),h={"Content-Type":"application/json",...(opt.headers||{})};if(c?.deviceKey)h.Authorization=`Bearer ${c.deviceKey}`;const r=await fetch(path,{...opt,headers:h});const t=await r.text();let b={};try{b=t?JSON.parse(t):{}}catch{b={error:t}}if(!r.ok)throw new Error(b.error||`Request failed (${r.status})`);return b}
-  async function bootstrap(silent=true){const c=cred();if(!c)return null;try{const {deviceKey,...profile}=c;const b=await api('/api/account/bootstrap',{method:'POST',body:JSON.stringify({...profile,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC'})});if(b.user?.plan&&PLANS[b.user.plan]){S._settings.plan=b.user.plan;S.persistSettings()}return b}catch(e){if(!silent)toast('Secure Pamet services are not configured on this deployment yet.',true);return null}}
+  async function bootstrap(silent=true){const c=cred();if(!c)return null;try{const {deviceKey,...profile}=c;const b=deviceKey?await api('/api/account/bootstrap',{method:'POST',body:JSON.stringify({...profile,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC'})}):await api('/api/auth/session');if(b.user?.plan&&PLANS[b.user.plan]){S._settings.plan=b.user.plan;S.persistSettings()}return b}catch(e){if(!silent)toast('Pamet could not verify your secure session. Please log in again.',true);return null}}
   function paid(){return ['pro','ultra'].includes(S.settings.plan)}
   function ultra(){return S.settings.plan==='ultra'}
   S.isPro=paid;S.isUltra=ultra;

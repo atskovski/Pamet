@@ -1,6 +1,6 @@
 # Pamet — Personal Health Journal
 
-**Version 1.1.0 — visual refinement, notifications, and production hardening** · **Your health history, finally useful.**
+**Version 1.2.0 — secure accounts, appointment preparation, and production architecture** · **Your health history, finally useful.**
 
 Pamet is a privacy-first personal health journal designed to help people consistently document symptoms, medications, lifestyle factors, and user-provided medical information, then turn those observations into useful, understandable health history.
 
@@ -17,6 +17,8 @@ Most symptom trackers are good at collecting information but leave the user resp
 - **Ultra — Prepare:** Turn that history into useful information for appointments and coordinated care.
 
 **Track → Understand → Prepare**
+
+The v1.2.0 production architecture uses a bundled PWA client, an Express/MySQL backend, server-verified Stripe entitlements, revocable HttpOnly account sessions, password-reset email links, Redis/Valkey rate limiting, Web Push, encrypted Ultra sync, and explicit dependency readiness checks. Deployment requirements and external review gates are tracked in `PRODUCTION_READINESS.md`.
 
 ## Product Vision
 
@@ -77,12 +79,22 @@ Pamet contains **no advertising on any plan**.
 | CSV / JSON data export | ✓ | ✓ | ✓ |
 | Basic sharing | — | ✓ | ✓ |
 | Multiple caregivers / roles | — | — | ✓ |
-| Appointment preparation | — | — | ✓ |
-| Longitudinal analysis | — | — | ✓ |
+| Appointment workspace | — | — | ✓ |
+| Health history over time | — | — | ✓ |
 | Multiple separate profiles | — | — | ✓ |
 | Advanced Visit Brief | — | — | ✓ |
 
 **Pro is the recommended plan for most individual users.** Its annual option saves about 28%. Ultra is positioned as **Advanced care coordination** for families, caregivers, and people preparing for more complex care conversations. A tier is purchasable only when both of its Stripe price IDs pass Pamet's live catalog validation.
+
+## v1.2.0 Highlights
+
+- Consolidated the browser runtime into one minified JavaScript bundle and one minified stylesheet while keeping source modules maintainable.
+- Added cross-device email/password authentication with revocable, expiring HttpOnly sessions; legacy device credentials remain migration-only.
+- Added a complete password-reset workflow: privacy-preserving email request, one-time 30-minute link, optional authenticator verification, server password replacement, session revocation, and automatic sign-in after success.
+- Restored account creation immediately after account deletion and centered the plain-language password protection message.
+- Re-rendered every favicon, PWA, Apple-touch, and notification surface from the approved Pamet folded-leaf master mark.
+- Added server-authoritative capability claims, a persisted Ultra appointment workspace, explicit account-deletion cleanup, and Stripe customer deletion.
+- Renamed “Longitudinal analysis” to **Health history over time** and refined Ultra around visit preparation and care-team coordination.
 
 ## v1.1.0 Highlights
 
@@ -236,7 +248,7 @@ PAMET_CRON_SECRET=<same value as deployment CRON_SECRET>
 
 ## Privacy and Security Boundaries
 
-- User passwords stay device-local and are PBKDF2-hashed; the backend does not receive the password.
+- New accounts authenticate against a scrypt password verifier on the server and receive an expiring, revocable HttpOnly session cookie. A separate PBKDF2 verifier remains on the device to unlock the local journal experience; raw passwords are never stored.
 - Stripe plan state is verified server-side; the browser cannot self-upgrade a plan.
 - Sharing links are random, expiring, revocable, and stored only as token hashes server-side.
 - Weekly digest email subjects contain no symptom details.
@@ -248,11 +260,11 @@ Before production handling of sensitive health information, complete qualified s
 
 ## Roadmap Boundaries
 
-### Now — v1.1.0
+### Now — v1.2.0
 
 Local-first logging, 90-day Free history, Pro unlimited history, weekly summary/digest infrastructure, basic trends/correlations, What Changed?, Visit Brief, reminders, subscription management, export/delete, and basic read-only sharing.
 
-### Next — v1.1.0+
+### Next — v1.2.0+
 
 FHIR-lite portability, independently reviewed accessibility/security/privacy controls, and formal compliance posture. v1.1.0 now includes account recovery, remote device revocation, encrypted Ultra sync, Web Push, distributed limits, and observability integration frameworks; see `PRODUCTION_READINESS.md` for configuration and external launch gates.
 

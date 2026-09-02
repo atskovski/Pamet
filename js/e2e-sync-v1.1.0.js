@@ -20,8 +20,8 @@
     return JSON.parse(decoder.decode(plaintext));
   }
   async function request(path, options = {}) {
-    const credential = window.PametAuth?.getBackendCredential?.(); if (!credential?.deviceKey) throw new Error("Sign in before syncing.");
-    const response = await fetch(path, { ...options, headers: { "Content-Type": "application/json", Authorization: `Bearer ${credential.deviceKey}`, ...(options.headers || {}) } });
+    const credential = window.PametAuth?.getBackendCredential?.(); if (!credential) throw new Error("Sign in before syncing.");
+    const response = await fetch(path, { ...options, headers: { "Content-Type": "application/json", ...(credential.deviceKey ? { Authorization: `Bearer ${credential.deviceKey}` } : {}), ...(options.headers || {}) } });
     const body = await response.json().catch(() => ({})); if (!response.ok) throw Object.assign(new Error(body.error || "Encrypted sync failed."), { status: response.status, body }); return body;
   }
   window.PametEncryptedSync = {

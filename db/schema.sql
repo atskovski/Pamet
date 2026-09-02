@@ -1,8 +1,10 @@
--- Pamet v1.1.0 database schema. Run as a controlled migration before deploying production.
+-- Pamet v1.2.0 database schema. Run as a controlled migration before deploying production.
 CREATE TABLE IF NOT EXISTS pamet_users (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
   local_user_id VARCHAR(128) NOT NULL UNIQUE,
   device_key_hash CHAR(64) NOT NULL UNIQUE,
+  password_hash CHAR(128) NULL,
+  password_salt CHAR(32) NULL,
   email VARCHAR(254) NOT NULL UNIQUE,
   first_name VARCHAR(100) NOT NULL DEFAULT '',
   last_name VARCHAR(100) NOT NULL DEFAULT '',
@@ -17,6 +19,14 @@ CREATE TABLE IF NOT EXISTS pamet_users (
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_digest (weekly_digest_enabled)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS pamet_sessions (
+  id CHAR(36) PRIMARY KEY, user_id BIGINT UNSIGNED NOT NULL, token_hash CHAR(64) NOT NULL UNIQUE,
+  expires_at DATETIME NOT NULL, last_used_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  revoked_at DATETIME NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_pamet_session_user FOREIGN KEY (user_id) REFERENCES pamet_users(id) ON DELETE CASCADE,
+  INDEX idx_session (token_hash,expires_at), INDEX idx_session_user (user_id,revoked_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS pamet_sharing_invites (
@@ -106,4 +116,19 @@ CREATE TABLE IF NOT EXISTS pamet_sync_blobs (
   nonce VARBINARY(32) NOT NULL, key_version INT UNSIGNED NOT NULL, revision BIGINT UNSIGNED NOT NULL DEFAULT 1,
   content_hash CHAR(64) NOT NULL, updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (user_id,profile_id), CONSTRAINT fk_pamet_sync_user FOREIGN KEY (user_id) REFERENCES pamet_users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS pamet_appointments (
+  id CHAR(36) PRIMARY KEY, user_id BIGINT UNSIGNED NOT NULL, profile_id VARCHAR(128) NOT NULL,
+  clinician VARCHAR(120) NOT NULL DEFAULT '', starts_at DATETIME NOT NULL, reason VARCHAR(500) NOT NULL DEFAULT '',
+  concerns_json JSON NOT NULL, questions_json JSON NOT NULL, reminder_minutes INT UNSIGNED NOT NULL DEFAULT 1440,
+  status VARCHAR(20) NOT NULL DEFAULT 'scheduled', created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_pamet_appointment_user FOREIGN KEY (user_id) REFERENCES pamet_users(id) ON DELETE CASCADE,
+  INDEX idx_appointment (user_id,starts_at,status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS pamet_rate_limits (
+  bucket_key VARCHAR(255) PRIMARY KEY, count INT UNSIGNED NOT NULL, expires_at DATETIME(3) NOT NULL,
+  INDEX idx_rate_limit_expiry (expires_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

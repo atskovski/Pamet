@@ -23,8 +23,8 @@
 
   async function request(path, options) {
     const credential = A.getBackendCredential && A.getBackendCredential();
-    if (!credential || !credential.deviceKey) throw new Error("Log in before sending feedback.");
-    const headers = { "Content-Type": "application/json", Authorization: `Bearer ${credential.deviceKey}` };
+    if (!credential) throw new Error("Log in before sending feedback.");
+    const headers = { "Content-Type": "application/json", ...(credential.deviceKey ? { Authorization: `Bearer ${credential.deviceKey}` } : {}) };
     const response = await fetch(path, { ...options, headers });
     const body = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(body.error || "Pamet could not save your feedback.");
@@ -47,7 +47,7 @@
       category: document.querySelector("#feedbackCategory").value,
       rating: rating ? Number(rating.value) : null,
       message: document.querySelector("#feedbackMessage").value.trim(),
-      appVersion: "1.1.0",
+      appVersion: "1.2.0",
       screen: "settings"
     };
 
@@ -56,10 +56,10 @@
     try {
       const credential = A.getBackendCredential();
       const { deviceKey, ...profile } = credential;
-      const bootstrap = await fetch("/api/account/bootstrap", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${deviceKey}` },
-        body: JSON.stringify({ ...profile, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC" })
+      const bootstrap = await fetch(deviceKey ? "/api/account/bootstrap" : "/api/auth/session", {
+        method: deviceKey ? "POST" : "GET",
+        headers: { "Content-Type": "application/json", ...(deviceKey ? { Authorization: `Bearer ${deviceKey}` } : {}) },
+        ...(deviceKey ? { body: JSON.stringify({ ...profile, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC" }) } : {})
       });
       if (!bootstrap.ok) throw new Error("Pamet could not verify this account before sending feedback.");
       await request("/api/feedback", { method: "POST", body: JSON.stringify(payload) });

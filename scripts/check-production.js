@@ -15,9 +15,9 @@ const encryptedSync = fs.readFileSync('js/e2e-sync-v1.1.0.js', 'utf8');
 function check(condition, message) { if (!condition) throw new Error(message); }
 
 check(!server.includes("express.static(path.join(__dirname),"), 'The repository root must never be public.');
-check(server.includes("app.use('/assets'") && server.includes("app.use('/css'") && server.includes("app.use('/js'"), 'Static files must use explicit allowlisted mounts.');
+check(server.includes("app.use('/assets'") && server.includes("app.use('/dist'") && !server.includes("app.use('/js'") && !server.includes("app.use('/css'"), 'Production must expose only assets and built bundles, not source modules.');
 check(server.includes('immutable: false') && server.includes('maxAge: 0'), 'Unversioned application assets must revalidate after deployments.');
-check(fs.readFileSync('index.html', 'utf8').includes('js/app.js?v=1100'), 'Executable assets must use a release-specific URL.');
+check(fs.readFileSync('index.html', 'utf8').includes('dist/pamet.min.js?v=1200'), 'Executable assets must use the release bundle URL.');
 check(server.includes('Content-Security-Policy') && server.includes('Strict-Transport-Security') && server.includes("app.disable('x-powered-by')"), 'Production security headers must remain enabled.');
 check(server.includes('distributedRateLimit') && limiter.includes('REDIS_URL') && limiter.includes('pExpire') && server.includes('limits.billing'), 'Sensitive handlers must use shared Redis/Valkey rate limits.');
 check(server.includes('priceIsValid') && [699, 5999, 1299, 9999].every((amount) => server.includes(`amount: ${amount}`)), 'Stripe prices must be verified against the approved catalog.');
@@ -36,6 +36,9 @@ check(schema.includes('pamet_stripe_events'), 'The deployable schema must includ
 check(schema.includes('pamet_devices') && schema.includes('pamet_recovery_tokens') && schema.includes('pamet_mfa'), 'Device revocation, recovery, and MFA storage must be deployable.');
 check(schema.includes('pamet_push_subscriptions') && server.includes("app.post('/api/jobs/push-reminders'") && notifications.includes('pushManager.subscribe'), 'Closed-app Web Push must include subscription and scheduled delivery paths.');
 check(schema.includes('pamet_sync_blobs') && encryptedSync.includes('AES-GCM') && encryptedSync.includes('HKDF') && server.includes("app.put('/api/sync/:profileId'"), 'Ultra sync must encrypt in the browser and store only opaque blobs.');
+check(schema.includes('pamet_sessions') && server.includes('HttpOnly; SameSite=Lax') && server.includes("app.post('/api/auth/login'"), 'Cross-device authentication must use revocable server sessions in HttpOnly cookies.');
+check(server.includes("app.post('/api/account/recovery/request'") && server.includes('identity.password_reset') && server.includes('password_hash=?,password_salt=?'), 'Password recovery must send an expiring email link and reset the server password verifier.');
+check(server.includes("app.get('/api/entitlements'") && server.includes("app.post('/api/appointments'"), 'Paid capabilities and Ultra appointment data must be enforced by the server.');
 check(server.includes('LOG_DRAIN_URL') && server.includes('ALERT_WEBHOOK_URL') && server.includes("app.get('/api/metrics'"), 'Logs, alerts, and protected metrics must expose production integrations.');
 
 console.log('Pamet production hardening checks passed.');

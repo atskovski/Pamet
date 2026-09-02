@@ -694,6 +694,7 @@
     $("#welcome").classList.remove("hidden");
     $("#registerForm").hidden = true;
     $("#loginForm").hidden = false;
+    const create = $("#loginForm .welcome-switch"); if (create) create.hidden = false;
   }
 
   function init() {
@@ -829,8 +830,8 @@
       if (confirm("Delete your account and all Pamet data? This cannot be undone.")) {
         try {
           const credential = A.getBackendCredential && A.getBackendCredential();
-          if (credential && credential.deviceKey) {
-            const response = await fetch("/api/account", { method: "DELETE", headers: { Authorization: `Bearer ${credential.deviceKey}` } });
+          if (credential) {
+            const response = await fetch("/api/account", { method: "DELETE", headers: credential.deviceKey ? { Authorization: `Bearer ${credential.deviceKey}` } : {} });
             const body = await response.json().catch(() => ({}));
             if (!response.ok) throw new Error(body.error || "Account deletion could not be completed.");
           }

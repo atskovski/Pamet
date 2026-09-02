@@ -2,14 +2,15 @@
 
 const path = require('path');
 const crypto = require('crypto');
+const { promisify } = require('util');
 const express = require('express');
 const mysql = require('mysql2/promise');
 const Stripe = require('stripe');
-const { distributedRateLimit, rateLimitReady } = require('./lib/rate-limit');
+const { distributedRateLimit, rateLimitReady, configureDistributedFallback } = require('./lib/rate-limit');
 const { totpSecret, verifyTotp, seal, open } = require('./lib/security');
 const push = require('./lib/push');
 
-const VERSION = '1.1.0';
+const VERSION = '1.2.0';
 const PORT = Number(process.env.PORT || 8080);
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const APP = (process.env.APP_BASE_URL || `http://localhost:${PORT}`).replace(/\/$/, '');
@@ -27,6 +28,9 @@ const priceValidationCache = new Map();
 let pool;
 let poolInitialization;
 const metrics = new Map();
+const scryptAsync = promisify(crypto.scrypt);
+const SESSION_COOKIE = 'pamet_session';
+const SESSION_TTL_DAYS = 30;
 
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
@@ -39,6 +43,7 @@ const plainObject = (value) => value !== null && typeof value === 'object' && !A
 const parse = (value, fallback = {}) => { if (plainObject(value) || Array.isArray(value)) return value; try { return JSON.parse(value); } catch { return fallback; } };
 const html = (value) => String(value || '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 const readBearer = (req) => { const value = String(req.headers.authorization || ''); return value.startsWith('Bearer ') ? value.slice(7).trim() : ''; };
+const readCookie = (req, name) => String(req.headers.cookie || '').split(';').map((item) => item.trim().split('=')).find(([key]) => key === name)?.[1] || '';
 const installationKeyOk = (value) => /^[a-f0-9]{64}$/i.test(value);
 const localUserIdOk = (value) => /^[a-z0-9][a-z0-9-]{15,127}$/i.test(value);
 const attemptIdOk = (value) => /^[a-z0-9][a-z0-9-]{15,63}$/i.test(value);
@@ -100,6 +105,9 @@ async function db() {
 
 async function schema(connection) {
   await connection.query(`CREATE TABLE IF NOT EXISTS pamet_users (id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,local_user_id VARCHAR(128) NOT NULL UNIQUE,device_key_hash CHAR(64) NOT NULL UNIQUE,email VARCHAR(254) NOT NULL UNIQUE,first_name VARCHAR(100) NOT NULL DEFAULT '',last_name VARCHAR(100) NOT NULL DEFAULT '',timezone VARCHAR(100) NOT NULL DEFAULT 'UTC',plan VARCHAR(16) NOT NULL DEFAULT 'free',subscription_status VARCHAR(32) NOT NULL DEFAULT 'none',stripe_customer_id VARCHAR(128) NULL UNIQUE,stripe_subscription_id VARCHAR(128) NULL UNIQUE,weekly_digest_enabled BOOLEAN NOT NULL DEFAULT FALSE,latest_digest_json JSON NULL,confirmation_email_sent_at DATETIME NULL,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,INDEX idx_digest(weekly_digest_enabled)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
+  await connection.query(`ALTER TABLE pamet_users ADD COLUMN IF NOT EXISTS password_hash CHAR(128) NULL AFTER device_key_hash`);
+  await connection.query(`ALTER TABLE pamet_users ADD COLUMN IF NOT EXISTS password_salt CHAR(32) NULL AFTER password_hash`);
+  await connection.query(`CREATE TABLE IF NOT EXISTS pamet_sessions (id CHAR(36) PRIMARY KEY,user_id BIGINT UNSIGNED NOT NULL,token_hash CHAR(64) NOT NULL UNIQUE,expires_at DATETIME NOT NULL,last_used_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,revoked_at DATETIME NULL,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY(user_id) REFERENCES pamet_users(id) ON DELETE CASCADE,INDEX idx_session(token_hash,expires_at),INDEX idx_session_user(user_id,revoked_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
   await connection.query(`CREATE TABLE IF NOT EXISTS pamet_sharing_invites (id CHAR(36) PRIMARY KEY,user_id BIGINT UNSIGNED NOT NULL,kind VARCHAR(20) NOT NULL,name VARCHAR(100) NOT NULL,email VARCHAR(254) NOT NULL,organization VARCHAR(120) NOT NULL DEFAULT '',permission_level VARCHAR(24) NOT NULL DEFAULT 'view',profile_name VARCHAR(80) NOT NULL DEFAULT '',status VARCHAR(20) NOT NULL DEFAULT 'active',share_token_hash CHAR(64) NOT NULL UNIQUE,snapshot_json JSON NOT NULL,expires_at DATETIME NOT NULL,revoked_at DATETIME NULL,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY(user_id) REFERENCES pamet_users(id) ON DELETE CASCADE,INDEX idx_share(user_id,kind,status)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
   await connection.query(`ALTER TABLE pamet_sharing_invites ADD COLUMN IF NOT EXISTS permission_level VARCHAR(24) NOT NULL DEFAULT 'view' AFTER organization`);
   await connection.query(`ALTER TABLE pamet_sharing_invites ADD COLUMN IF NOT EXISTS profile_name VARCHAR(80) NOT NULL DEFAULT '' AFTER permission_level`);
@@ -111,7 +119,31 @@ async function schema(connection) {
   await connection.query(`CREATE TABLE IF NOT EXISTS pamet_mfa (user_id BIGINT UNSIGNED PRIMARY KEY,secret_encrypted TEXT NOT NULL,enabled BOOLEAN NOT NULL DEFAULT FALSE,verified_at DATETIME NULL,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,FOREIGN KEY(user_id) REFERENCES pamet_users(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
   await connection.query(`CREATE TABLE IF NOT EXISTS pamet_push_subscriptions (id CHAR(36) PRIMARY KEY,user_id BIGINT UNSIGNED NOT NULL,device_id CHAR(36) NULL,endpoint_hash CHAR(64) NOT NULL UNIQUE,subscription_json JSON NOT NULL,timezone VARCHAR(100) NOT NULL DEFAULT 'UTC',reminder_hour TINYINT UNSIGNED NOT NULL DEFAULT 20,enabled BOOLEAN NOT NULL DEFAULT TRUE,last_sent_local_date DATE NULL,last_success_at DATETIME NULL,failure_count INT UNSIGNED NOT NULL DEFAULT 0,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,FOREIGN KEY(user_id) REFERENCES pamet_users(id) ON DELETE CASCADE,FOREIGN KEY(device_id) REFERENCES pamet_devices(id) ON DELETE SET NULL,INDEX idx_push_due(enabled,reminder_hour)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
   await connection.query(`CREATE TABLE IF NOT EXISTS pamet_sync_blobs (user_id BIGINT UNSIGNED NOT NULL,profile_id VARCHAR(128) NOT NULL,ciphertext LONGBLOB NOT NULL,nonce VARBINARY(32) NOT NULL,key_version INT UNSIGNED NOT NULL,revision BIGINT UNSIGNED NOT NULL DEFAULT 1,content_hash CHAR(64) NOT NULL,updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,PRIMARY KEY(user_id,profile_id),FOREIGN KEY(user_id) REFERENCES pamet_users(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
+  await connection.query(`CREATE TABLE IF NOT EXISTS pamet_appointments (id CHAR(36) PRIMARY KEY,user_id BIGINT UNSIGNED NOT NULL,profile_id VARCHAR(128) NOT NULL,clinician VARCHAR(120) NOT NULL DEFAULT '',starts_at DATETIME NOT NULL,reason VARCHAR(500) NOT NULL DEFAULT '',concerns_json JSON NOT NULL,questions_json JSON NOT NULL,reminder_minutes INT UNSIGNED NOT NULL DEFAULT 1440,status VARCHAR(20) NOT NULL DEFAULT 'scheduled',created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,FOREIGN KEY(user_id) REFERENCES pamet_users(id) ON DELETE CASCADE,INDEX idx_appointment(user_id,starts_at,status)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
+  await connection.query(`CREATE TABLE IF NOT EXISTS pamet_rate_limits (bucket_key VARCHAR(255) PRIMARY KEY,count INT UNSIGNED NOT NULL,expires_at DATETIME(3) NOT NULL,INDEX idx_rate_limit_expiry(expires_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
 }
+
+configureDistributedFallback({
+  async hit(key, windowMs) { const connection = await db(); const expires = new Date(Date.now() + windowMs); await connection.execute(`INSERT INTO pamet_rate_limits(bucket_key,count,expires_at) VALUES(?,1,?) ON DUPLICATE KEY UPDATE count=IF(expires_at<=NOW(3),1,count+1),expires_at=IF(expires_at<=NOW(3),VALUES(expires_at),expires_at)`, [key, expires]); const [rows] = await connection.execute('SELECT count,expires_at FROM pamet_rate_limits WHERE bucket_key=?', [key]); if (rows[0].count % 100 === 0) connection.execute('DELETE FROM pamet_rate_limits WHERE expires_at<NOW(3) LIMIT 500').catch(() => {}); return { count: rows[0].count, resetAt: +new Date(rows[0].expires_at) }; },
+  async ready() { const connection = await db(); await connection.query('SELECT 1 FROM pamet_rate_limits LIMIT 0'); }
+});
+
+async function passwordHash(password, salt) {
+  const value = await scryptAsync(String(password), Buffer.from(salt, 'hex'), 64, { N: 16384, r: 8, p: 1, maxmem: 64 * 1024 * 1024 });
+  return Buffer.from(value).toString('hex');
+}
+async function passwordMatches(password, salt, expected) {
+  if (!salt || !expected) return false;
+  const actual = Buffer.from(await passwordHash(password, salt)); const wanted = Buffer.from(String(expected));
+  return actual.length === wanted.length && crypto.timingSafeEqual(actual, wanted);
+}
+async function createSession(connection, userId, res) {
+  const raw = token();
+  await connection.execute('INSERT INTO pamet_sessions(id,user_id,token_hash,expires_at) VALUES(?,?,?,DATE_ADD(NOW(),INTERVAL ? DAY))', [crypto.randomUUID(), userId, sha(raw), SESSION_TTL_DAYS]);
+  const secure = NODE_ENV === 'production' ? '; Secure' : '';
+  res.setHeader('Set-Cookie', `${SESSION_COOKIE}=${raw}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${SESSION_TTL_DAYS * 86400}${secure}`);
+}
+function clearSessionCookie(res) { const secure = NODE_ENV === 'production' ? '; Secure' : ''; res.setHeader('Set-Cookie', `${SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${secure}`); }
 
 async function audit(userId, type, data = {}) {
   try { const connection = await db(); await connection.execute('INSERT INTO pamet_audit_log(user_id,event_type,event_json) VALUES(?,?,?)', [userId || null, type, JSON.stringify(data)]); }
@@ -143,6 +175,12 @@ const limits = {
 
 async function auth(req, res, next) {
   try {
+    const session = readCookie(req, SESSION_COOKIE);
+    if (installationKeyOk(session)) {
+      const connection = await db();
+      const [sessions] = await connection.execute(`SELECT u.*,s.id session_id FROM pamet_sessions s JOIN pamet_users u ON u.id=s.user_id WHERE s.token_hash=? AND s.revoked_at IS NULL AND s.expires_at>NOW() LIMIT 1`, [sha(session)]);
+      if (sessions.length) { req.user = sessions[0]; await connection.execute('UPDATE pamet_sessions SET last_used_at=NOW() WHERE id=?', [sessions[0].session_id]); return next(); }
+    }
     const key = readBearer(req);
     if (!installationKeyOk(key)) return res.status(401).json({ error: 'Authentication required.' });
     const connection = await db();
@@ -253,14 +291,22 @@ app.post('/api/stripe/webhook', express.raw({ type: 'application/json', limit: '
 
 app.use(express.json({ limit: '256kb', strict: true }));
 
+app.use('/api', (req, res, next) => {
+  if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method) || !readCookie(req, SESSION_COOKIE)) return next();
+  const origin = String(req.headers.origin || '');
+  if (origin && origin !== new URL(APP).origin) return res.status(403).json({ error: 'Request origin is not allowed.' });
+  next();
+});
+
 app.get('/api/health', (req, res) => res.json({ ok: true, version: VERSION }));
 app.get('/api/ready', async (req, res) => {
-  const checks = { database: false, distributedRateLimit: false, push: push.configured(), logDrain: !!process.env.LOG_DRAIN_URL, metrics: !!process.env.METRICS_SECRET, alerts: !!process.env.ALERT_WEBHOOK_URL, identityEncryption: /^[a-f0-9]{64}$/i.test(process.env.IDENTITY_ENCRYPTION_KEY || '') };
+  const checks = { database: false, distributedRateLimit: false, push: push.configured(), email: !!(process.env.RESEND_API_KEY && process.env.EMAIL_FROM), logDrain: !!process.env.LOG_DRAIN_URL, metrics: !!process.env.METRICS_SECRET, alerts: !!process.env.ALERT_WEBHOOK_URL, identityEncryption: /^[a-f0-9]{64}$/i.test(process.env.IDENTITY_ENCRYPTION_KEY || '') };
   try { const connection = await db(); await connection.query('SELECT 1'); await connection.query('SELECT 1 FROM pamet_devices LIMIT 0'); await connection.query('SELECT 1 FROM pamet_push_subscriptions LIMIT 0'); await connection.query('SELECT 1 FROM pamet_sync_blobs LIMIT 0'); checks.database = true; } catch {}
   const limiter = await rateLimitReady(); checks.distributedRateLimit = limiter.ready;
-  const required = ['database', 'distributedRateLimit', 'push', 'logDrain', 'metrics', 'alerts', 'identityEncryption'];
-  const ok = required.every((name) => checks[name]);
-  res.status(ok ? 200 : 503).json({ ok, version: VERSION, checks });
+  const coreRequired = ['database', 'distributedRateLimit'];
+  const launchRequired = [...coreRequired, 'push', 'email', 'logDrain', 'metrics', 'alerts', 'identityEncryption'];
+  const ok = coreRequired.every((name) => checks[name]); const launchReady = launchRequired.every((name) => checks[name]);
+  res.status(ok ? 200 : 503).json({ ok, launchReady, version: VERSION, checks });
 });
 app.get('/api/metrics', (req, res) => {
   const secret = readBearer(req);
@@ -272,6 +318,70 @@ app.get('/api/metrics', (req, res) => {
     lines.push(`pamet_http_requests_total{${labels}} ${value.count}`, `pamet_http_request_duration_ms_sum{${labels}} ${value.durationMs.toFixed(3)}`);
   }
   res.type('text/plain; version=0.0.4').send(`${lines.join('\n')}\n`);
+});
+
+app.post('/api/auth/register', limits.identity, async (req, res, next) => {
+  try {
+    const email = clean(req.body.email, 254).toLowerCase(); const first = clean(req.body.firstName, 100); const last = clean(req.body.lastName, 100); const password = String(req.body.password || '');
+    if (!emailOk(email) || !first || password.length < 12 || password.length > 128) return res.status(400).json({ error: 'Enter a valid name, email, and password of at least 12 characters.' });
+    const connection = await db(); const [existing] = await connection.execute('SELECT id FROM pamet_users WHERE email=? LIMIT 1', [email]);
+    if (existing.length) return res.status(409).json({ error: 'An account already exists for this email.' });
+    const salt = crypto.randomBytes(16).toString('hex'); const hash = await passwordHash(password, salt); const legacy = token();
+    const timezone = timezoneOk(req.body.timezone) ? req.body.timezone : 'UTC';
+    const [result] = await connection.execute('INSERT INTO pamet_users(local_user_id,device_key_hash,password_hash,password_salt,email,first_name,last_name,timezone) VALUES(?,?,?,?,?,?,?,?)', [crypto.randomUUID(), sha(legacy), hash, salt, email, first, last, timezone]);
+    const [rows] = await connection.execute('SELECT * FROM pamet_users WHERE id=?', [result.insertId]);
+    await createSession(connection, result.insertId, res); await audit(result.insertId, 'identity.account_registered', { method: 'password' });
+    res.status(201).json({ user: publicUser(rows[0]) });
+  } catch (error) { next(error); }
+});
+
+app.post('/api/auth/login', limits.identity, async (req, res, next) => {
+  try {
+    const email = clean(req.body.email, 254).toLowerCase(); const password = String(req.body.password || ''); const connection = await db();
+    const [rows] = await connection.execute('SELECT * FROM pamet_users WHERE email=? LIMIT 1', [email]);
+    if (!rows.length || !(await passwordMatches(password, rows[0].password_salt, rows[0].password_hash))) return res.status(401).json({ error: 'Email or password is incorrect.' });
+    await createSession(connection, rows[0].id, res); await audit(rows[0].id, 'identity.login', { method: 'password' }); res.json({ user: publicUser(rows[0]) });
+  } catch (error) { next(error); }
+});
+
+app.post('/api/auth/logout', auth, async (req, res, next) => {
+  try { const raw = readCookie(req, SESSION_COOKIE); if (raw) { const connection = await db(); await connection.execute('UPDATE pamet_sessions SET revoked_at=NOW() WHERE token_hash=?', [sha(raw)]); } clearSessionCookie(res); res.json({ loggedOut: true }); }
+  catch (error) { next(error); }
+});
+
+app.post('/api/auth/password', limits.identity, auth, async (req, res, next) => {
+  try {
+    const current = String(req.body.currentPassword || ''); const nextPassword = String(req.body.newPassword || '');
+    if (nextPassword.length < 12 || nextPassword.length > 128) return res.status(400).json({ error: 'New password must be at least 12 characters.' });
+    if (!(await passwordMatches(current, req.user.password_salt, req.user.password_hash))) return res.status(401).json({ error: 'Current password is incorrect.' });
+    const salt = crypto.randomBytes(16).toString('hex'); const hash = await passwordHash(nextPassword, salt); const connection = await db();
+    await connection.execute('UPDATE pamet_users SET password_hash=?,password_salt=? WHERE id=?', [hash, salt, req.user.id]);
+    await connection.execute('UPDATE pamet_sessions SET revoked_at=NOW() WHERE user_id=? AND id<>?', [req.user.id, req.user.session_id || '']);
+    await audit(req.user.id, 'identity.password_changed'); res.json({ changed: true });
+  } catch (error) { next(error); }
+});
+
+app.get('/api/auth/session', auth, (req, res) => res.json({ user: publicUser(req.user) }));
+app.get('/api/entitlements', auth, (req, res) => res.json({ plan: req.user.plan || 'free', capabilities: { correlations: ['pro','ultra'].includes(req.user.plan), unlimitedHistory: ['pro','ultra'].includes(req.user.plan), sharing: ['pro','ultra'].includes(req.user.plan), appointmentWorkspace: req.user.plan === 'ultra', multipleProfiles: req.user.plan === 'ultra', advancedVisitBrief: req.user.plan === 'ultra', encryptedSync: req.user.plan === 'ultra' } }));
+
+app.get('/api/appointments', auth, async (req, res, next) => {
+  try { if (req.user.plan !== 'ultra') return res.status(403).json({ error: 'Appointment workspace requires Pamet Ultra.' }); const connection = await db(); const [rows] = await connection.execute('SELECT id,profile_id,clinician,starts_at,reason,concerns_json,questions_json,reminder_minutes,status FROM pamet_appointments WHERE user_id=? ORDER BY starts_at DESC LIMIT 50', [req.user.id]); res.json({ appointments: rows.map((row) => ({ id: row.id, profileId: row.profile_id, clinician: row.clinician, startsAt: row.starts_at, reason: row.reason, concerns: parse(row.concerns_json, []), questions: parse(row.questions_json, []), reminderMinutes: row.reminder_minutes, status: row.status })) }); }
+  catch (error) { next(error); }
+});
+
+app.post('/api/appointments', limits.identity, auth, async (req, res, next) => {
+  try {
+    if (req.user.plan !== 'ultra') return res.status(403).json({ error: 'Appointment workspace requires Pamet Ultra.' });
+    const starts = new Date(req.body.startsAt); const clinician = clean(req.body.clinician, 120); const reason = clean(req.body.reason, 500); const profileId = clean(req.body.profileId || 'primary', 128);
+    const concerns = Array.isArray(req.body.concerns) ? req.body.concerns.map((item) => clean(item, 200)).filter(Boolean).slice(0, 10) : []; const questions = Array.isArray(req.body.questions) ? req.body.questions.map((item) => clean(item, 200)).filter(Boolean).slice(0, 10) : []; const reminder = Math.min(10080, Math.max(0, Number(req.body.reminderMinutes || 1440)));
+    if (!clinician || Number.isNaN(+starts)) return res.status(400).json({ error: 'Clinician and appointment date are required.' });
+    const id = crypto.randomUUID(); const connection = await db(); await connection.execute('INSERT INTO pamet_appointments(id,user_id,profile_id,clinician,starts_at,reason,concerns_json,questions_json,reminder_minutes) VALUES(?,?,?,?,?,?,?,?,?)', [id, req.user.id, profileId, clinician, starts, reason, JSON.stringify(concerns), JSON.stringify(questions), reminder]); await audit(req.user.id, 'appointment.created', { appointmentId: id }); res.status(201).json({ id, saved: true });
+  } catch (error) { next(error); }
+});
+
+app.delete('/api/appointments/:id', limits.identity, auth, async (req, res, next) => {
+  try { if (req.user.plan !== 'ultra') return res.status(403).json({ error: 'Appointment workspace requires Pamet Ultra.' }); if (!uuidOk(req.params.id)) return res.status(404).json({ error: 'Appointment not found.' }); const connection = await db(); const [result] = await connection.execute('DELETE FROM pamet_appointments WHERE id=? AND user_id=?', [req.params.id, req.user.id]); if (!result.affectedRows) return res.status(404).json({ error: 'Appointment not found.' }); res.json({ deleted: true }); }
+  catch (error) { next(error); }
 });
 
 app.post('/api/account/bootstrap', limits.bootstrap, async (req, res, next) => {
@@ -323,12 +433,13 @@ app.post('/api/account/bootstrap', limits.bootstrap, async (req, res, next) => {
 app.delete('/api/account', auth, async (req, res, next) => {
   try {
     if (stripe && req.user.stripe_subscription_id) { try { await stripe.subscriptions.cancel(req.user.stripe_subscription_id); } catch (error) { if (error.code !== 'resource_missing') throw error; } }
+    if (stripe && req.user.stripe_customer_id) { try { await stripe.customers.del(req.user.stripe_customer_id); } catch (error) { if (error.code !== 'resource_missing') throw error; } }
     const connectionPool = await db();
     const connection = await connectionPool.getConnection();
-    try { await connection.beginTransaction(); await connection.execute('DELETE FROM pamet_audit_log WHERE user_id=?', [req.user.id]); await connection.execute('DELETE FROM pamet_users WHERE id=?', [req.user.id]); await connection.commit(); }
+    try { await connection.beginTransaction(); await connection.execute('DELETE FROM pamet_sharing_invites WHERE user_id=?', [req.user.id]); await connection.execute('DELETE FROM pamet_sessions WHERE user_id=?', [req.user.id]); await connection.execute('DELETE FROM pamet_audit_log WHERE user_id=?', [req.user.id]); await connection.execute('DELETE FROM pamet_users WHERE id=?', [req.user.id]); await connection.commit(); }
     catch (error) { await connection.rollback(); throw error; }
     finally { connection.release(); }
-    res.json({ deleted: true });
+    clearSessionCookie(res); res.json({ deleted: true });
   } catch (error) { next(error); }
 });
 
@@ -384,6 +495,7 @@ app.post('/api/security/mfa/disable', limits.identity, auth, async (req, res, ne
 
 app.post('/api/account/recovery/request', limits.identity, async (req, res, next) => {
   try {
+    if (!process.env.RESEND_API_KEY || !process.env.EMAIL_FROM) return res.status(503).json({ error: 'Password reset email is not configured yet.' });
     const email = clean(req.body.email, 254).toLowerCase();
     if (emailOk(email) && process.env.RESEND_API_KEY && process.env.EMAIL_FROM) {
       const connection = await db(); const [rows] = await connection.execute('SELECT id,first_name FROM pamet_users WHERE email=? LIMIT 1', [email]);
@@ -398,17 +510,17 @@ app.post('/api/account/recovery/request', limits.identity, async (req, res, next
 
 app.post('/api/account/recovery/complete', limits.identity, async (req, res, next) => {
   try {
-    const raw = clean(req.body.token, 128); const credential = clean(req.body.deviceKey, 128); const label = clean(req.body.deviceLabel || 'Recovered device', 80);
-    if (!installationKeyOk(raw) || !installationKeyOk(credential)) return res.status(400).json({ error: 'Recovery request is invalid.' });
+    const raw = clean(req.body.token, 128); const password = String(req.body.password || '');
+    if (!installationKeyOk(raw) || password.length < 12 || password.length > 128) return res.status(400).json({ error: 'Use a valid recovery link and a password of at least 12 characters.' });
     const connection = await db(); const [rows] = await connection.execute(`SELECT r.id token_id,r.user_id,u.email,u.first_name,u.last_name,m.enabled mfa_enabled,m.secret_encrypted FROM pamet_recovery_tokens r JOIN pamet_users u ON u.id=r.user_id LEFT JOIN pamet_mfa m ON m.user_id=u.id WHERE r.token_hash=? AND r.used_at IS NULL AND r.expires_at>NOW() LIMIT 1`, [sha(raw)]);
     if (!rows.length) return res.status(400).json({ error: 'Recovery link is invalid or expired.' });
     const row = rows[0]; if (row.mfa_enabled && !verifyTotp(open(row.secret_encrypted), req.body.code)) return res.status(401).json({ error: 'Your authenticator code is required.' });
-    const deviceId = crypto.randomUUID();
+    const salt = crypto.randomBytes(16).toString('hex'); const hash = await passwordHash(password, salt);
     const tx = await connection.getConnection();
-    try { await tx.beginTransaction(); await tx.execute('UPDATE pamet_recovery_tokens SET used_at=NOW() WHERE id=? AND used_at IS NULL', [row.token_id]); await tx.execute('INSERT INTO pamet_devices(id,user_id,credential_hash,label,last_used_at) VALUES(?,?,?,?,NOW())', [deviceId, row.user_id, sha(credential), label]); await tx.commit(); }
+    try { await tx.beginTransaction(); await tx.execute('UPDATE pamet_recovery_tokens SET used_at=NOW() WHERE id=? AND used_at IS NULL', [row.token_id]); await tx.execute('UPDATE pamet_users SET password_hash=?,password_salt=? WHERE id=?', [hash, salt, row.user_id]); await tx.execute('UPDATE pamet_sessions SET revoked_at=NOW() WHERE user_id=? AND revoked_at IS NULL', [row.user_id]); await tx.commit(); }
     catch (error) { await tx.rollback(); throw error; } finally { tx.release(); }
-    await audit(row.user_id, 'identity.recovery_completed', { deviceId });
-    res.json({ recovered: true, deviceId, profile: { email: row.email, firstName: row.first_name, lastName: row.last_name } });
+    await createSession(connection, row.user_id, res); await audit(row.user_id, 'identity.password_reset');
+    res.json({ recovered: true, profile: { id: String(row.user_id), email: row.email, firstName: row.first_name, lastName: row.last_name } });
   } catch (error) { next(error); }
 });
 
@@ -706,8 +818,7 @@ app.get('/api/share/:token', limits.publicShare, async (req, res, next) => {
 // Asset URLs are not content-hashed, so they must revalidate on every release.
 const staticOptions = { dotfiles: 'ignore', etag: true, fallthrough: false, immutable: false, maxAge: 0 };
 app.use('/assets', express.static(path.join(__dirname, 'assets'), staticOptions));
-app.use('/css', express.static(path.join(__dirname, 'css'), staticOptions));
-app.use('/js', express.static(path.join(__dirname, 'js'), staticOptions));
+app.use('/dist', express.static(path.join(__dirname, 'dist'), staticOptions));
 app.get(['/', '/index.html'], (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 app.get('/share.html', (req, res) => res.sendFile(path.join(__dirname, 'share.html')));
 app.get('/manifest.webmanifest', (req, res) => res.type('application/manifest+json').sendFile(path.join(__dirname, 'manifest.webmanifest')));
