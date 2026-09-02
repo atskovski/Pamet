@@ -1,6 +1,6 @@
 # Pamet Security and Privacy Notes
 
-Pamet handles sensitive personal health observations. This document records engineering boundaries for the v1.0.5 web implementation; it is not a legal privacy policy, security certification, or representation of HIPAA compliance.
+Pamet handles sensitive personal health observations. This document records engineering boundaries for the v1.1.0 web implementation; it is not a legal privacy policy, security certification, or representation of HIPAA compliance.
 
 ## Design boundaries
 
@@ -11,11 +11,11 @@ Pamet handles sensitive personal health observations. This document records engi
 
 ## Authentication
 
-The current account gate is local to the device. Passwords are salted and PBKDF2-HMAC-SHA-256 hashed with 600,000 iterations. Legacy hashes are upgraded after a successful login. A persistent local session keeps users signed in until explicit logout.
+The account gate remains local to each device. Passwords are salted and PBKDF2-HMAC-SHA-256 hashed with 600,000 iterations. Server services use separate 256-bit per-device credentials stored as hashes. Users can revoke another device, request a 30-minute single-use recovery link, and protect recovery with TOTP MFA. TOTP seeds are encrypted with a deployment key.
 
 Optional server services use a random installation credential. The browser sends that credential over HTTPS; the backend stores only its SHA-256 hash.
 
-Before multi-device accounts or password recovery are introduced, migrate to a reviewed server-side identity system with email verification, secure recovery, session rotation/revocation, rate limiting, and MFA/passkey support where appropriate.
+These controls require independent review and production exercises before they should be described as audited. Recovery email security remains dependent on the user's email account and the configured mail provider.
 
 ## Billing
 
@@ -32,7 +32,7 @@ Transactional email uses the configured email provider only when enabled. Weekly
 
 ## Sharing
 
-Caregiver and provider sharing is user-initiated in v1.0.5. Pro links are view-only; Ultra links may also allow the recipient to print/save the shared summary.
+Caregiver and provider sharing is user-initiated in v1.1.0. Pro links are view-only; Ultra links may also allow the recipient to print/save the shared summary.
 
 - Share tokens use cryptographically secure randomness.
 - Only token hashes are stored server-side.
@@ -42,10 +42,10 @@ Caregiver and provider sharing is user-initiated in v1.0.5. Pro links are view-o
 
 ## Data minimization
 
-The backend stores account metadata, subscription state, digest preference/aggregate snapshot, sharing snapshots explicitly chosen by the user, and audit events. It does not automatically synchronize the user's complete local journal.
+The backend stores account metadata, subscription state, digest preference/aggregate snapshot, sharing snapshots explicitly chosen by the user, audit events, push subscriptions, and—only for Ultra encrypted sync—opaque ciphertext blobs. Pamet never receives an encrypted-sync recovery key.
 
 ## Production review
 
-The v1.0.5 runtime applies a static-file allowlist, CSP, HSTS, frame protection, request IDs, body limits, handler validation, generic production errors, endpoint rate limits, database readiness checks, and automated HTTP security tests.
+The v1.1.0 runtime applies a static-file allowlist, CSP, HSTS, frame protection, request IDs, body limits, handler validation, generic production errors, endpoint rate limits, database readiness checks, and automated HTTP security tests.
 
-Before representing Pamet as legally or operationally production-ready for sensitive health data, complete an independent security/privacy review plus database encryption and restore drills, centralized redacted logging, distributed rate limiting, incident response, retention enforcement, vendor/data-processing agreements, and applicable legal/regulatory analysis. Multi-device identity, recovery, MFA/passkeys, and session revocation require a reviewed server-side identity provider.
+Before representing Pamet as certified or compliant for sensitive health data, configure and exercise the v1.1.0 Redis, alerting, recovery, MFA, device, Web Push, and encrypted-sync controls; complete database encryption/restore drills, retention enforcement, vendor agreements, and independent security, accessibility, privacy, and applicable legal review.

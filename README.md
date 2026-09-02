@@ -1,6 +1,6 @@
 # Pamet — Personal Health Journal
 
-**Version 1.0.5 — visual refinement, notifications, and production hardening** · **Your health history, finally useful.**
+**Version 1.1.0 — visual refinement, notifications, and production hardening** · **Your health history, finally useful.**
 
 Pamet is a privacy-first personal health journal designed to help people consistently document symptoms, medications, lifestyle factors, and user-provided medical information, then turn those observations into useful, understandable health history.
 
@@ -84,7 +84,7 @@ Pamet contains **no advertising on any plan**.
 
 **Pro is the recommended plan for most individual users.** Its annual option saves about 28%. Ultra is positioned as **Advanced care coordination** for families, caregivers, and people preparing for more complex care conversations. A tier is purchasable only when both of its Stripe price IDs pass Pamet's live catalog validation.
 
-## v1.0.5 Highlights
+## v1.1.0 Highlights
 
 - Three rotating, brand-aligned landscape scenes and a clearer authentication card with plain-language local-account guidance.
 - A neutral charcoal-teal dark palette with measurable WCAG AA text contrast, 3:1 control boundaries, sky-blue information accents, and sage reserved for affirmative actions.
@@ -248,13 +248,13 @@ Before production handling of sensitive health information, complete qualified s
 
 ## Roadmap Boundaries
 
-### Now — v1.0.5
+### Now — v1.1.0
 
 Local-first logging, 90-day Free history, Pro unlimited history, weekly summary/digest infrastructure, basic trends/correlations, What Changed?, Visit Brief, reminders, subscription management, export/delete, and basic read-only sharing.
 
-### Next — v1.0.5+
+### Next — v1.1.0+
 
-Account recovery and remote session revocation, multi-device encrypted sync, FHIR-lite portability, centralized observability, and externally reviewed accessibility/security/compliance controls. See `PRODUCTION_READINESS.md` for launch gates.
+FHIR-lite portability, independently reviewed accessibility/security/privacy controls, and formal compliance posture. v1.1.0 now includes account recovery, remote device revocation, encrypted Ultra sync, Web Push, distributed limits, and observability integration frameworks; see `PRODUCTION_READINESS.md` for configuration and external launch gates.
 
 ### Not planned for initial product
 

@@ -1,4 +1,4 @@
--- Pamet v1.0.5 database schema. server.js also creates these tables automatically in development.
+-- Pamet v1.1.0 database schema. Run as a controlled migration before deploying production.
 CREATE TABLE IF NOT EXISTS pamet_users (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
   local_user_id VARCHAR(128) NOT NULL UNIQUE,
@@ -66,4 +66,44 @@ CREATE TABLE IF NOT EXISTS pamet_feedback (
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_feedback_created (created_at),
   INDEX idx_feedback_category (category)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS pamet_devices (
+  id CHAR(36) PRIMARY KEY, user_id BIGINT UNSIGNED NOT NULL, credential_hash CHAR(64) NOT NULL UNIQUE,
+  label VARCHAR(80) NOT NULL DEFAULT 'Pamet device', status VARCHAR(16) NOT NULL DEFAULT 'active',
+  last_used_at DATETIME NULL, revoked_at DATETIME NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_pamet_device_user FOREIGN KEY (user_id) REFERENCES pamet_users(id) ON DELETE CASCADE,
+  INDEX idx_device_user (user_id,status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS pamet_recovery_tokens (
+  id CHAR(36) PRIMARY KEY, user_id BIGINT UNSIGNED NOT NULL, token_hash CHAR(64) NOT NULL UNIQUE,
+  expires_at DATETIME NOT NULL, used_at DATETIME NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_pamet_recovery_user FOREIGN KEY (user_id) REFERENCES pamet_users(id) ON DELETE CASCADE,
+  INDEX idx_recovery (token_hash,expires_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS pamet_mfa (
+  user_id BIGINT UNSIGNED PRIMARY KEY, secret_encrypted TEXT NOT NULL, enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  verified_at DATETIME NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_pamet_mfa_user FOREIGN KEY (user_id) REFERENCES pamet_users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS pamet_push_subscriptions (
+  id CHAR(36) PRIMARY KEY, user_id BIGINT UNSIGNED NOT NULL, device_id CHAR(36) NULL,
+  endpoint_hash CHAR(64) NOT NULL UNIQUE, subscription_json JSON NOT NULL, timezone VARCHAR(100) NOT NULL DEFAULT 'UTC',
+  reminder_hour TINYINT UNSIGNED NOT NULL DEFAULT 20, enabled BOOLEAN NOT NULL DEFAULT TRUE,
+  last_sent_local_date DATE NULL, last_success_at DATETIME NULL, failure_count INT UNSIGNED NOT NULL DEFAULT 0,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_pamet_push_user FOREIGN KEY (user_id) REFERENCES pamet_users(id) ON DELETE CASCADE,
+  CONSTRAINT fk_pamet_push_device FOREIGN KEY (device_id) REFERENCES pamet_devices(id) ON DELETE SET NULL,
+  INDEX idx_push_due (enabled,reminder_hour)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS pamet_sync_blobs (
+  user_id BIGINT UNSIGNED NOT NULL, profile_id VARCHAR(128) NOT NULL, ciphertext LONGBLOB NOT NULL,
+  nonce VARBINARY(32) NOT NULL, key_version INT UNSIGNED NOT NULL, revision BIGINT UNSIGNED NOT NULL DEFAULT 1,
+  content_hash CHAR(64) NOT NULL, updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (user_id,profile_id), CONSTRAINT fk_pamet_sync_user FOREIGN KEY (user_id) REFERENCES pamet_users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -1,6 +1,6 @@
-# Pamet v1.0.5 Production Readiness Review
+# Pamet v1.1.0 Production Readiness Review
 
-Reviewed 2026-09-01. This is an engineering readiness record, not a compliance certification.
+Reviewed 2026-09-02. This is an engineering readiness record, not a compliance certification.
 
 ## Implemented and verified
 
@@ -9,14 +9,16 @@ Reviewed 2026-09-01. This is an engineering readiness record, not a compliance c
 | Runtime | One Express application; thin process entry point; explicit health and database-readiness handlers |
 | Public files | Only the application shell, share page, manifest, service worker, and asset directories are served |
 | HTTP security | CSP, HSTS in production, frame denial, MIME sniffing prevention, referrer policy, permissions policy, request IDs, no-store API/share responses |
-| Input/abuse controls | Strict JSON and body limits, route validation, generic production errors, endpoint-specific rate limits |
-| Authentication | 256-bit installation credential; hash-only backend storage; PBKDF2-HMAC-SHA-256 local passwords at 600,000 iterations |
+| Input/abuse controls | Strict JSON/body limits, route validation, generic production errors, and Redis/Valkey-backed endpoint limits; a configured-but-unavailable shared store fails closed |
+| Authentication | 256-bit per-device credentials, remote device revocation, one-time email recovery, encrypted TOTP secrets, PBKDF2 local passwords |
 | Billing | Server-owned entitlements, exact price validation, idempotent customer/subscription creation, raw-body webhook signatures, database webhook deduplication |
 | Data lifecycle | All-profile CSV/JSON export; backend-first account deletion; active subscription cancellation; cascading share deletion |
 | Sharing | Random hash-only tokens, expiry, revocation, plan enforcement, view/download permissions, snapshot size limits, failed-email rollback |
-| Privacy claims | No E2E-encryption claim; no diagnosis, emergency monitoring, drug interaction, live portal, or treatment claim |
+| Encrypted sync | Ultra API stores versioned AES-256-GCM ciphertext created in the browser; recovery keys are never transmitted to Pamet |
+| Closed-app reminders | User-consented Web Push subscriptions, VAPID delivery, timezone-aware deduplication, stale-subscription disabling, hourly scheduler |
+| Privacy claims | No claim that local browser storage is encrypted; no diagnosis, emergency monitoring, drug interaction, live portal, or treatment claim |
 | Quality gates | Syntax checks, store/advanced-feature assertions, Node HTTP behavior tests, production security assertions, dependency audit on every PR and main push |
-| Observability hooks | Structured request events, optional authenticated log drain, protected Prometheus request/error/latency counters |
+| Observability hooks | Structured events, authenticated log drain, protected Prometheus counters, alert webhook, and readiness visibility for every required integration |
 
 ## Deployment configuration required
 
@@ -27,7 +29,10 @@ Pamet fails safely when a required service is absent. Configure these as deploym
 - Stripe: publishable/secret/webhook keys and the four price IDs. Each tier is exposed only when both IDs are active live USD recurring prices with the exact approved amount and interval. `ULTRA_ENABLED` is intentionally not used.
 - Email: `RESEND_API_KEY` and a verified `EMAIL_FROM`.
 - Scheduler: a high-entropy `CRON_SECRET` sent as a Bearer token.
-- Observability: `METRICS_SECRET` plus a collector for `/api/metrics`; optionally `LOG_DRAIN_URL` and `LOG_DRAIN_TOKEN` for structured request-event shipping.
+- Distributed limits: `REDIS_URL` for a TLS-protected Redis/Valkey service.
+- Web Push: `VAPID_SUBJECT`, `VAPID_PUBLIC_KEY`, and `VAPID_PRIVATE_KEY`.
+- Identity: a randomly generated 32-byte `IDENTITY_ENCRYPTION_KEY` encoded as 64 hex characters.
+- Observability: `METRICS_SECRET`, `LOG_DRAIN_URL`, `LOG_DRAIN_TOKEN`, `ALERT_WEBHOOK_URL`, and optional `ALERT_WEBHOOK_TOKEN`.
 
 Approved Stripe catalog:
 
@@ -44,11 +49,11 @@ These cannot be completed solely in this repository:
 
 - Confirm live Stripe checkout, seven-day trial transition, cancellation, failed payment, billing portal, webhook retry, and the daily entitlement reconciliation job using a controlled production account before broad launch.
 - Run database backup and point-in-time restore drills; document retention and deletion timelines.
-- Replace in-memory rate limiting with Redis/Valkey or a managed edge rate limiter before horizontally scaling; the current limiter remains explicitly single-process.
-- Configure a centralized, access-controlled log/alert service and a tested incident-response process. The application cannot supply paging, retention, or dashboards without that external destination.
+- Provision the Redis/Valkey, Web Push, log, metrics, and paging destinations. `/api/ready` stays unhealthy until they are configured and reachable where applicable.
+- Exercise recovery, MFA enrollment/removal, device revocation, encrypted-sync conflict handling, push delivery, and key-loss scenarios in staging.
 - Obtain independent penetration, privacy, accessibility, and applicable legal/regulatory reviews plus vendor agreements.
-- Adopt reviewed server-side identity before multi-device sign-in, recovery, MFA/passkeys, or remote session revocation.
-- Decide whether browser-local unencrypted journal storage meets the intended threat model; otherwise implement audited at-rest encryption and key recovery.
+- Have the new identity and encrypted-sync design independently reviewed before marketing either as audited or certified.
+- Decide whether readable local browser journal storage meets the intended threat model. Encrypted sync does not encrypt the working local copy.
 
 ## Release commands
 

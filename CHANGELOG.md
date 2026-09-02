@@ -2,6 +2,17 @@
 
 This file is the repository-only system of record for product and engineering changes. It is **not rendered inside the Pamet application**.
 
+## [1.1.0] — 2026-09-02
+
+- Added Redis/Valkey-backed distributed rate limiting with production fail-closed behavior and readiness reporting.
+- Added closed-app Web Push subscriptions, VAPID delivery, timezone-aware 8pm scheduling, click-through handling, and an hourly delivery workflow.
+- Added per-device credentials, remote device revocation, single-use email recovery, and authenticator-app MFA with encrypted TOTP seeds.
+- Added Ultra browser-encrypted sync using AES-256-GCM, HKDF profile separation, optimistic revisions, and opaque server storage.
+- Added centralized structured-log, metrics, and alert-webhook integrations plus dependency-level readiness results.
+- Documented the feedback database path and retained its intentional separation from accounts and journal data.
+- Right-aligned the compact Compare Pro and Ultra Plans action.
+- Added independent penetration, WCAG/screen-reader, and HIPAA-adjacent review scopes and exit criteria without claiming self-certification.
+
 ## [1.0.5] — 2026-09-02
 
 - Rebuilt dark mode around neutral charcoal-teal surfaces, sky-blue information accents, sage reserved for affirmative actions, and stronger text/control contrast.

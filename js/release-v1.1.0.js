@@ -1,4 +1,4 @@
-/* Pamet v1.0.5 — authentication presentation and rotating brand landscapes. */
+/* Pamet v1.1.0 — authentication presentation and rotating brand landscapes. */
 (function () {
   "use strict";
   const welcome = document.querySelector("#welcome");

@@ -1,4 +1,4 @@
-/* Pamet v1.0.5 — calm landscape authentication and high-contrast neutral dark mode. */
+/* Pamet v1.1.0 — calm landscape authentication and high-contrast neutral dark mode. */
 .welcome {
   --login-scene: url("../assets/login-sunrise.jpg");
   background-image: linear-gradient(90deg,rgba(7,34,36,.72),rgba(7,34,36,.34)),var(--login-scene)!important;
@@ -14,9 +14,10 @@
 .notification-note { margin: -4px 52px 10px 34px; color: var(--text-tertiary); font-size: 11px; line-height: 1.45; }
 .pamet-notification { position: fixed; z-index: 8000; top: 18px; left: 50%; width: min(430px,calc(100vw - 28px)); transform: translateX(-50%); display: grid; gap: 3px; padding: 14px 44px 14px 16px; border: 1px solid #A9C9D8; border-radius: 13px; background: #F4FAFD; color: #173B4A; box-shadow: 0 16px 44px rgba(6,31,39,.22); }
 .pamet-notification strong { font-size: 14px; }.pamet-notification span { color: #45616C; font-size: 12px; line-height: 1.4; }.pamet-notification button { position: absolute; right: 10px; top: 9px; border: 0; background: transparent; color: inherit; font-size: 22px; cursor: pointer; }
-.plan-cta { width: auto; min-width: min(100%,320px); margin: 16px auto 2px; padding: 12px 22px; background: var(--pamet-teal); color: #fff; box-shadow: none; }
+.plan-cta { display: block; width: auto; min-width: min(100%,320px); margin: 16px 0 2px auto; padding: 12px 22px; background: var(--pamet-teal); color: #fff; box-shadow: none; }
 .pamet-current-plan { background: #F7F9F7; }.pamet-plan-summary { columns: 2; column-gap: 28px; }
 .phase2-plan-label.advanced { background: #EAF3F8; color: #285B72; }
+.security-overlay { z-index: 9000; }.security-modal { width: min(560px,calc(100vw - 28px)); }.security-content,.security-section { display: grid; gap: 12px; }.security-section { padding: 14px 0; border-top: 1px solid var(--border-color); }.security-device { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 0; border-bottom: 1px solid var(--border-color); }.security-device small { display: block; color: var(--text-tertiary); }.security-device .data-btn { width: auto; border: 0; }.security-secret { overflow-wrap: anywhere; padding: 12px; border-radius: 9px; background: var(--surface-secondary); color: var(--text-primary); }.recovery-button { display: block; margin: 8px auto 0; border: 0; background: transparent; color: #0F5C64; cursor: pointer; text-decoration: underline; }.security-note { margin-top: 8px; }
 
 body.dark {
   --app-background: #182326;

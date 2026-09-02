@@ -5,8 +5,11 @@ const crypto = require('crypto');
 const express = require('express');
 const mysql = require('mysql2/promise');
 const Stripe = require('stripe');
+const { distributedRateLimit, rateLimitReady } = require('./lib/rate-limit');
+const { totpSecret, verifyTotp, seal, open } = require('./lib/security');
+const push = require('./lib/push');
 
-const VERSION = '1.0.5';
+const VERSION = '1.1.0';
 const PORT = Number(process.env.PORT || 8080);
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const APP = (process.env.APP_BASE_URL || `http://localhost:${PORT}`).replace(/\/$/, '');
@@ -28,7 +31,7 @@ const metrics = new Map();
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
 
-const sha = (value) => crypto.createHash('sha256').update(String(value)).digest('hex');
+const sha = (value) => crypto.createHash('sha256').update(Buffer.isBuffer(value) ? value : String(value)).digest('hex');
 const token = () => crypto.randomBytes(32).toString('hex');
 const clean = (value, max) => String(value || '').trim().slice(0, max);
 const emailOk = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
@@ -56,6 +59,11 @@ function operationalEvent(event) {
     method: 'POST', headers: { 'Content-Type': 'application/json', ...(process.env.LOG_DRAIN_TOKEN ? { Authorization: `Bearer ${process.env.LOG_DRAIN_TOKEN}` } : {}) },
     body: line, signal: AbortSignal.timeout(3000)
   }).catch(() => {});
+}
+function operationalAlert(event) {
+  operationalEvent({ event: 'alert.raised', ...event });
+  if (!process.env.ALERT_WEBHOOK_URL) return;
+  fetch(process.env.ALERT_WEBHOOK_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(process.env.ALERT_WEBHOOK_TOKEN ? { Authorization: `Bearer ${process.env.ALERT_WEBHOOK_TOKEN}` } : {}) }, body: JSON.stringify({ service: 'pamet', version: VERSION, at: new Date().toISOString(), ...event }), signal: AbortSignal.timeout(5000) }).catch(() => {});
 }
 
 function databaseOptions() {
@@ -98,6 +106,11 @@ async function schema(connection) {
   await connection.query(`CREATE TABLE IF NOT EXISTS pamet_audit_log (id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,user_id BIGINT UNSIGNED NULL,event_type VARCHAR(80) NOT NULL,event_json JSON NULL,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,INDEX idx_audit(user_id,created_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
   await connection.query(`CREATE TABLE IF NOT EXISTS pamet_feedback (id CHAR(36) PRIMARY KEY,category VARCHAR(24) NOT NULL,rating TINYINT UNSIGNED NULL,message VARCHAR(1000) NOT NULL,app_version VARCHAR(16) NOT NULL,screen VARCHAR(40) NOT NULL,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,INDEX idx_feedback_created(created_at),INDEX idx_feedback_category(category)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
   await connection.query(`CREATE TABLE IF NOT EXISTS pamet_stripe_events (event_id VARCHAR(255) PRIMARY KEY,event_type VARCHAR(100) NOT NULL,processed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,INDEX idx_stripe_event_time(processed_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
+  await connection.query(`CREATE TABLE IF NOT EXISTS pamet_devices (id CHAR(36) PRIMARY KEY,user_id BIGINT UNSIGNED NOT NULL,credential_hash CHAR(64) NOT NULL UNIQUE,label VARCHAR(80) NOT NULL DEFAULT 'Pamet device',status VARCHAR(16) NOT NULL DEFAULT 'active',last_used_at DATETIME NULL,revoked_at DATETIME NULL,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY(user_id) REFERENCES pamet_users(id) ON DELETE CASCADE,INDEX idx_device_user(user_id,status)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
+  await connection.query(`CREATE TABLE IF NOT EXISTS pamet_recovery_tokens (id CHAR(36) PRIMARY KEY,user_id BIGINT UNSIGNED NOT NULL,token_hash CHAR(64) NOT NULL UNIQUE,expires_at DATETIME NOT NULL,used_at DATETIME NULL,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY(user_id) REFERENCES pamet_users(id) ON DELETE CASCADE,INDEX idx_recovery(token_hash,expires_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
+  await connection.query(`CREATE TABLE IF NOT EXISTS pamet_mfa (user_id BIGINT UNSIGNED PRIMARY KEY,secret_encrypted TEXT NOT NULL,enabled BOOLEAN NOT NULL DEFAULT FALSE,verified_at DATETIME NULL,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,FOREIGN KEY(user_id) REFERENCES pamet_users(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
+  await connection.query(`CREATE TABLE IF NOT EXISTS pamet_push_subscriptions (id CHAR(36) PRIMARY KEY,user_id BIGINT UNSIGNED NOT NULL,device_id CHAR(36) NULL,endpoint_hash CHAR(64) NOT NULL UNIQUE,subscription_json JSON NOT NULL,timezone VARCHAR(100) NOT NULL DEFAULT 'UTC',reminder_hour TINYINT UNSIGNED NOT NULL DEFAULT 20,enabled BOOLEAN NOT NULL DEFAULT TRUE,last_sent_local_date DATE NULL,last_success_at DATETIME NULL,failure_count INT UNSIGNED NOT NULL DEFAULT 0,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,FOREIGN KEY(user_id) REFERENCES pamet_users(id) ON DELETE CASCADE,FOREIGN KEY(device_id) REFERENCES pamet_devices(id) ON DELETE SET NULL,INDEX idx_push_due(enabled,reminder_hour)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
+  await connection.query(`CREATE TABLE IF NOT EXISTS pamet_sync_blobs (user_id BIGINT UNSIGNED NOT NULL,profile_id VARCHAR(128) NOT NULL,ciphertext LONGBLOB NOT NULL,nonce VARBINARY(32) NOT NULL,key_version INT UNSIGNED NOT NULL,revision BIGINT UNSIGNED NOT NULL DEFAULT 1,content_hash CHAR(64) NOT NULL,updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,PRIMARY KEY(user_id,profile_id),FOREIGN KEY(user_id) REFERENCES pamet_users(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
 }
 
 async function audit(userId, type, data = {}) {
@@ -117,32 +130,15 @@ function publicUser(user) {
   return { id: String(user.id), email: user.email, firstName: user.first_name, lastName: user.last_name, plan: user.plan || 'free', subscriptionStatus: user.subscription_status || 'none', weeklyDigest: !!user.weekly_digest_enabled };
 }
 
-function rateLimit({ windowMs, max, name }) {
-  const hits = new Map();
-  return (req, res, next) => {
-    if (process.env.DISABLE_RATE_LIMITS === 'true') return next();
-    const now = Date.now();
-    const key = `${name}:${req.ip || req.socket.remoteAddress || 'unknown'}`;
-    let item = hits.get(key);
-    if (!item || item.resetAt <= now) item = { count: 0, resetAt: now + windowMs };
-    item.count += 1;
-    hits.set(key, item);
-    if (hits.size > 5000) for (const [entryKey, value] of hits) if (value.resetAt <= now) hits.delete(entryKey);
-    res.setHeader('RateLimit-Limit', String(max));
-    res.setHeader('RateLimit-Remaining', String(Math.max(0, max - item.count)));
-    res.setHeader('RateLimit-Reset', String(Math.ceil(item.resetAt / 1000)));
-    if (item.count > max) { res.setHeader('Retry-After', String(Math.ceil((item.resetAt - now) / 1000))); return res.status(429).json({ error: 'Too many requests. Please try again later.' }); }
-    next();
-  };
-}
-
 const limits = {
-  bootstrap: rateLimit({ windowMs: 15 * 60 * 1000, max: 20, name: 'bootstrap' }),
-  billing: rateLimit({ windowMs: 15 * 60 * 1000, max: 20, name: 'billing' }),
-  feedback: rateLimit({ windowMs: 60 * 60 * 1000, max: 10, name: 'feedback' }),
-  sharing: rateLimit({ windowMs: 60 * 60 * 1000, max: 30, name: 'sharing' }),
-  publicShare: rateLimit({ windowMs: 60 * 1000, max: 60, name: 'public-share' }),
-  cron: rateLimit({ windowMs: 15 * 60 * 1000, max: 10, name: 'cron' })
+  bootstrap: distributedRateLimit({ windowMs: 15 * 60 * 1000, max: 20, name: 'bootstrap' }),
+  billing: distributedRateLimit({ windowMs: 15 * 60 * 1000, max: 20, name: 'billing' }),
+  feedback: distributedRateLimit({ windowMs: 60 * 60 * 1000, max: 10, name: 'feedback' }),
+  sharing: distributedRateLimit({ windowMs: 60 * 60 * 1000, max: 30, name: 'sharing' }),
+  publicShare: distributedRateLimit({ windowMs: 60 * 1000, max: 60, name: 'public-share' }),
+  identity: distributedRateLimit({ windowMs: 15 * 60 * 1000, max: 10, name: 'identity' }),
+  sync: distributedRateLimit({ windowMs: 60 * 1000, max: 60, name: 'sync' }),
+  cron: distributedRateLimit({ windowMs: 15 * 60 * 1000, max: 10, name: 'cron' })
 };
 
 async function auth(req, res, next) {
@@ -150,8 +146,18 @@ async function auth(req, res, next) {
     const key = readBearer(req);
     if (!installationKeyOk(key)) return res.status(401).json({ error: 'Authentication required.' });
     const connection = await db();
-    const [rows] = await connection.execute('SELECT * FROM pamet_users WHERE device_key_hash=? LIMIT 1', [sha(key)]);
+    let rows = []; let deviceSchemaAvailable = true;
+    try { [rows] = await connection.execute(`SELECT u.*,d.id device_id FROM pamet_devices d JOIN pamet_users u ON u.id=d.user_id WHERE d.credential_hash=? AND d.status='active' LIMIT 1`, [sha(key)]); }
+    catch (error) { if (error.code !== 'ER_NO_SUCH_TABLE') throw error; deviceSchemaAvailable = false; }
+    if (!rows.length) {
+      const [legacy] = await connection.execute('SELECT * FROM pamet_users WHERE device_key_hash=? LIMIT 1', [sha(key)]);
+      if (legacy.length) {
+        if (!deviceSchemaAvailable) rows.push(legacy[0]);
+        else { const [knownDevices] = await connection.execute('SELECT id FROM pamet_devices WHERE user_id=? LIMIT 1', [legacy[0].id]); if (!knownDevices.length) { const id = crypto.randomUUID(); await connection.execute('INSERT IGNORE INTO pamet_devices(id,user_id,credential_hash,label,last_used_at) VALUES(?,?,?,?,NOW())', [id, legacy[0].id, sha(key), 'Original device']); legacy[0].device_id = id; rows.push(legacy[0]); } }
+      }
+    }
     if (!rows.length) return res.status(401).json({ error: 'Authentication required.' });
+    if (rows[0].device_id) await connection.execute('UPDATE pamet_devices SET last_used_at=NOW() WHERE id=?', [rows[0].device_id]).catch(() => {});
     req.user = rows[0]; next();
   } catch (error) { next(error); }
 }
@@ -248,7 +254,14 @@ app.post('/api/stripe/webhook', express.raw({ type: 'application/json', limit: '
 app.use(express.json({ limit: '256kb', strict: true }));
 
 app.get('/api/health', (req, res) => res.json({ ok: true, version: VERSION }));
-app.get('/api/ready', async (req, res) => { try { const connection = await db(); await connection.query('SELECT 1'); res.json({ ok: true, version: VERSION }); } catch { res.status(503).json({ ok: false, version: VERSION }); } });
+app.get('/api/ready', async (req, res) => {
+  const checks = { database: false, distributedRateLimit: false, push: push.configured(), logDrain: !!process.env.LOG_DRAIN_URL, alerts: !!process.env.ALERT_WEBHOOK_URL, identityEncryption: /^[a-f0-9]{64}$/i.test(process.env.IDENTITY_ENCRYPTION_KEY || '') };
+  try { const connection = await db(); await connection.query('SELECT 1'); await connection.query('SELECT 1 FROM pamet_devices LIMIT 0'); await connection.query('SELECT 1 FROM pamet_push_subscriptions LIMIT 0'); await connection.query('SELECT 1 FROM pamet_sync_blobs LIMIT 0'); checks.database = true; } catch {}
+  const limiter = await rateLimitReady(); checks.distributedRateLimit = limiter.ready;
+  const required = ['database', 'distributedRateLimit', 'push', 'logDrain', 'alerts', 'identityEncryption'];
+  const ok = required.every((name) => checks[name]);
+  res.status(ok ? 200 : 503).json({ ok, version: VERSION, checks });
+});
 app.get('/api/metrics', (req, res) => {
   const secret = readBearer(req);
   if (!process.env.METRICS_SECRET || !secret || !secretEqual(secret, process.env.METRICS_SECRET)) return res.status(401).type('text/plain').send('Unauthorized\n');
@@ -275,9 +288,16 @@ app.post('/api/account/bootstrap', limits.bootstrap, async (req, res, next) => {
     const keyHash = sha(key);
     const [rows] = await connection.execute('SELECT * FROM pamet_users WHERE local_user_id=? OR email=?', [local, email]);
     let user = rows.find((row) => row.local_user_id === local);
+    if (!user) {
+      const emailUser = rows.find((row) => row.email === email);
+      if (emailUser) { const [authorized] = await connection.execute(`SELECT id FROM pamet_devices WHERE user_id=? AND credential_hash=? AND status='active'`, [emailUser.id, keyHash]); if (authorized.length) user = emailUser; }
+    }
     let created = false;
     if (user) {
-      if (user.device_key_hash !== keyHash) return res.status(403).json({ error: 'This device credential does not match the account.' });
+      let devices = [];
+      try { [devices] = await connection.execute(`SELECT id FROM pamet_devices WHERE user_id=? AND credential_hash=? AND status='active'`, [user.id, keyHash]); }
+      catch (error) { if (error.code !== 'ER_NO_SUCH_TABLE') throw error; }
+      if (user.device_key_hash !== keyHash && !devices.length) return res.status(403).json({ error: 'This device is not authorized for the account. Use account recovery to add it.' });
       await connection.execute('UPDATE pamet_users SET email=?,first_name=?,last_name=?,timezone=? WHERE id=?', [email, first, last, timezone, user.id]);
     } else {
       if (rows.some((row) => row.email === email)) return res.status(409).json({ error: 'This email is already linked to another Pamet installation.' });
@@ -285,6 +305,7 @@ app.post('/api/account/bootstrap', limits.bootstrap, async (req, res, next) => {
       const [fresh] = await connection.execute('SELECT * FROM pamet_users WHERE id=?', [result.insertId]);
       user = fresh[0]; created = true;
     }
+    await connection.execute('INSERT IGNORE INTO pamet_devices(id,user_id,credential_hash,label,last_used_at) VALUES(?,?,?,?,NOW())', [crypto.randomUUID(), user.id, keyHash, clean(req.body.deviceLabel || 'Pamet device', 80)]).catch((error) => { if (error.code !== 'ER_NO_SUCH_TABLE') throw error; });
     const [fresh] = await connection.execute('SELECT * FROM pamet_users WHERE id=?', [user.id]);
     user = fresh[0];
     let emailSent = false;
@@ -308,6 +329,86 @@ app.delete('/api/account', auth, async (req, res, next) => {
     catch (error) { await connection.rollback(); throw error; }
     finally { connection.release(); }
     res.json({ deleted: true });
+  } catch (error) { next(error); }
+});
+
+app.get('/api/security/devices', auth, async (req, res, next) => {
+  try {
+    const connection = await db();
+    const [rows] = await connection.execute('SELECT id,label,status,last_used_at,created_at FROM pamet_devices WHERE user_id=? ORDER BY created_at DESC', [req.user.id]);
+    const [mfa] = await connection.execute('SELECT enabled FROM pamet_mfa WHERE user_id=?', [req.user.id]);
+    res.json({ currentDeviceId: req.user.device_id, mfaEnabled: !!(mfa[0] && mfa[0].enabled), devices: rows.map((row) => ({ id: row.id, label: row.label, status: row.status, lastUsedAt: row.last_used_at, createdAt: row.created_at })) });
+  } catch (error) { next(error); }
+});
+
+app.delete('/api/security/devices/:id', limits.identity, auth, async (req, res, next) => {
+  try {
+    const id = clean(req.params.id, 36);
+    if (!uuidOk(id)) return res.status(404).json({ error: 'Device not found.' });
+    if (id === req.user.device_id) return res.status(409).json({ error: 'Use Log out to remove the current device.' });
+    const connection = await db();
+    const [result] = await connection.execute(`UPDATE pamet_devices SET status='revoked',revoked_at=NOW() WHERE id=? AND user_id=? AND status='active'`, [id, req.user.id]);
+    if (!result.affectedRows) return res.status(404).json({ error: 'Device not found.' });
+    await audit(req.user.id, 'identity.device_revoked', { deviceId: id });
+    res.json({ revoked: true });
+  } catch (error) { next(error); }
+});
+
+app.post('/api/security/mfa/setup', limits.identity, auth, async (req, res, next) => {
+  try {
+    if (!process.env.IDENTITY_ENCRYPTION_KEY) return res.status(503).json({ error: 'MFA encryption is not configured.' });
+    const secret = totpSecret();
+    const connection = await db();
+    await connection.execute('INSERT INTO pamet_mfa(user_id,secret_encrypted,enabled) VALUES(?,?,FALSE) ON DUPLICATE KEY UPDATE secret_encrypted=VALUES(secret_encrypted),enabled=FALSE,verified_at=NULL', [req.user.id, seal(secret)]);
+    const issuer = encodeURIComponent('Pamet'); const label = encodeURIComponent(`Pamet:${req.user.email}`);
+    res.json({ secret, otpauthUri: `otpauth://totp/${label}?secret=${secret}&issuer=${issuer}&digits=6&period=30` });
+  } catch (error) { next(error); }
+});
+
+app.post('/api/security/mfa/confirm', limits.identity, auth, async (req, res, next) => {
+  try {
+    const connection = await db(); const [rows] = await connection.execute('SELECT secret_encrypted FROM pamet_mfa WHERE user_id=?', [req.user.id]);
+    if (!rows.length || !verifyTotp(open(rows[0].secret_encrypted), req.body.code)) return res.status(400).json({ error: 'That verification code is not valid.' });
+    await connection.execute('UPDATE pamet_mfa SET enabled=TRUE,verified_at=NOW() WHERE user_id=?', [req.user.id]);
+    await audit(req.user.id, 'identity.mfa_enabled'); res.json({ enabled: true });
+  } catch (error) { next(error); }
+});
+
+app.post('/api/security/mfa/disable', limits.identity, auth, async (req, res, next) => {
+  try {
+    const connection = await db(); const [rows] = await connection.execute('SELECT secret_encrypted,enabled FROM pamet_mfa WHERE user_id=?', [req.user.id]);
+    if (!rows.length || !rows[0].enabled || !verifyTotp(open(rows[0].secret_encrypted), req.body.code)) return res.status(400).json({ error: 'A current authenticator code is required.' });
+    await connection.execute('DELETE FROM pamet_mfa WHERE user_id=?', [req.user.id]); await audit(req.user.id, 'identity.mfa_disabled'); res.json({ enabled: false });
+  } catch (error) { next(error); }
+});
+
+app.post('/api/account/recovery/request', limits.identity, async (req, res, next) => {
+  try {
+    const email = clean(req.body.email, 254).toLowerCase();
+    if (emailOk(email) && process.env.RESEND_API_KEY && process.env.EMAIL_FROM) {
+      const connection = await db(); const [rows] = await connection.execute('SELECT id,first_name FROM pamet_users WHERE email=? LIMIT 1', [email]);
+      if (rows.length) {
+        const raw = token(); await connection.execute('INSERT INTO pamet_recovery_tokens(id,user_id,token_hash,expires_at) VALUES(?,?,?,DATE_ADD(NOW(),INTERVAL 30 MINUTE))', [crypto.randomUUID(), rows[0].id, sha(raw)]);
+        await mail(email, 'Recover your Pamet account', `<h1 style="font-size:22px">Recover your Pamet account</h1><p>This link expires in 30 minutes and can be used once.</p><p><a href="${html(`${APP}/?recover=${raw}`)}" style="display:inline-block;background:#4CAF7A;color:#0B2D24;text-decoration:none;font-weight:700;padding:11px 18px;border-radius:10px">Continue account recovery</a></p><p>If you did not request this, you can ignore this email.</p>`);
+      }
+    }
+    res.status(202).json({ accepted: true });
+  } catch (error) { next(error); }
+});
+
+app.post('/api/account/recovery/complete', limits.identity, async (req, res, next) => {
+  try {
+    const raw = clean(req.body.token, 128); const credential = clean(req.body.deviceKey, 128); const label = clean(req.body.deviceLabel || 'Recovered device', 80);
+    if (!installationKeyOk(raw) || !installationKeyOk(credential)) return res.status(400).json({ error: 'Recovery request is invalid.' });
+    const connection = await db(); const [rows] = await connection.execute(`SELECT r.id token_id,r.user_id,u.email,u.first_name,u.last_name,m.enabled mfa_enabled,m.secret_encrypted FROM pamet_recovery_tokens r JOIN pamet_users u ON u.id=r.user_id LEFT JOIN pamet_mfa m ON m.user_id=u.id WHERE r.token_hash=? AND r.used_at IS NULL AND r.expires_at>NOW() LIMIT 1`, [sha(raw)]);
+    if (!rows.length) return res.status(400).json({ error: 'Recovery link is invalid or expired.' });
+    const row = rows[0]; if (row.mfa_enabled && !verifyTotp(open(row.secret_encrypted), req.body.code)) return res.status(401).json({ error: 'Your authenticator code is required.' });
+    const deviceId = crypto.randomUUID();
+    const tx = await connection.getConnection();
+    try { await tx.beginTransaction(); await tx.execute('UPDATE pamet_recovery_tokens SET used_at=NOW() WHERE id=? AND used_at IS NULL', [row.token_id]); await tx.execute('INSERT INTO pamet_devices(id,user_id,credential_hash,label,last_used_at) VALUES(?,?,?,?,NOW())', [deviceId, row.user_id, sha(credential), label]); await tx.commit(); }
+    catch (error) { await tx.rollback(); throw error; } finally { tx.release(); }
+    await audit(row.user_id, 'identity.recovery_completed', { deviceId });
+    res.json({ recovered: true, deviceId, profile: { email: row.email, firstName: row.first_name, lastName: row.last_name } });
   } catch (error) { next(error); }
 });
 
@@ -419,6 +520,78 @@ app.post('/api/digest/snapshot', auth, async (req, res, next) => {
     const connection = await db();
     await connection.execute('UPDATE pamet_users SET latest_digest_json=? WHERE id=?', [snapshot, req.user.id]);
     res.json({ saved: true });
+  } catch (error) { next(error); }
+});
+
+app.get('/api/notifications/config', (req, res) => res.json({ enabled: push.configured(), publicKey: process.env.VAPID_PUBLIC_KEY || '' }));
+
+app.post('/api/notifications/subscriptions', limits.identity, auth, async (req, res, next) => {
+  try {
+    if (!push.configured()) return res.status(503).json({ error: 'Push notifications are not configured.' });
+    const subscription = req.body.subscription;
+    const endpoint = clean(subscription && subscription.endpoint, 2048);
+    const timezoneCandidate = clean(req.body.timezone || 'UTC', 100); const timezone = timezoneOk(timezoneCandidate) ? timezoneCandidate : 'UTC';
+    const reminderHour = Number.isInteger(Number(req.body.reminderHour)) && Number(req.body.reminderHour) >= 0 && Number(req.body.reminderHour) <= 23 ? Number(req.body.reminderHour) : 20;
+    if (!endpoint.startsWith('https://') || !plainObject(subscription.keys) || !subscription.keys.p256dh || !subscription.keys.auth) return res.status(400).json({ error: 'A valid push subscription is required.' });
+    const serialized = JSON.stringify(subscription); if (Buffer.byteLength(serialized) > 16 * 1024) return res.status(413).json({ error: 'Push subscription is too large.' });
+    const connection = await db();
+    await connection.execute(`INSERT INTO pamet_push_subscriptions(id,user_id,device_id,endpoint_hash,subscription_json,timezone,reminder_hour,enabled) VALUES(?,?,?,?,?,?,?,TRUE) ON DUPLICATE KEY UPDATE user_id=VALUES(user_id),device_id=VALUES(device_id),subscription_json=VALUES(subscription_json),timezone=VALUES(timezone),reminder_hour=VALUES(reminder_hour),enabled=TRUE,failure_count=0`, [crypto.randomUUID(), req.user.id, req.user.device_id || null, sha(endpoint), serialized, timezone, reminderHour]);
+    await audit(req.user.id, 'notifications.push_enabled', { reminderHour, timezone }); res.status(201).json({ saved: true });
+  } catch (error) { next(error); }
+});
+
+app.delete('/api/notifications/subscriptions', limits.identity, auth, async (req, res, next) => {
+  try {
+    const endpoint = clean(req.body.endpoint, 2048); if (!endpoint) return res.status(400).json({ error: 'Push endpoint is required.' });
+    const connection = await db(); await connection.execute('DELETE FROM pamet_push_subscriptions WHERE user_id=? AND endpoint_hash=?', [req.user.id, sha(endpoint)]);
+    await audit(req.user.id, 'notifications.push_disabled'); res.json({ deleted: true });
+  } catch (error) { next(error); }
+});
+
+app.get('/api/sync/:profileId', limits.sync, auth, async (req, res, next) => {
+  try {
+    if (req.user.plan !== 'ultra') return res.status(403).json({ error: 'Encrypted multi-device sync requires Pamet Ultra.' });
+    const profileId = clean(req.params.profileId, 128); if (!localUserIdOk(profileId)) return res.status(400).json({ error: 'Invalid profile.' });
+    const connection = await db(); const [rows] = await connection.execute('SELECT ciphertext,nonce,key_version,revision,content_hash,updated_at FROM pamet_sync_blobs WHERE user_id=? AND profile_id=?', [req.user.id, profileId]);
+    if (!rows.length) return res.status(404).json({ error: 'No synchronized journal exists for this profile.' });
+    const row = rows[0]; res.json({ ciphertext: Buffer.from(row.ciphertext).toString('base64'), nonce: Buffer.from(row.nonce).toString('base64'), keyVersion: row.key_version, revision: Number(row.revision), contentHash: row.content_hash, updatedAt: row.updated_at });
+  } catch (error) { next(error); }
+});
+
+app.put('/api/sync/:profileId', limits.sync, auth, async (req, res, next) => {
+  try {
+    if (req.user.plan !== 'ultra') return res.status(403).json({ error: 'Encrypted multi-device sync requires Pamet Ultra.' });
+    const profileId = clean(req.params.profileId, 128); const ciphertext = Buffer.from(String(req.body.ciphertext || ''), 'base64'); const nonce = Buffer.from(String(req.body.nonce || ''), 'base64');
+    const keyVersion = Number(req.body.keyVersion); const expectedRevision = Number(req.body.expectedRevision || 0);
+    if (!localUserIdOk(profileId) || ciphertext.length < 16 || ciphertext.length > 5 * 1024 * 1024 || nonce.length !== 12 || !Number.isInteger(keyVersion) || keyVersion < 1) return res.status(400).json({ error: 'Invalid encrypted sync payload.' });
+    const connection = await db(); const contentHash = sha(ciphertext); const [existing] = await connection.execute('SELECT revision FROM pamet_sync_blobs WHERE user_id=? AND profile_id=?', [req.user.id, profileId]);
+    const current = existing.length ? Number(existing[0].revision) : 0; if (current !== expectedRevision) return res.status(409).json({ error: 'A newer encrypted journal is available.', currentRevision: current });
+    const revision = current + 1;
+    await connection.execute(`INSERT INTO pamet_sync_blobs(user_id,profile_id,ciphertext,nonce,key_version,revision,content_hash) VALUES(?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE ciphertext=VALUES(ciphertext),nonce=VALUES(nonce),key_version=VALUES(key_version),revision=VALUES(revision),content_hash=VALUES(content_hash)`, [req.user.id, profileId, ciphertext, nonce, keyVersion, revision, contentHash]);
+    await audit(req.user.id, 'sync.encrypted_blob_saved', { profileId, revision, keyVersion }); res.json({ saved: true, revision, contentHash });
+  } catch (error) { next(error); }
+});
+
+app.post('/api/jobs/push-reminders', limits.cron, async (req, res, next) => {
+  try {
+    const secret = readBearer(req); if (!process.env.CRON_SECRET || !secret || !secretEqual(secret, process.env.CRON_SECRET)) return res.status(401).json({ error: 'Unauthorized.' });
+    if (!push.configured()) return res.status(503).json({ error: 'Web Push is not configured.' });
+    const connection = await db(); const [rows] = await connection.execute('SELECT * FROM pamet_push_subscriptions WHERE enabled=TRUE AND failure_count<5');
+    let sent = 0; let disabled = 0;
+    for (const row of rows) {
+      try {
+        const parts = new Intl.DateTimeFormat('en-CA', { timeZone: row.timezone, hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit' }).formatToParts(new Date());
+        const value = Object.fromEntries(parts.map((part) => [part.type, part.value])); const localDate = `${value.year}-${value.month}-${value.day}`; const localHour = Number(value.hour === '24' ? 0 : value.hour);
+        if (localHour !== Number(row.reminder_hour) || String(row.last_sent_local_date || '').slice(0, 10) === localDate) continue;
+        await push.send(parse(row.subscription_json), { title: 'Time for a quick Pamet check-in', body: 'Take a moment to record how you felt today. Small entries build a clearer health history.', url: APP, tag: `pamet-daily-${localDate}` });
+        await connection.execute('UPDATE pamet_push_subscriptions SET last_sent_local_date=?,last_success_at=NOW(),failure_count=0 WHERE id=?', [localDate, row.id]); sent += 1;
+      } catch (error) {
+        const terminal = error.statusCode === 404 || error.statusCode === 410;
+        await connection.execute(`UPDATE pamet_push_subscriptions SET failure_count=failure_count+1,enabled=? WHERE id=?`, [!terminal, row.id]); if (terminal) disabled += 1;
+        operationalEvent({ event: 'push.delivery_failed', subscriptionId: row.id, status: error.statusCode || 0 });
+      }
+    }
+    res.json({ checked: rows.length, sent, disabled });
   } catch (error) { next(error); }
 });
 
@@ -544,6 +717,7 @@ app.use((error, req, res, next) => {
   if (res.headersSent) return next(error);
   const status = error.type === 'entity.too.large' ? 413 : error instanceof SyntaxError && error.status === 400 ? 400 : Number(error.status || 500);
   console.error('request_failed', { requestId: req.requestId, method: req.method, path: req.path, status, message: error.message });
+  if (status >= 500) operationalAlert({ severity: 'error', kind: 'http_failure', requestId: req.requestId, method: req.method, route: metricRoute(req), status });
   const message = status === 413 ? 'Request is too large.' : status === 400 ? 'Invalid JSON request.' : NODE_ENV === 'production' ? 'Pamet could not complete that request.' : error.message;
   res.status(status).json({ error: message, requestId: req.requestId });
 });

@@ -1,9 +1,38 @@
-/* Pamet v1.0.5 — consent-based daily and pattern notifications. */
+/* Pamet v1.1.0 — consent-based local and closed-app Web Push notifications. */
 (function () {
   "use strict";
   const S = window.PametStore;
   if (!S) return;
   let dailyTimer;
+
+  function authHeaders() {
+    const credential = window.PametAuth?.getBackendCredential?.();
+    return credential?.deviceKey ? { "Content-Type": "application/json", Authorization: `Bearer ${credential.deviceKey}` } : null;
+  }
+
+  function applicationKey(value) {
+    const padding = "=".repeat((4 - value.length % 4) % 4);
+    const raw = atob((value + padding).replace(/-/g, "+").replace(/_/g, "/"));
+    return Uint8Array.from(raw, (char) => char.charCodeAt(0));
+  }
+
+  async function syncPush(enabled) {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+    const headers = authHeaders(); if (!headers) return;
+    const registration = await navigator.serviceWorker.ready;
+    let subscription = await registration.pushManager.getSubscription();
+    if (!enabled) {
+      if (subscription) {
+        await fetch("/api/notifications/subscriptions", { method: "DELETE", headers, body: JSON.stringify({ endpoint: subscription.endpoint }) });
+        await subscription.unsubscribe();
+      }
+      return;
+    }
+    const config = await fetch("/api/notifications/config").then((response) => response.json());
+    if (!config.enabled || !config.publicKey) return;
+    if (!subscription) subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: applicationKey(config.publicKey) });
+    await fetch("/api/notifications/subscriptions", { method: "POST", headers, body: JSON.stringify({ subscription: subscription.toJSON(), timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC", reminderHour: 20 }) });
+  }
 
   function inApp(title, body) {
     let notice = document.querySelector("#pametNotification");
@@ -60,7 +89,7 @@
 
   window.addEventListener("load", () => {
     const daily = document.querySelector("#setDailyReminder"), patterns = document.querySelector("#setPatternAlerts");
-    daily?.addEventListener("change", async () => { await permissionFor(daily); scheduleDaily(); });
+    daily?.addEventListener("change", async () => { await permissionFor(daily); try { await syncPush(daily.checked); } catch { inApp("Notification setup needs attention", "Pamet will keep using in-app reminders until closed-app notifications are available."); } scheduleDaily(); });
     patterns?.addEventListener("change", async () => { await permissionFor(patterns); localStorage.setItem("pamet_pattern_signature_v105", patternSignature()); });
     scheduleDaily();
     if (!localStorage.getItem("pamet_pattern_signature_v105")) localStorage.setItem("pamet_pattern_signature_v105", patternSignature());

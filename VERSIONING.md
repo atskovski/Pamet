@@ -1,8 +1,8 @@
 # Pamet versioning policy
 
-Pamet uses semantic versioning from the normalized `v1.0.4` baseline. The current release is `v1.0.5`.
+Pamet uses semantic versioning from the normalized `v1.0.4` baseline. The current release is `v1.1.0`.
 
-- The next patch release is `v1.0.6`.
+- The next patch release is `v1.1.1`.
 - Increment the patch number for compatible fixes, security hardening, copy, styling, tests, and small workflow improvements.
 - Increment the minor number for a substantial backward-compatible capability such as account recovery, encrypted multi-device sync, or FHIR export.
 - Increment the major number only for an intentionally breaking data, API, authentication, or deployment migration.

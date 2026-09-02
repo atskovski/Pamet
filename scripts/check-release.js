@@ -15,15 +15,15 @@ function check(condition, message) {
 }
 
 check(
-  html.includes('href="css/brand-v1.0.3.css?v=1050" data-pamet-brand-v105'),
+  html.includes('href="css/brand-v1.0.3.css?v=1100" data-pamet-brand-v105'),
   'The v1.0.3 brand stylesheet must be loaded directly.'
 );
 check(
-  html.includes('src="js/v1.0.3.js?v=1050" data-pamet-v105'),
+  html.includes('src="js/v1.0.3.js?v=1100" data-pamet-v105'),
   'The v1.0.3 runtime must be loaded directly.'
 );
 check(
-  html.indexOf('src="js/app.js?v=1050"') < html.indexOf('src="js/v1.0.3.js?v=1050"'),
+  html.indexOf('src="js/app.js?v=1100"') < html.indexOf('src="js/v1.0.3.js?v=1100"'),
   'The v1.0.3 runtime must load after the base app.'
 );
 check(
@@ -35,8 +35,8 @@ check(
   'The retired Custom symptoms settings card must not be rendered.'
 );
 check(
-  html.includes('Pamet v1.0.5 · Your health history, finally useful.'),
-  'The visible footer must identify Pamet v1.0.5.'
+  html.includes('Pamet v1.1.0 · Your health history, finally useful.'),
+  'The visible footer must identify Pamet v1.1.0.'
 );
 check(
   html.includes('Don’t have an account?') && /id="registerForm" hidden/.test(html),
@@ -71,8 +71,8 @@ check(
   'The PWA manifest must include standalone display and phone-sized icons.'
 );
 check(
-  worker.includes('pamet-shell-v105-0') && !worker.slice(0, worker.indexOf('const PATHS')).includes('/api/'),
-  'The v1.0.5 service worker must use a fresh cache and never list API data in the shell.'
+  worker.includes('pamet-shell-v110-0') && worker.includes('security-v1.1.0.js') && !worker.slice(0, worker.indexOf('const PATHS')).includes('/api/'),
+  'The v1.1.0 service worker must use a fresh cache and never list API data in the shell.'
 );
 
-console.log('Pamet v1.0.5 release checks passed.');
+console.log('Pamet v1.1.0 release checks passed.');

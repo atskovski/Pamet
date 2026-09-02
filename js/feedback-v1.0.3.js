@@ -47,7 +47,7 @@
       category: document.querySelector("#feedbackCategory").value,
       rating: rating ? Number(rating.value) : null,
       message: document.querySelector("#feedbackMessage").value.trim(),
-      appVersion: "1.0.5",
+      appVersion: "1.1.0",
       screen: "settings"
     };
 

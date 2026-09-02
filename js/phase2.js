@@ -1,4 +1,4 @@
-/* Pamet v1.0.5 — profiles, appointment preparation, longitudinal summaries, and advanced sharing. */
+/* Pamet v1.1.0 — profiles, appointment preparation, longitudinal summaries, and advanced sharing. */
 (function () {
   "use strict";
   const S = window.PametStore;
@@ -127,7 +127,7 @@
   function injectSettings() {
     const profileCard = $("#screen-settings .profile-card");
     if (!profileCard) return;
-    const footer = $(".footer-line"); if (footer) footer.textContent = "Pamet v1.0.5 · Your health history, finally useful.";
+    const footer = $(".footer-line"); if (footer) footer.textContent = "Pamet v1.1.0 · Your health history, finally useful.";
     $("#phase2ProfileSwitcher")?.remove();
 
     let tools = $("#phase2UltraTools");
@@ -142,7 +142,7 @@
   }, true);
 
   document.title = "Pamet — Track, understand, prepare";
-  const footer = $(".footer-line"); if (footer) footer.textContent = "Pamet v1.0.5 · Your health history, finally useful.";
+  const footer = $(".footer-line"); if (footer) footer.textContent = "Pamet v1.1.0 · Your health history, finally useful.";
   injectSettings();
   new MutationObserver(() => enhancePlanModal()).observe(document.body, { childList: true, subtree: true });
   $$(".tab[data-tab='settings']").forEach((tab) => tab.addEventListener("click", () => setTimeout(injectSettings, 20)));

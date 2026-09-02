@@ -9,17 +9,17 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Georgia&display=swap" rel="stylesheet" />
-  <script src="js/auth.js?v=1050"></script>
+  <script src="js/auth.js?v=1100"></script>
   <link rel="manifest" href="manifest.webmanifest" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
   <link rel="apple-touch-icon" href="assets/icon-192.png" />
-  <link rel="stylesheet" href="css/styles.css?v=1050" />
-  <link rel="stylesheet" href="css/brand-v1.0.3.css?v=1050" data-pamet-brand-v105 />
-  <link rel="stylesheet" href="css/release-v1.0.3.css?v=1050" />
-  <link rel="stylesheet" href="css/phase2.css?v=1050" />
-  <link rel="stylesheet" href="css/release-v1.0.5.css?v=1050" />
-  <link rel="icon" href="assets/pamet-mark.svg?v=1050" type="image/svg+xml" />
+  <link rel="stylesheet" href="css/styles.css?v=1100" />
+  <link rel="stylesheet" href="css/brand-v1.0.3.css?v=1100" data-pamet-brand-v105 />
+  <link rel="stylesheet" href="css/release-v1.0.3.css?v=1100" />
+  <link rel="stylesheet" href="css/phase2.css?v=1100" />
+  <link rel="stylesheet" href="css/release-v1.1.0.css?v=1100" />
+  <link rel="icon" href="assets/pamet-mark.svg?v=1100" type="image/svg+xml" />
 </head>
 <body>
 
@@ -288,7 +288,7 @@
               <button class="data-btn danger" id="deleteAccount">Delete account</button>
             </div>
 
-            <p class="footer-line">Pamet v1.0.5 · Your health history, finally useful.</p>
+            <p class="footer-line">Pamet v1.1.0 · Your health history, finally useful.</p>
           </div>
         </div>
       </section>
@@ -372,18 +372,20 @@
 
   </div>
 
-  <script src="js/store.js?v=1050"></script>
-  <script src="js/app.js?v=1050"></script>
-  <script src="js/v1.0.3.js?v=1050" data-pamet-v105></script>
-  <script src="js/feedback-v1.0.3.js?v=1050"></script>
-  <script src="js/phase2.js?v=1050"></script>
-  <script src="js/notifications-v1.0.5.js?v=1050"></script>
-  <script src="js/release-v1.0.5.js?v=1050"></script>
+  <script src="js/store.js?v=1100"></script>
+  <script src="js/app.js?v=1100"></script>
+  <script src="js/v1.0.3.js?v=1100" data-pamet-v105></script>
+  <script src="js/feedback-v1.0.3.js?v=1100"></script>
+  <script src="js/phase2.js?v=1100"></script>
+  <script src="js/notifications-v1.1.0.js?v=1100"></script>
+  <script src="js/e2e-sync-v1.1.0.js?v=1100"></script>
+  <script src="js/security-v1.1.0.js?v=1100"></script>
+  <script src="js/release-v1.1.0.js?v=1100"></script>
   <script>
     // Register the service worker for offline use and installability.
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {
-      navigator.serviceWorker.register('sw.js?v=1050').catch(function () { /* offline-only environments */ });
+      navigator.serviceWorker.register('sw.js?v=1100').catch(function () { /* offline-only environments */ });
       });
     }
   </script>
