@@ -2,7 +2,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const app = require('../server');
+const app = require('../secure-server');
 
 let server;
 let base;
@@ -42,4 +42,11 @@ test('unknown and malformed requests do not leak internals', async () => {
   });
   assert.equal(malformed.status, 400);
   assert.equal((await malformed.json()).error, 'Invalid JSON request.');
+
+  const malformedAuth = await fetch(`${base}/api/auth/login`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{'
+  });
+  assert.equal(malformedAuth.status, 400);
+  assert.equal((await malformedAuth.json()).error, 'Invalid JSON request.');
+  assert.equal(malformedAuth.headers.get('x-content-type-options'), 'nosniff');
 });
