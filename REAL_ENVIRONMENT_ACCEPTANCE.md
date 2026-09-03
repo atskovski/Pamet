@@ -3,6 +3,8 @@
 This document is the release acceptance record for the deployed Pamet environment. It complements CI: CI proves code-level behavior against disposable infrastructure; this record proves what the actual deployed environment is serving.
 
 Production target: `https://pamet.wasmer.app`
+Expected repository release: **1.2.2**
+Expected main commit at time of this update: `e93ac82afbb1d4d3280321bdd818626da0872076`
 
 ## Automated public checks
 
@@ -14,50 +16,56 @@ npm run check:live
 PAMET_BASE_URL=https://pamet.wasmer.app npm run check:live
 ```
 
-The checker verifies:
+The checker now verifies deployment identity, not only service health:
 
 - application shell responds successfully;
-- `/api/health` returns HTTP 200, `ok=true`, and a semantic version;
-- `/api/ready` returns HTTP 200 with `launchReady=true`;
-- health and readiness report the same release version;
+- the root response has `X-Pamet-Version` matching `package.json`;
+- server-rendered HTML contains the exact current Settings footer;
+- JS/CSS URLs carry the expected release cache-buster;
+- `/api/health` returns HTTP 200, `ok=true`, and the exact repository release;
+- `/api/ready` returns HTTP 200, `launchReady=true`, and the exact repository release;
+- health/readiness response headers also identify the expected release;
 - database, distributed rate limiting, Web Push, email, log drain, metrics, alerts, and identity encryption are all healthy;
 - public billing config reports Pro, Ultra, and email enabled;
 - entitlements, device management, and sharing APIs return 401 without authentication.
 
-## Evidence collected before this fix
+GitHub also runs `.github/workflows/live-acceptance.yml` after pushes to `main`, hourly, and on manual dispatch. The workflow gives production a bounded convergence window and then fails if Wasmer is still serving a different release.
 
-Live checks were run against Wasmer on 2026-09-02.
+## Evidence collected
+
+### 2026-09-03 — after Pamet 1.2.2 merged to main
 
 | Check | Result | Evidence / note |
 |---|---|---|
-| Application shell | PASS | HTTP 200 and login/create-account UI rendered. |
-| `/api/health` | PASS | HTTP 200, `{ "ok": true, "version": "1.2.1" }`. |
-| `/api/ready` dependencies | PASS | HTTP 200, `ok=true`, `launchReady=true`; database, distributed rate limit, push, email, log drain, metrics, alerts, and identity encryption all reported healthy. |
-| Health/readiness version consistency | FAIL before fix | Health reported `1.2.1`; readiness reported `1.2.0`. This branch normalizes readiness at the production edge. |
-| Pro billing configured | PASS | Public billing config reported `proEnabled=true`. |
-| Ultra billing configured | PASS | Public billing config reported `ultraEnabled=true`. |
-| Email configured | PASS | Public billing config reported `emailEnabled=true`. |
-| Unauthenticated entitlements | PASS | `/api/entitlements` returned HTTP 401 `Authentication required.` |
-| Unauthenticated device management | PASS | `/api/security/devices` returned HTTP 401 `Authentication required.` |
-| Unauthenticated sharing | PASS | `/api/sharing/invites` returned HTTP 401 `Authentication required.` |
-| Settings footer version | FAIL before fix | JavaScript-rendered Settings UI displayed `Pamet v1.1.0` even though health reported 1.2.1. Root cause: stale deployed production bundle. This branch rebuilds the bundle before start and reconciles the Settings footer against `/api/health`. |
+| Repository release | PASS | `package.json` is 1.2.2 and PR #23 merged to `main` as `e93ac82afbb1d4d3280321bdd818626da0872076`. |
+| Repository quality gate | PASS | Production build, release checks, unit/security/UI tests, and dependency audit passed. |
+| Repository lifecycle gate | PASS | MySQL lifecycle integration and disposable backup → isolated restore drill passed. |
+| Live application shell | PASS | Production remains reachable. |
+| Live `/api/health` | **BLOCKED / STALE DEPLOYMENT** | Force-fresh check after the merge still returned version `1.2.1`; expected `1.2.2`. |
+| Live `/api/ready` | **BLOCKED / STALE DEPLOYMENT** | Must be rechecked after Wasmer promotes current `main`; 1.2.2 edge normalizes this version when deployed. |
+| Live Settings footer | **BLOCKED / STALE DEPLOYMENT** | Must show exactly `Pamet v1.2.2 · Your health history, finally useful.` after current `main` is deployed. |
+| Wasmer/GitHub synchronization | **BLOCKED** | Repository contains no Wasmer deployment workflow/config that controls the external Git integration. Wasmer must be connected to `atskovski/Pamet`, production branch `main`, and promote the current head. Issue #22 tracks this provider-side gate. |
 
-## Post-deploy acceptance required for this branch
+Earlier public checks already confirmed the currently running environment has healthy database, distributed rate limiting, Web Push configuration, email, log drain, metrics, alerts, identity encryption, enabled Pro/Ultra billing, and correct unauthenticated 401 boundaries. Those dependency checks must be rerun on 1.2.2 once deployment convergence occurs.
 
-After this change reaches production, repeat the following and record the date/results:
+## Post-deploy acceptance required for 1.2.2
+
+After Wasmer promotes the current `main`, repeat and record the date/results:
 
 - [ ] `npm run check:live` passes with no failures.
-- [ ] `/api/health` and `/api/ready` both report `1.2.1`.
-- [ ] Settings footer renders exactly `Pamet v1.2.1 · Your health history, finally useful.`.
+- [ ] Root response `X-Pamet-Version` is `1.2.2`.
+- [ ] `/api/health` and `/api/ready` both report `1.2.2`.
+- [ ] Settings footer renders exactly `Pamet v1.2.2 · Your health history, finally useful.`.
 - [ ] Browser console shows no CSP error preventing the production bundle or service-worker registration.
-- [ ] Service worker is registered and the current shell cache is active.
+- [ ] Service worker is registered and `pamet-shell-v122-0` is active.
 - [ ] Login with a controlled acceptance account succeeds and persists across a normal reload.
 - [ ] Logout invalidates the active session.
+- [ ] Sign out everywhere revokes all controlled sessions and returns the browser to a usable login/account-creation state.
 - [ ] Password reset email is delivered to the controlled acceptance mailbox and the reset link works once.
 - [ ] Account Security opens; MFA enrollment/verification works; disabling MFA works.
 - [ ] Authorized-device inventory loads and a secondary controlled device can be revoked.
-- [ ] A new health entry saves only after valid submission and appears in history.
-- [ ] CSV and JSON exports contain the expected controlled test entry and no formula-injection behavior.
+- [ ] A new synthetic health entry saves only after valid submission and appears in history.
+- [ ] CSV and JSON exports contain the expected synthetic test entry and no formula-injection behavior.
 - [ ] Pro/Ultra checkout opens the intended live Stripe catalog using a controlled production test purchase process.
 - [ ] Subscription entitlement changes appear server-side after the relevant Stripe event.
 - [ ] Billing portal opens for the controlled subscribed account.
