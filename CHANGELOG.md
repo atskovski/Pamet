@@ -1,5 +1,34 @@
 # Pamet Change Log
 
+## [1.6.0] — 2026-09-03
+
+### Security hardening
+
+- Removed `unsafe-inline` from the production style Content Security Policy.
+- Added `style-src-attr 'none'` and strict production-bundle checks that prevent generated browser code from reintroducing inline style attributes.
+- Externalized dynamic presentation into CSP-safe stylesheet classes and progress elements.
+- Kept deployed strict-CSP UI verification as an environment evidence gate rather than treating code-only CI as proof of production behavior.
+
+### Feature-owned frontend architecture
+
+- Replaced active release-numbered JavaScript filenames with responsibility-based modules including `billing-sharing.js`, `care-planning.js`, `care-workspace.js`, `notifications.js`, `encrypted-sync.js`, `security.js`, `insights.js`, and `legal-support.js`.
+- Replaced active release-numbered CSS filenames with feature-owned layers including `brand.css`, `care-planning.css`, `product-clarity.css`, `design-system.css`, and `care-ux.css`.
+- Removed unused historical browser modules from the active source tree.
+- Kept release history in Git and this CHANGELOG instead of source filenames.
+- Preserved the existing dependency order and kept Care UX as the final production stylesheet layer.
+
+### Release and native coordination
+
+- Promoted Pamet to **1.6.0**.
+- Rotated the PWA shell to `pamet-shell-v160-1` and release registration to `sw.js?v=1600`.
+- Published mobile backend contract identity `1.6.0` while retaining `1.5.1` as the minimum compatible backend so the existing native 1.5.1 baselines remain compatible.
+- Merged green Pamet iOS and Android 1.5.1 native release-engineering baselines before starting this production architecture release.
+- Kept Stripe live acceptance, provider-level PITR/restore, independent penetration testing, independent WCAG 2.2 AA review, independent cryptographic review, and qualified privacy/legal review explicitly open until real evidence exists.
+
+---
+
+This file is the repository system of record for completed product and engineering changes. It is not rendered inside the Pamet application.
+
 ## [1.5.1] — 2026-09-03
 
 ### Care sharing and appointment clarity
@@ -14,8 +43,6 @@
 - Retries secure appointment sync before suggesting authentication and never logs the user out as a recovery shortcut.
 
 ---
-
-This file is the repository system of record for completed product and engineering changes. It is not rendered inside the Pamet application.
 
 ## [1.5.0] — 2026-09-03
 
