@@ -2,9 +2,11 @@
 
 // Backwards-compatible deployment entry point. The reviewed Express application
 // remains in server.js; this edge wrapper adds account-keyed login throttling,
-// breached-password screening, legacy identity migration, and CSP enforcement.
+// breached-password screening, legacy identity migration, release normalization,
+// and CSP enforcement.
 const crypto = require('crypto');
 const express = require('express');
+const VERSION = require('./package.json').version;
 const inner = require('./server');
 const { distributedRateLimit } = require('./lib/rate-limit');
 const { breachedPassword } = require('./lib/security');
@@ -23,30 +25,17 @@ function hardenedCsp(value) {
     .replace('; style-src', "; script-src-attr 'none'; style-src");
 }
 
-// The inner application owns the canonical security header set. This wrapper
-// removes executable inline-script permission from any CSP it emits while
-// retaining inline styles until the remaining style attributes are migrated.
 app.use((req, res, next) => {
   const setHeader = res.setHeader.bind(res);
   res.setHeader = (name, value) => setHeader(name, String(name).toLowerCase() === 'content-security-policy' ? hardenedCsp(value) : value);
   next();
 });
 
-// Observe remaining pre-session bearer compatibility traffic without logging
-// the credential, a reusable hash, email, user id, IP address, or request body.
-// Cron/metrics tokens are separate authentication schemes and are excluded.
 app.use('/api', (req, res, next) => {
   const authorization = String(req.headers.authorization || '');
   const bearer = authorization.startsWith('Bearer ') ? authorization.slice(7).trim() : '';
   if (/^[a-f0-9]{64}$/i.test(bearer) && !req.path.startsWith('/jobs/') && req.path !== '/metrics') {
-    console.log(JSON.stringify({
-      service: 'pamet',
-      version: '1.2.0',
-      event: 'identity.legacy_bearer_observed',
-      method: req.method,
-      path: req.path,
-      at: new Date().toISOString()
-    }));
+    console.log(JSON.stringify({ service: 'pamet', version: VERSION, event: 'identity.legacy_bearer_observed', method: req.method, path: req.path, at: new Date().toISOString() }));
   }
   next();
 });
@@ -77,11 +66,7 @@ const accountLoginLimit = distributedRateLimit({
   keyGenerator: (req) => `email:${sha(normalizedEmail(req) || 'missing')}`
 });
 
-const passwordSafetyLimit = distributedRateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10,
-  name: 'password-safety'
-});
+const passwordSafetyLimit = distributedRateLimit({ windowMs: 15 * 60 * 1000, max: 10, name: 'password-safety' });
 
 async function rejectBreachedPassword(req, res, next) {
   const password = String(req.body && (req.body.newPassword || req.body.password) || '');
@@ -96,6 +81,7 @@ async function rejectBreachedPassword(req, res, next) {
 }
 
 app.use('/api/auth', authSecurityHeaders);
+app.get('/api/health', authSecurityHeaders, (req, res) => res.json({ ok: true, version: VERSION }));
 app.post('/api/auth/login', parseAuthJson, accountLoginLimit);
 app.post('/api/auth/register', parseAuthJson, passwordSafetyLimit, rejectBreachedPassword);
 app.post('/api/auth/password', parseAuthJson, passwordSafetyLimit, rejectBreachedPassword);
@@ -109,6 +95,6 @@ app.use((error, req, res, next) => {
   res.status(status).json({ error: status === 503 ? 'Service temporarily unavailable.' : 'Request failed.' });
 });
 
-if (require.main === module) app.listen(port, () => console.log(`Pamet v1.2.0 listening securely on ${port}`));
+if (require.main === module) app.listen(port, () => console.log(`Pamet v${VERSION} listening securely on ${port}`));
 
 module.exports = app;
