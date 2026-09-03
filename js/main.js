@@ -17,14 +17,32 @@ import "./security-v1.1.0.js";
 import "./release-v1.1.0.js";
 import "./version-update-v1.2.3.js";
 
-function applyReleaseVersion(version) {
+function releaseFooterText(version = PAMET_VERSION) {
   const normalized = String(version || '').trim() || PAMET_VERSION;
+  return `Pamet v${normalized} · Your health history, finally useful.`;
+}
+
+function applyReleaseVersion(version = PAMET_VERSION) {
+  const text = releaseFooterText(version);
   document.querySelectorAll('.footer-line').forEach((footer) => {
-    footer.textContent = `Pamet v${normalized} · Your health history, finally useful.`;
+    if (footer.textContent !== text) footer.textContent = text;
   });
 }
 
-applyReleaseVersion(PAMET_VERSION);
+// Historical feature layers still contain their original release labels. Keep
+// application release identity centralized here so later async settings/billing
+// refreshes cannot overwrite the actually loaded Pamet version.
+function protectReleaseFooter() {
+  applyReleaseVersion(PAMET_VERSION);
+  const observer = new MutationObserver((mutations) => {
+    if (!mutations.some((mutation) => mutation.target?.closest?.('.footer-line') || mutation.target?.classList?.contains?.('footer-line'))) return;
+    applyReleaseVersion(PAMET_VERSION);
+  });
+  document.querySelectorAll('.footer-line').forEach((footer) => observer.observe(footer, { childList: true, characterData: true, subtree: true }));
+  document.addEventListener('pamet:settings-rendered', () => applyReleaseVersion(PAMET_VERSION));
+}
+
+protectReleaseFooter();
 fetch('/api/health', { credentials: 'same-origin', cache: 'no-store' })
   .then((response) => response.ok ? response.json() : null)
   .then((health) => {
