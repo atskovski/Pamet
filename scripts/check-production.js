@@ -18,6 +18,7 @@ const encryptedSync = fs.readFileSync('js/encrypted-sync.js', 'utf8');
 const ci = fs.readFileSync('.github/workflows/ci.yml', 'utf8');
 const integrationTests = fs.readFileSync('tests/integration.test.js', 'utf8');
 const uiTests = fs.readFileSync('tests/ui-hardening.test.js', 'utf8');
+const cryptoUiTests = fs.readFileSync('tests/crypto-ui.test.js', 'utf8');
 const backupDrill = fs.readFileSync('scripts/backup-restore-drill.sh', 'utf8');
 const localEncryptionThreatModel = fs.readFileSync('LOCAL_ENCRYPTION_THREAT_MODEL.md', 'utf8');
 
@@ -63,7 +64,8 @@ check(securityUi.includes('pamet-modal-backdrop security-overlay') && securityUi
 
 check(ci.includes('integration:') && ci.includes('mysql:') && ci.includes('PAMET_INTEGRATION_TESTS') && ci.includes('npm run test:integration'), 'CI must retain the MySQL-backed production lifecycle integration gate.');
 check(ci.includes('backup-restore-drill.sh') && backupDrill.includes('mysqldump') && backupDrill.includes('pamet_restore_drill'), 'CI must retain a disposable MySQL backup and separate-schema restore drill.');
-check(uiTests.includes('centered Pamet modal backdrop') && uiTests.includes('legacy accounts migrate') && uiTests.includes('script CSP'), 'UI/security regression tests must remain in the quality gate.');
+check(uiTests.includes("require('node:test')") && uiTests.includes("require('node:assert/strict')") && uiTests.includes("/api/auth/legacy-upgrade") && uiTests.includes("script-src-attr 'none'"), 'UI/security regression tests must remain executable and cover legacy auth migration plus strict CSP.');
+check(cryptoUiTests.includes("require('../js/qr-sharing.js')") && cryptoUiTests.includes("require('../js/local-encryption.js')") && cryptoUiTests.includes('stageMigration'), 'Crypto UI regression tests must target the feature-owned QR and local-encryption modules.');
 check(
   integrationTests.includes('/api/auth/register') && integrationTests.includes('/api/auth/password') && integrationTests.includes('/api/security/devices/') && integrationTests.includes('/api/sharing/invites') && integrationTests.includes('/api/share/') && integrationTests.includes('/api/stripe/webhook') && integrationTests.includes('/api/entitlements') && integrationTests.includes('/api/sync/') && integrationTests.includes('currentRevision'),
   'Integration coverage must retain auth, entitlement, device, sharing/revocation, Stripe, and encrypted-sync lifecycle assertions.'
