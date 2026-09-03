@@ -11,7 +11,7 @@ Pamet is not emergency monitoring, a diagnostic service, a clinical decision too
 
 ## Current State
 
-Pamet is an actively developed web/PWA product deployed from GitHub `main` to Wasmer.
+Pamet is an actively developed web/PWA product deployed from GitHub `main` to Wasmer. The production repository also owns the mobile API/entitlement contract used by the native iOS and Android release baselines.
 
 ### Core product
 
@@ -28,6 +28,7 @@ Pamet is an actively developed web/PWA product deployed from GitHub `main` to Wa
 - Stripe checkout/subscriptions/webhooks/billing portal with server-side plan validation.
 - Consent-based Web Push reminders and weekly digest infrastructure.
 - Grafana Cloud OTLP logs/metrics, readiness checks, and operational alerts.
+- In-app privacy/safety/support guidance with troubleshooting steps and explicit medical-use boundaries.
 
 ### Pamet 1.5.1
 
@@ -38,7 +39,11 @@ Pamet is an actively developed web/PWA product deployed from GitHub `main` to Wa
 - Keeps `/api/` and sensitive sharing routes out of service-worker caching.
 - Reduces unnecessary PWA precache payload and avoids duplicate service-worker registration/update work.
 - Forces readable white text on primary green actions in both light and dark modes, including upgrade/update and first-entry calls to action.
-- Adds performance/release regression checks so the navigation, caching, and contrast guarantees remain protected by CI.
+- Adds an in-app “Privacy, safety & HIPAA information” surface that explains what Pamet can and cannot do without making an unsupported compliance claim.
+- Adds dead-end troubleshooting guidance for account/error states and directs users to privacy-safe feedback rather than leaving them stranded.
+- Refreshes the browser threat model and adds an evidence-based go-live status dashboard.
+- Adds production-to-native release coordination for `Pamet-iOS` and `Pamet-Android` through the authoritative `contracts/mobile-api.json` contract, scheduled native drift checks, and optional cross-repository dispatch.
+- Strengthens release/version/governance checks so stale critical release documentation fails CI.
 
 ## Product Model
 
@@ -99,21 +104,33 @@ Paid tiers are offered only when their Stripe configuration passes server-side v
 - Service-worker caching excludes `/api/` and sensitive sharing routes.
 - Browser update flows do not clear local journal data.
 - Appointment reminder notifications intentionally avoid symptom, medication, clinician, or diagnosis details on the lock screen.
+- Pamet does **not** claim HIPAA compliance, SOC 2 certification, independent penetration testing, independent WCAG certification, or independently reviewed local/E2E encryption until the corresponding external evidence is complete.
 
 ## Production Architecture
 
-- Bundled PWA/browser client
-- Node.js / Express secure edge and application runtime
-- MySQL account/session/entitlement/sharing/appointment/audit/sync metadata
-- Stripe subscriptions and webhooks
-- Redis/Valkey distributed rate limiting with MySQL fallback
+- Static PWA frontend authored in vanilla JavaScript/CSS and bundled/minified with esbuild
+- Node.js 20+ / Express 5 secure edge and application runtime
+- `secure-server.js` as the production entrypoint around `server.js`
+- MySQL via `mysql2` for account/session/entitlement/sharing/appointment/audit/sync metadata
+- Optional Redis/Valkey distributed rate limiting with MySQL fallback
+- Stripe subscriptions and idempotent webhooks
 - Resend transactional email
 - Web Push / VAPID
 - Grafana Cloud OTLP logs and metrics
-- GitHub Actions CI, scheduled jobs, and live acceptance checks
-- Wasmer deployment from `main`
+- GitHub Actions CI, scheduled jobs, live acceptance, billing reconciliation, reminders, and native-release coordination
+- Wasmer deployment from `main` at `pamet.wasmer.app`
 
-Journal entries remain local-first by default. Ultra encrypted sync stores opaque ciphertext rather than plaintext journal content.
+Journal entries remain local-first by default. Ultra encrypted sync stores opaque ciphertext rather than plaintext journal content. Encrypted sync is not the same as encrypted working local storage.
+
+## Native Release Coordination
+
+- Production owns `contracts/mobile-api.json` as the backend/mobile compatibility contract.
+- `Pamet-iOS` and `Pamet-Android` validate that contract and the live production health endpoint on scheduled/manual checks.
+- When the optional GitHub Actions secret `MOBILE_SYNC_TOKEN` is configured with minimal cross-repository permissions, production `main` changes can dispatch immediate native release checks.
+- Native clients do not copy web JS/CSS automatically; backend/entitlement changes synchronize by contract, while product/safety behavior is implemented natively and independently tested.
+- A mobile contract update is not release-ready until the relevant native tests, lint/static analysis, and release compilation/build pass.
+
+See `MOBILE_RELEASE_COORDINATION.md` for the synchronization model and platform release gates.
 
 ## Design System
 
@@ -148,9 +165,12 @@ Every production merge should pass:
 - Stripe/device/session/sharing/sync assertions
 - disposable MySQL backup → isolated restore
 - dependency audit
-- live Wasmer version/readiness acceptance
+- mobile contract validation
+- live Wasmer version/readiness acceptance when the environment is available
 
-Real-provider or independent evidence is still required for provider PITR/RPO/RTO, independent penetration testing, WCAG 2.2 AA review, privacy/legal/BAA-DPA determinations, and final activation review for encrypted working local storage.
+Real-provider or independent evidence is still required for provider PITR/RPO/RTO, production Stripe live-mode acceptance, independent penetration testing, WCAG 2.2 AA review, privacy/legal/BAA-DPA determinations, and final activation review for encrypted working local storage.
+
+See `GO_LIVE_STATUS.md` for a concise evidence-based status table. Earlier snapshots that say GitHub Actions CI is missing are stale; CI is present in `.github/workflows/ci.yml`.
 
 ## Repository Organization
 
@@ -160,26 +180,30 @@ Real-provider or independent evidence is still required for provider PITR/RPO/RT
 - `db/` — deployable schema
 - `scripts/` — production/release checks and operational drills
 - `tests/` — unit and integration coverage
-- `.github/workflows/` — CI, deployment acceptance, billing reconciliation, reminders, and admin-mirror trigger
+- `.github/workflows/` — CI, deployment acceptance, billing reconciliation, reminders, admin-mirror trigger, and mobile release coordination
 - `dist/` — generated production bundles
 - `assets/` — application icons and login imagery
+- `contracts/` — authoritative mobile/backend compatibility contracts
 
-Historical filenames that remain imported identify the feature layer where a module originated; they are not separate application versions.
+Historical filenames that remain imported identify the feature layer where a module originated; they are not separate application versions. Refactoring the remaining historical version-suffixed source modules into feature-owned modules is a maintainability goal, not a reason to perform a high-risk pre-launch rewrite.
 
 ## Operational Documentation
 
 | Document | Purpose |
 | --- | --- |
+| `GO_LIVE_STATUS.md` | Evidence-based go-live dashboard and remaining external gates |
 | `PRODUCTION_READINESS.md` | Production configuration and unresolved launch gates |
 | `REAL_ENVIRONMENT_ACCEPTANCE.md` | Deployed environment evidence |
 | `BACKUP_RESTORE_RUNBOOK.md` | Recovery requirements |
 | `ASSURANCE_HANDOFF.md` | External security/privacy/accessibility review handoff |
 | `ACCESSIBILITY_REVIEW.md` | External WCAG 2.2 AA review scope and evidence checklist |
 | `SECURITY.md` | Security architecture |
-| `THREAT_MODEL.md` | General threat model |
+| `THREAT_MODEL.md` | Current general browser/data threat model |
 | `LOCAL_ENCRYPTION_THREAT_MODEL.md` | Local-journal encryption/recovery design gate |
 | `LEGACY_AUTH_SUNSET.md` | Compatibility-auth retirement criteria |
 | `INCIDENT_RESPONSE.md` | Security/operations response process |
+| `MOBILE_RELEASE_COORDINATION.md` | Production → iOS/Android synchronization and release gates |
+| `PERFORMANCE_AUDIT.md` | Current performance findings, budgets, and follow-up work |
 | `CHANGELOG.md` | Release history |
 
 ## Run Locally
