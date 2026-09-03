@@ -58,6 +58,33 @@ Pamet contains **no advertising on any plan**.
 | Pro | $6.99 | $59.99 |
 | Ultra | $12.99 | $99.99 |
 
+### Plan feature matrix
+
+This table is the quick-reference view of the current Pamet plan model. **✅** means the feature is included for that plan; **—** means it is not included at that tier. Ultra inherits the included Free and Pro capabilities unless a row is explicitly marked otherwise.
+
+| Feature | Free | Pro | Ultra |
+| --- | :---: | :---: | :---: |
+| Symptom, medication, mood, activity, lifestyle, and notes logging | ✅ | ✅ | ✅ |
+| Calendar and journal-history review | ✅ | ✅ | ✅ |
+| 7/30/90-day observational Insights views | ✅ | ✅ | ✅ |
+| Standard Visit Brief | ✅ | ✅ | ✅ |
+| Dark mode and accessibility-focused UI | ✅ | ✅ | ✅ |
+| Account security, password reset/change, session/device management, and authenticator MFA | ✅ | ✅ | ✅ |
+| Consent-based Web Push reminders | ✅ | ✅ | ✅ |
+| Weekly digest infrastructure when email is configured | ✅ | ✅ | ✅ |
+| No advertising | ✅ | ✅ | ✅ |
+| Unlimited history entitlement | — | ✅ | ✅ |
+| Observational correlations / recorded-factor comparisons | — | ✅ | ✅ |
+| What Changed / deeper trend interpretation | — | ✅ | ✅ |
+| Medication-timing observations | — | ✅ | ✅ |
+| Read-only, expiring, revocable caregiver/provider sharing | — | ✅ | ✅ |
+| Appointment Workspace | — | — | ✅ |
+| Multiple health profiles | — | — | ✅ |
+| Advanced Visit Brief | — | — | ✅ |
+| Encrypted multi-device journal sync | — | — | ✅ |
+
+The server-authoritative entitlement API currently enforces Pro/Ultra access for **correlations, unlimited history, and sharing**, and Ultra-only access for **Appointment Workspace, multiple profiles, Advanced Visit Brief, and encrypted sync**. Product copy and future plan changes should keep this README table synchronized with those entitlements.
+
 Paid tiers are offered only when their Stripe configuration passes server-side validation.
 
 ## Privacy and Safety Boundaries
