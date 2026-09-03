@@ -2,6 +2,7 @@
 
 process.env.NODE_ENV = 'production';
 process.env.DISABLE_RATE_LIMITS = 'true';
+const expectedVersion = require('../package.json').version;
 const app = require('../server');
 
 async function check(condition, message) { if (!condition) throw new Error(message); }
@@ -13,9 +14,10 @@ async function check(condition, message) { if (!condition) throw new Error(messa
   try {
     const health = await fetch(`${base}/api/health`);
     const body = await health.json();
-    await check(health.ok && body.version === '1.2.0', 'Health handler must report v1.2.0.');
+    await check(health.ok && body.version === expectedVersion, `Health handler must report canonical v${expectedVersion}.`);
     await check(health.headers.get('x-content-type-options') === 'nosniff', 'Security headers must be present.');
-    await check(health.headers.get('content-security-policy')?.includes("default-src 'self'"), 'CSP must be present.');
+    const csp = health.headers.get('content-security-policy') || '';
+    await check(csp.includes("default-src 'self'") && csp.includes("script-src-attr 'none'") && csp.includes("style-src-attr 'none'") && !csp.includes("'unsafe-inline'"), 'Strict CSP must be present without unsafe-inline.');
     await check(health.headers.get('strict-transport-security')?.includes('max-age='), 'HSTS must be present in production.');
 
     for (const privatePath of ['/server.js', '/package.json', '/db/schema.sql', '/.env.example', '/js/auth.js', '/css/styles.css']) {
@@ -28,7 +30,7 @@ async function check(condition, message) { if (!condition) throw new Error(messa
     await check((await fetch(`${base}/dist/pamet.min.css?v=1200`)).ok, 'The production stylesheet must be served.');
     const malformed = await fetch(`${base}/api/account/bootstrap`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{' });
     await check(malformed.status === 400, 'Malformed JSON must produce a safe 400 response.');
-    console.log('Pamet HTTP security smoke checks passed.');
+    console.log(`Pamet ${expectedVersion} HTTP security smoke checks passed.`);
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }

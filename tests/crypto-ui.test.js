@@ -7,8 +7,8 @@ const crypto = require('node:crypto');
 if (!global.crypto) global.crypto = crypto.webcrypto;
 if (!global.window) global.window = global;
 
-require('../js/qr-v1.2.0.js');
-require('../js/local-encryption-v1.2.0.js');
+require('../js/qr-sharing.js');
+require('../js/local-encryption.js');
 
 test('authenticator QR renders locally as a complete version 10 matrix', () => {
   const uri = 'otpauth://totp/Pamet%3Atest%40example.com?secret=JBSWY3DPEHPK3PXP&issuer=Pamet&digits=6&period=30';

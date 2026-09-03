@@ -1,14 +1,14 @@
-/* Pamet v1.5.2 production stylesheet entrypoint. */
+/* Pamet v1.6.0 production stylesheet entrypoint. */
 @import "./styles.css";
-@import "./brand-v1.0.3.css";
-@import "./release-v1.0.3.css";
-@import "./phase2.css";
-@import "./release-v1.1.0.css";
-@import "./mobile-v1.2.0.css";
-@import "./product-clarity-v1.4.0.css";
+@import "./brand.css";
+@import "./release-base.css";
+@import "./care-planning.css";
+@import "./login-experience.css";
+@import "./mobile.css";
+@import "./product-clarity.css";
 @import "./version-update.css";
-@import "./design-system-v1.5.0.css";
-@import "./contrast-v1.5.1.css";
-@import "./legal-support-v1.5.1.css";
+@import "./design-system.css";
+@import "./contrast.css";
+@import "./legal-support.css";
 @import "./csp-safe.css";
-@import "./care-ux-v1.5.1.css";
+@import "./care-ux.css";

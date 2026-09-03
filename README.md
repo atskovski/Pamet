@@ -1,6 +1,6 @@
 # Pamet — Personal Health Journal
 
-**Version 1.5.1**  
+**Version 1.6.0**  
 **Your health history, finally useful.**
 
 Pamet is a privacy-first personal health journal for recording symptoms, medications, mood, activity, lifestyle factors, notes, and other user-provided health information over time, then organizing those observations for personal review and healthcare conversations.
@@ -30,20 +30,18 @@ Pamet is an actively developed web/PWA product deployed from GitHub `main` to Wa
 - Grafana Cloud OTLP logs/metrics, readiness checks, and operational alerts.
 - In-app privacy/safety/support guidance with troubleshooting steps and explicit medical-use boundaries.
 
-### Pamet 1.5.1
+### Pamet 1.6.0
 
-- Retains the 1.5.0 Insights, Calendar, Visit Brief, design-system, and accessibility improvements.
-- Hardens caregiver/provider sharing confirmations, profile-context refresh, and Appointment Workspace persistence/session clarity.
-- Improves navigation responsiveness by coalescing broad DOM mutation work into animation-frame batches.
-- Improves repeat-load performance with faster service-worker shell caching while keeping navigations network-first.
-- Keeps `/api/` and sensitive sharing routes out of service-worker caching.
-- Reduces unnecessary PWA precache payload and avoids duplicate service-worker registration/update work.
-- Forces readable white text on primary green actions in both light and dark modes, including upgrade/update and first-entry calls to action.
-- Adds an in-app “Privacy, safety & HIPAA information” surface that explains what Pamet can and cannot do without making an unsupported compliance claim.
-- Adds dead-end troubleshooting guidance for account/error states and directs users to privacy-safe feedback rather than leaving them stranded.
-- Refreshes the browser threat model and adds an evidence-based go-live status dashboard.
-- Adds production-to-native release coordination for `Pamet-iOS` and `Pamet-Android` through the authoritative `contracts/mobile-api.json` contract, scheduled native drift checks, and optional cross-repository dispatch.
-- Strengthens release/version/governance checks so stale critical release documentation fails CI.
+- Retains the 1.5.x Insights, Calendar, Visit Brief, sharing, Appointment Workspace, performance, accessibility, and safety improvements.
+- Removes `unsafe-inline` from the production style Content Security Policy and blocks inline style attributes with `style-src-attr 'none'`.
+- Uses a strict-CSP production build guard so generated browser code cannot silently reintroduce inline style attributes.
+- Reorganizes active browser JavaScript from release-numbered filenames into feature-owned modules such as `billing-sharing.js`, `care-planning.js`, `care-workspace.js`, `notifications.js`, `insights.js`, and `security.js`.
+- Reorganizes active CSS layers into feature-owned names such as `brand.css`, `care-planning.css`, `product-clarity.css`, `design-system.css`, and `care-ux.css`.
+- Removes unused historical browser module files from the active source tree while keeping release history in Git and this CHANGELOG.
+- Rotates the service-worker shell to the 1.6.0 asset revision while continuing to exclude `/api/` and sensitive sharing routes from caching.
+- Publishes backend contract identity `1.6.0` while retaining `1.5.1` as the minimum compatible native backend baseline.
+- Keeps iOS and Android native release baselines synchronized through the production-owned mobile contract rather than copying web implementation details into native clients.
+- Keeps external go-live assurance gates visibly open until real evidence exists.
 
 ## Product Model
 
@@ -109,6 +107,8 @@ Paid tiers are offered only when their Stripe configuration passes server-side v
 ## Production Architecture
 
 - Static PWA frontend authored in vanilla JavaScript/CSS and bundled/minified with esbuild
+- Feature-owned browser modules with release history maintained in Git/CHANGELOG rather than filenames
+- Strict production CSP with external/self styles and `style-src-attr 'none'`
 - Node.js 20+ / Express 5 secure edge and application runtime
 - `secure-server.js` as the production entrypoint around `server.js`
 - MySQL via `mysql2` for account/session/entitlement/sharing/appointment/audit/sync metadata
@@ -128,6 +128,7 @@ Journal entries remain local-first by default. Ultra encrypted sync stores opaqu
 - `Pamet-iOS` and `Pamet-Android` validate that contract and the live production health endpoint on scheduled/manual checks.
 - When the optional GitHub Actions secret `MOBILE_SYNC_TOKEN` is configured with minimal cross-repository permissions, production `main` changes can dispatch immediate native release checks.
 - Native clients do not copy web JS/CSS automatically; backend/entitlement changes synchronize by contract, while product/safety behavior is implemented natively and independently tested.
+- Pamet 1.6.0 keeps the minimum compatible backend at 1.5.1 because the mobile API contract remains compatible; native binary versions can advance on their own store-release cadence.
 - A mobile contract update is not release-ready until the relevant native tests, lint/static analysis, and release compilation/build pass.
 
 See `MOBILE_RELEASE_COORDINATION.md` for the synchronization model and platform release gates.
@@ -156,8 +157,10 @@ These checks are not an independent accessibility certification. A qualified ext
 Every production merge should pass:
 
 - production bundle build
+- strict-CSP output checks
 - syntax/static release checks
 - version consistency
+- feature-module ownership checks
 - security/UI assertions
 - Insights/design-system assertions
 - unit/security tests
@@ -174,8 +177,8 @@ See `GO_LIVE_STATUS.md` for a concise evidence-based status table. Earlier snaps
 
 ## Repository Organization
 
-- `js/` — browser source modules
-- `css/` — source stylesheets and design-system layers
+- `js/` — feature-owned browser source modules
+- `css/` — feature-owned source stylesheets and design-system layers
 - `lib/` — server-side supporting modules
 - `db/` — deployable schema
 - `scripts/` — production/release checks and operational drills
@@ -185,7 +188,7 @@ See `GO_LIVE_STATUS.md` for a concise evidence-based status table. Earlier snaps
 - `assets/` — application icons and login imagery
 - `contracts/` — authoritative mobile/backend compatibility contracts
 
-Historical filenames that remain imported identify the feature layer where a module originated; they are not separate application versions. Refactoring the remaining historical version-suffixed source modules into feature-owned modules is a maintainability goal, not a reason to perform a high-risk pre-launch rewrite.
+Release history belongs in `CHANGELOG.md` and Git. Active source modules are named for the feature or responsibility they own rather than the release in which they were introduced. The broader `server.js` decomposition remains a controlled follow-up: route/service extraction should occur in bounded, independently tested slices rather than a single high-risk rewrite.
 
 ## Operational Documentation
 
