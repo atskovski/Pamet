@@ -18,7 +18,7 @@ test.after(() => new Promise((resolve) => server.close(resolve)));
 test('health reports the normalized release and security headers', async () => {
   const response = await fetch(`${base}/api/health`);
   assert.equal(response.status, 200);
-  assert.deepEqual(await response.json(), { ok: true, version: '1.2.0' });
+  assert.deepEqual(await response.json(), { ok: true, version: '1.2.1' });
   assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
   assert.equal(response.headers.get('x-frame-options'), 'DENY');
   assert.match(response.headers.get('content-security-policy'), /frame-ancestors 'none'/);
