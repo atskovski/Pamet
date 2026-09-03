@@ -1,4 +1,4 @@
-/* Pamet v1.4.0 production stylesheet entrypoint. */
+/* Pamet v1.5.0 production stylesheet entrypoint. */
 @import "./styles.css";
 @import "./brand-v1.0.3.css";
 @import "./release-v1.0.3.css";
@@ -7,3 +7,4 @@
 @import "./mobile-v1.2.0.css";
 @import "./product-clarity-v1.4.0.css";
 @import "./version-update.css";
+@import "./design-system-v1.5.0.css";
