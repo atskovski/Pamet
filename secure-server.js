@@ -26,12 +26,25 @@ const indexTemplate = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8'
 const versionedIndex = indexTemplate
   .replace(/Pamet v\d+\.\d+\.\d+ · Your health history, finally useful\./g, `Pamet v${VERSION} · Your health history, finally useful.`)
   .replace(/dist\/pamet\.min\.css\?v=\d+/g, `dist/pamet.min.css?v=${releaseAssetVersion}`)
-  .replace(/dist\/pamet\.min\.js\?v=\d+/g, `dist/pamet.min.js?v=${releaseAssetVersion}`);
+  .replace(/dist\/pamet\.min\.js\?v=\d+/g, `dist/pamet.min.js?v=${releaseAssetVersion}`)
+  .replace('class="metric-icon" style="--icon-bg:var(--warm-light)"', 'class="metric-icon tone-warm"')
+  .replace('class="metric-icon" style="--icon-bg:var(--sage-light)"', 'class="metric-icon tone-sage"')
+  .replace('class="metric-badge" data-badge="+3 vs last" style="--badge:var(--warm-terracotta)"', 'class="metric-badge tone-terracotta" data-badge="+3 vs last"')
+  .replace('class="metric-badge" data-badge="Improving" style="--badge:var(--sage-green)"', 'class="metric-badge tone-sage" data-badge="Improving"')
+  .replace('class="metric-badge" data-badge="Watch" style="--badge:var(--rose-pink)"', 'class="metric-badge tone-rose" data-badge="Watch"')
+  .replace('class="metric-badge" data-badge="Pamet active" style="--badge:var(--sage-green)"', 'class="metric-badge tone-sage" data-badge="Pamet active"')
+  .replace('<i style="background:var(--warm-light)"></i>', '<i class="legend-swatch tone-warm"></i>')
+  .replace('<i style="background:var(--rose-light)"></i>', '<i class="legend-swatch tone-rose"></i>')
+  .replace('<i style="background:var(--sage-light)"></i>', '<i class="legend-swatch tone-sage"></i>')
+  .replace(/\s*<script>\s*\/\/ Register the service worker[\s\S]*?<\/script>/, '');
 
 function hardenedCsp(value) {
-  return String(value || '')
+  let policy = String(value || '')
     .replace("script-src 'self' 'unsafe-inline'", "script-src 'self'")
+    .replace("style-src 'self' 'unsafe-inline'", "style-src 'self'")
     .replace('; style-src', "; script-src-attr 'none'; style-src");
+  if (!policy.includes('style-src-attr')) policy = policy.replace('; font-src', "; style-src-attr 'none'; font-src");
+  return policy;
 }
 
 app.use((req, res, next) => {
@@ -56,7 +69,7 @@ function authSecurityHeaders(req, res, next) {
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(self "https://js.stripe.com")');
   res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
-  res.setHeader('Content-Security-Policy', "default-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' https://js.stripe.com https://*.js.stripe.com; script-src-attr 'none'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://*.stripe.com; connect-src 'self' https://api.stripe.com https://*.stripe.com https://link.com https://*.link.com; frame-src https://js.stripe.com https://*.js.stripe.com https://hooks.stripe.com https://link.com https://*.link.com");
+  res.setHeader('Content-Security-Policy', "default-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' https://js.stripe.com https://*.js.stripe.com; script-src-attr 'none'; style-src 'self' https://fonts.googleapis.com; style-src-attr 'none'; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://*.stripe.com; connect-src 'self' https://api.stripe.com https://*.stripe.com https://link.com https://*.link.com; frame-src https://js.stripe.com https://*.js.stripe.com https://hooks.stripe.com https://link.com https://*.link.com");
   res.setHeader('Cache-Control', 'no-store');
   if (nodeEnv === 'production') res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   next();

@@ -11,9 +11,9 @@ Rule: a code/self-review result is not presented as an independent certification
 | Rate limiting | **Strong implementation** | Production limiter is designed to fail closed with Redis/Valkey when configured and MySQL fallback. Production topology/load evidence should still be retained. |
 | Billing (Stripe) | **Strong implementation; live acceptance open** | Webhook idempotency and server-side price/plan validation exist. A complete live-mode checkout → subscription/trial → cancellation → failed-payment → webhook/reconciliation dry run remains a go-live evidence gate. |
 | Working-journal end-to-end/local encryption | **Not shipped** | Deliberately gated pending independent cryptographic review. Ultra encrypted sync is separate from encrypting the working browser copy. |
-| CSP hardening | **Partial** | Script execution is externalized for production; style CSP still permits `unsafe-inline`. Final style-CSP cleanup remains open. |
-| Frontend maintainability | **Needs planned refactor** | Production is bundled, but source still contains historical version-suffixed feature layers. Consolidate into feature-owned modules after the launch stabilization window rather than doing a high-risk rewrite immediately before release. |
-| Server maintainability | **Needs planned refactor** | `server.js` remains broad in responsibility. Extract auth, billing, sync, push, appointments and health routes/services with shared middleware after current release stabilization. |
+| CSP hardening | **Strong implementation; deployed verification required** | Production policy removes style `unsafe-inline`, blocks style attributes with `style-src-attr 'none'`, externalizes presentation into the production stylesheet, and CI prevents generated browser code from reintroducing inline style attributes. Verify the deployed UI under the strict policy before treating the environment gate as complete. |
+| Frontend maintainability | **Refactor next** | Production is bundled, but source still contains historical version-suffixed feature layers. Pamet 1.6.0 moves active JS/CSS ownership to feature-named modules in a controlled follow-up rather than mixing that rewrite into this CSP patch. |
+| Server maintainability | **Controlled refactor next** | `server.js` remains broad in responsibility. Pamet 1.6.0 begins canonical version/runtime cleanup and route/service extraction in bounded slices. |
 | CI automation | **Active** | `.github/workflows/ci.yml` runs production build/check/test/audit plus MySQL lifecycle and disposable backup/restore exercises. Earlier reports saying CI was missing are stale. |
 | Live acceptance automation | **Active, environment-dependent** | `live-acceptance.yml` and scripts validate deployed health/readiness/version when credentials/environment are available. Keep live evidence separate from code-only CI. |
 | Independent penetration test | **Open** | Self-review and automated tests are not a substitute for independent adversarial testing. |
@@ -21,8 +21,8 @@ Rule: a code/self-review result is not presented as an independent certification
 | Backup / restore | **CI drill exercised; production-provider drill open** | Disposable MySQL backup → isolated restore runs in CI. Provider-level production PITR/restore evidence and recorded RPO/RTO are still required. |
 | Dependency security | **Automated** | Production dependency audit is part of release CI. Keep results tied to the exact release commit. |
 | Mobile contract | **Established** | `contracts/mobile-api.json` is the production-owned contract used by iOS and Android release baselines. |
-| iOS release engineering | **Native baseline in validation** | Simulator test + Release compile CI exists. Store signing, final icon/artwork, App Store Connect, device/accessibility/security review and product parity remain external gates. |
-| Android release engineering | **Native baseline in validation** | Unit/lint/debug/release build gate exists. Play signing/console, device/accessibility/security review and product parity remain external gates. |
+| iOS release engineering | **1.5.1 native baseline merged** | Simulator tests and Release compilation are green and the baseline is in `Pamet-iOS/main`. Store signing, final icon/artwork, App Store Connect, real-device/accessibility/security review and full product parity remain release gates. |
+| Android release engineering | **1.5.1 native baseline merged** | Unit tests, lint, debug/release builds and release shrinking are green and the baseline is in `Pamet-Android/main`. Play signing/console, real-device/accessibility/security review and full product parity remain release gates. |
 
 ## Launch blocking evidence
 
