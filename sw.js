@@ -1,4 +1,4 @@
-/* Pamet v1.6.1 service worker: fast versioned shell caching plus user-approved Web Push; API/share data is never cached. */
+/* Pamet v1.6.1 service worker: release-specific shell caching plus user-approved Web Push; API/share data is never cached. */
 const CACHE="pamet-shell-v161-1";
 const SHELL=["/","/index.html","/dist/pamet.min.css?v=161","/dist/pamet.min.js?v=161","/manifest.webmanifest","/assets/pamet-mark.svg?v=161","/assets/icon-192.png","/assets/icon-512.png","/assets/icon-maskable-512.png","/assets/login-sunrise.jpg"];
 const PATHS=new Set(SHELL.map(path=>new URL(path,self.location.origin).pathname));
@@ -20,9 +20,10 @@ self.addEventListener("fetch",e=>{
   if(!nav&&!shell&&!staticAsset)return;
 
   if(staticAsset||(!nav&&shell)){
-    e.respondWith(caches.match(r,{ignoreSearch:true}).then(cached=>{
+    /* Match the complete request URL. Never ignore ?v= for release assets: doing so can pin a client to an older CSS/JS bundle. */
+    e.respondWith(caches.match(r).then(cached=>{
       if(cached)return cached;
-      return fetch(r).then(res=>{
+      return fetch(r,{cache:"no-store"}).then(res=>{
         if(res?.ok){const copy=res.clone();caches.open(CACHE).then(c=>c.put(r,copy)).catch(()=>{})}
         return res;
       });
@@ -30,7 +31,7 @@ self.addEventListener("fetch",e=>{
     return;
   }
 
-  e.respondWith(fetch(r).then(res=>{
+  e.respondWith(fetch(r,{cache:"no-store"}).then(res=>{
     if(res?.ok){const copy=res.clone();caches.open(CACHE).then(c=>c.put("/index.html",copy)).catch(()=>{})}
     return res;
   }).catch(()=>caches.match("/index.html",{ignoreSearch:true}).then(cached=>cached||Response.error())));
