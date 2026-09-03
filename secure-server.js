@@ -32,6 +32,25 @@ app.use((req, res, next) => {
   next();
 });
 
+// Observe remaining pre-session bearer compatibility traffic without logging
+// the credential, a reusable hash, email, user id, IP address, or request body.
+// Cron/metrics tokens are separate authentication schemes and are excluded.
+app.use('/api', (req, res, next) => {
+  const authorization = String(req.headers.authorization || '');
+  const bearer = authorization.startsWith('Bearer ') ? authorization.slice(7).trim() : '';
+  if (/^[a-f0-9]{64}$/i.test(bearer) && !req.path.startsWith('/jobs/') && req.path !== '/metrics') {
+    console.log(JSON.stringify({
+      service: 'pamet',
+      version: '1.2.0',
+      event: 'identity.legacy_bearer_observed',
+      method: req.method,
+      path: req.path,
+      at: new Date().toISOString()
+    }));
+  }
+  next();
+});
+
 function authSecurityHeaders(req, res, next) {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
