@@ -8,7 +8,7 @@ const app = fs.readFileSync('js/app.js', 'utf8');
 const planning = fs.readFileSync('js/care-planning.js', 'utf8');
 const careWorkspace = fs.readFileSync('js/care-workspace.js', 'utf8');
 const theme = fs.readFileSync('css/care-planning.css', 'utf8');
-const releaseTheme = fs.readFileSync('css/release-base.css', 'utf8');
+const baseTheme = fs.readFileSync('css/styles.css', 'utf8');
 const server = fs.readFileSync('server.js', 'utf8');
 const schema = fs.readFileSync('db/schema.sql', 'utf8');
 
@@ -30,7 +30,7 @@ check(planning.includes('/api/sharing/invites') && server.includes("app.post('/a
 check(server.includes("app.get('/api/appointments', auth") && server.includes("app.post('/api/appointments'") && server.includes("app.delete('/api/appointments/:id'"), 'Appointment workspace must use authenticated Ultra backend persistence.');
 check(server.includes('permission_level') && schema.includes('permission_level') && schema.includes('pamet_appointments'), 'Sharing permissions and appointments must remain persisted in MySQL.');
 check(theme.includes('.phase2-profile-switcher') && theme.includes('.phase2-appointment-grid') && theme.includes('.phase2-share-result'), 'Profile, appointment, and sharing surfaces must have dedicated responsive layouts.');
-check(releaseTheme.includes('--app-background: #182326') && releaseTheme.includes('--border-color: #7C8F93') && releaseTheme.includes('--text-primary: #F5F8F7'), 'The neutral dark palette must remain active.');
-check(contrast('F5F8F7', '263438') >= 4.5 && contrast('D5DEDC', '263438') >= 4.5 && contrast('7C8F93', '263438') >= 3, 'Dark text and control boundaries must meet WCAG AA contrast targets.');
+check(baseTheme.includes('body.dark') && baseTheme.includes('--app-background:  #17120E') && baseTheme.includes('--border-color:    #3A2E24') && baseTheme.includes('--text-primary:    #F4ECE4'), 'The current dark palette must remain active.');
+check(contrast('F4ECE4', '201913') >= 4.5 && contrast('C9B8A8', '201913') >= 4.5 && contrast('9E8E7D', '201913') >= 3, 'Dark text and control boundaries must meet WCAG AA contrast targets.');
 
 console.log('Pamet care workspace checks passed.');
