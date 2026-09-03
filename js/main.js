@@ -67,9 +67,11 @@ window.addEventListener('load', () => {
   else setTimeout(checkServerRelease, 250);
 }, { once: true });
 
-/* The query token is intentionally release-specific so browsers fetch the new worker after every patch. */
+/* Release-specific worker URL + updateViaCache:none prevents old PWA shells from masking a new release. */
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js?v=1610').catch(() => {});
+    navigator.serviceWorker.register('sw.js?v=1610', { updateViaCache: 'none' })
+      .then((registration) => registration.update().catch(() => {}))
+      .catch(() => {});
   });
 }
