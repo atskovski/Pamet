@@ -42,6 +42,10 @@ test('operational runtime and synthetic alert endpoints are not public', async (
   const alert = await fetch(`${base}/api/ops/test-alert`, { method: 'POST' });
   assert.equal(alert.status, 401);
   assert.deepEqual(await alert.json(), { error: 'Unauthorized.' });
+
+  const adminRuntime = await fetch(`${base}/api/admin/ops/runtime`);
+  assert.equal(adminRuntime.status, 404);
+  assert.deepEqual(await adminRuntime.json(), { error: 'Not found.' });
 });
 
 test('unknown and malformed requests do not leak internals', async () => {
