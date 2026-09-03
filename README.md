@@ -29,19 +29,16 @@ Pamet is an actively developed web/PWA product deployed from GitHub `main` to Wa
 - Consent-based Web Push reminders and weekly digest infrastructure.
 - Grafana Cloud OTLP logs/metrics, readiness checks, and operational alerts.
 
-### Pamet 1.5.0
+### Pamet 1.5.1
 
-- Rebuilds Insights into a comprehensive observational workspace rather than a static pattern list.
-- Adds filters for **Symptoms**, **Lifestyle**, **Medications**, and **Sleep / Stress**.
-- Adds first-seen, last-seen, supporting-entry count, and recent-vs-earlier direction for observations.
-- Adds **Why am I seeing this?** supporting-history expansion.
-- Adds data-completeness scoring so users can see which fields are consistently available for comparison.
-- Adds observation Archive/Restore without deleting underlying journal entries.
-- Renames **Doctor Report** to **Visit Brief** to make authorship and intent clearer.
-- Introduces one shared icon registry and a formal production type scale.
-- Formalizes semantic colors: teal for navigation/actions, neutrals for structure, sage/amber/rose for health-state meaning, and no Admin purple in production.
-- Adds Calendar Today, long-history search, symptom filtering, and date jump-back from results.
-- Adds skip navigation, consistent visible focus, reduced-motion handling, stronger screen labels, and keyboard Escape behavior.
+- Retains the 1.5.0 Insights, Calendar, Visit Brief, design-system, and accessibility improvements.
+- Hardens caregiver/provider sharing confirmations, profile-context refresh, and Appointment Workspace persistence/session clarity.
+- Improves navigation responsiveness by coalescing broad DOM mutation work into animation-frame batches.
+- Improves repeat-load performance with faster service-worker shell caching while keeping navigations network-first.
+- Keeps `/api/` and sensitive sharing routes out of service-worker caching.
+- Reduces unnecessary PWA precache payload and avoids duplicate service-worker registration/update work.
+- Forces readable white text on primary green actions in both light and dark modes, including upgrade/update and first-entry calls to action.
+- Adds performance/release regression checks so the navigation, caching, and contrast guarantees remain protected by CI.
 
 ## Product Model
 
@@ -102,7 +99,7 @@ Pamet uses a warm clinical visual system with explicit semantic roles:
 - **Rose:** significant symptom/severity meaning
 - **Purple:** reserved for the separate private Pamet Admin/Superuser environment
 
-The 1.5.0 runtime also centralizes common icons and defines metadata, helper, body, control, section-heading, and page-heading type roles.
+The current runtime centralizes common icons and defines metadata, helper, body, control, section-heading, and page-heading type roles.
 
 ## Accessibility Status
 
