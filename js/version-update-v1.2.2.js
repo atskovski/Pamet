@@ -5,6 +5,10 @@
   let latestVersion = null;
   let checkTimer = null;
 
+  function loadedVersion() {
+    return window.PametLoadedVersion || window.PametVersion || '0.0.0';
+  }
+
   function compareVersions(a, b) {
     const pa = String(a || '').split('.').map((n) => Number(n) || 0);
     const pb = String(b || '').split('.').map((n) => Number(n) || 0);
@@ -23,7 +27,7 @@
   }
 
   function showPrompt(version) {
-    if (!version || compareVersions(version, window.PametVersion) <= 0) return;
+    if (!version || compareVersions(version, loadedVersion()) <= 0) return;
     if (sessionStorage.getItem(DISMISS_KEY) === version) return;
     latestVersion = version;
     if (document.getElementById('pametVersionUpdate')) return;
@@ -60,7 +64,8 @@
       });
       if (!response.ok) return;
       const health = await response.json();
-      if (health?.version && compareVersions(health.version, window.PametVersion) > 0) {
+      if (health?.version) {
+        window.PametServerVersion = health.version;
         showPrompt(health.version);
       }
     } catch {
@@ -90,6 +95,7 @@
     }
   }
 
+  window.PametOfferVersionUpdate = showPrompt;
   window.PametCheckForUpdate = checkServerVersion;
 
   window.addEventListener('load', () => {
@@ -104,7 +110,7 @@
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (latestVersion && compareVersions(latestVersion, window.PametVersion) > 0) {
+      if (latestVersion && compareVersions(latestVersion, loadedVersion()) > 0) {
         const target = new URL(window.location.href);
         target.searchParams.set('pamet_release', latestVersion);
         window.location.replace(target.toString());
