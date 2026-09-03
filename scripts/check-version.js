@@ -11,6 +11,7 @@ const updateFlow=fs.readFileSync('js/version-update.js','utf8');
 const legalSupport=fs.readFileSync('js/legal-support.js','utf8');
 const bundle=fs.readFileSync('dist/pamet.min.js','utf8');
 const mainCss=fs.readFileSync('css/main.css','utf8');
+const darkMode=fs.readFileSync('css/dark-mode.css','utf8');
 const readme=fs.readFileSync('README.md','utf8');
 const changelog=fs.readFileSync('CHANGELOG.md','utf8');
 const threatModel=fs.readFileSync('THREAT_MODEL.md','utf8');
@@ -35,9 +36,13 @@ const requiredModules=['performance.js','icons.js','account-switch.js','billing-
 requiredModules.forEach((name)=>check(main.includes(`./${name}`),`Production entrypoint must load feature-owned module ${name}.`));
 check(!/\.\/(?:[^"']*-v\d|v\d|phase2\.js)/.test(main),'Production entrypoint must not import release-numbered browser modules.');
 check(!/@import\s+["'][^"']*(?:-v\d|phase2\.css)/.test(mainCss),'Production stylesheet entrypoint must not import release-numbered stylesheets.');
+check(mainCss.includes('@import "./dark-mode.css";'),'Production stylesheet must include the unified dark-mode layer.');
 check(mainCss.trim().endsWith('@import "./care-ux.css";'),'Care UX must remain the final production stylesheet layer.');
+check(darkMode.includes('/* Pamet v1.6.0')&&darkMode.includes('--surface: #141A1E')&&darkMode.includes('--text-primary: #F2F5F4')&&darkMode.includes('.insights-empty'),'Dark mode must retain unified dark surfaces and accessible text hierarchy.');
 check(updateFlow.includes('New Pamet version available')&&updateFlow.includes('Update now')&&updateFlow.includes('does not clear your saved Pamet data'),'Safe update prompt must remain explicit.');
 check(legalSupport.includes('Pamet observes. Pamet does not diagnose.')&&legalSupport.includes('not emergency monitoring')&&legalSupport.includes('HIPAA'),'Safety/privacy support wording must remain available in-app.');
+check(legalSupport.includes(`window.PametVersion || '${expected}'`),`Safety/privacy support fallback must match Pamet ${expected}.`);
+check(!legalSupport.includes("window.PametVersion || '1.5.1'"),'Safety/privacy support must not retain the prior release fallback.');
 check(feedback.includes('window.PametVersion ||'),'Feedback must use runtime version.');
 check(worker.includes(`Pamet v${expected}`)&&worker.includes('pamet-shell-v160-1'),'Service worker cache/version must match release.');
 check(worker.includes('SKIP_WAITING')&&worker.includes('ignoreSearch:true'),'Service worker must support safe activation and version-tolerant shell caching.');
@@ -54,4 +59,4 @@ check(goLive.includes(`Pamet ${expected}`)&&goLive.includes('CI automation')&&go
 check(mobileContract.backendVersion===expected,'Mobile API contract backendVersion must match package.json version.');
 check(mobileContract.minimumBackendVersion==='1.5.1','Pamet 1.6.0 must preserve the compatible native minimum backend baseline.');
 check(Number(mobileContract.contractVersion)>=2,'Mobile API contract must use supported contractVersion.');
-console.log(`Pamet ${expected} version, CSP, module ownership, and governance checks passed.`);
+console.log(`Pamet ${expected} version, CSP, module ownership, dark-mode, and governance checks passed.`);
