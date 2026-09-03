@@ -7,6 +7,7 @@ window.PametLoadedVersion = PAMET_VERSION;
 import "./performance.js";
 import "./auth.js";
 import "./store.js";
+import "./platform-foundation.js";
 import "./icons.js";
 import "./app.js";
 import "./account-switch.js";
