@@ -1,0 +1,55 @@
+name: Refresh Pamet 1.5.1 artifacts retry
+
+on:
+  push:
+    branches: [fix/care-sharing-appointments-v1.5.1]
+    paths: ['.github/workflows/refresh-v151-artifacts-2.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/care-sharing-appointments-v1.5.1
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Normalize Pamet 1.5.1 release identity
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          reps={
+            'scripts/check-version.js':[("const expected='1.5.0'","const expected='1.5.1'"),("sw.js?v=1500","sw.js?v=1510"),("pamet-shell-v150-0","pamet-shell-v151-0")],
+            'scripts/check-release.js':[("const PAMET_VERSION = '1.5.0'","const PAMET_VERSION = '1.5.1'"),("Pamet v1.5.0","Pamet v1.5.1"),("1.5.0 runtime modules","1.5.1 runtime modules"),("sw.js?v=1500","sw.js?v=1510"),("pamet-shell-v150-0","pamet-shell-v151-0"),("dist/pamet.min.js?v=150","dist/pamet.min.js?v=151"),("1.5.0 service worker","1.5.1 service worker")],
+            'scripts/check-production.js':[("sw.js?v=1500","sw.js?v=1510"),("Pamet 1.5.0","Pamet 1.5.1")],
+            'sw.js':[("Pamet v1.5.0","Pamet v1.5.1"),("pamet-shell-v150-0","pamet-shell-v151-0"),("?v=150","?v=151")],
+            'README.md':[("**Version 1.5.0**","**Version 1.5.1**")],
+          }
+          for name,pairs in reps.items():
+            p=Path(name); s=p.read_text()
+            for old,new in pairs: s=s.replace(old,new)
+            p.write_text(s)
+          p=Path('CHANGELOG.md'); s=p.read_text()
+          section='''## [1.5.1] — 2026-09-03\n\n### Care sharing and appointment clarity\n\n- Replaced Caregiver access and Primary Care Access toggles with explicit sharing actions.\n- Keeps sending, error, and success confirmations inside the active sharing window.\n- Returns to Settings automatically after a successful secure invitation.\n- Gives caregivers a deliberately limited summary while Primary Care receives a richer patient-generated Visit Brief with supported observations, medications, context, and discussion prompts.\n- Refreshes the quick-profile badge when profiles are added or removed.\n- Adds explicit date/time confirmation before saving an appointment.\n- Makes local draft storage and secure appointment storage visibly distinct.\n- Retries secure appointment sync before suggesting authentication and never logs the user out as a recovery shortcut.\n\n---\n\n'''
+          if '## [1.5.1]' not in s: s=s.replace('# Pamet Change Log\n\n','# Pamet Change Log\n\n'+section,1)
+          p.write_text(s)
+          PY
+      - run: |
+          npm install --package-lock-only --ignore-scripts
+          npm ci --ignore-scripts
+          npm run build
+          npm run check
+          npm test
+          npm audit --omit=dev --audit-level=high
+      - name: Commit generated release artifacts
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add package-lock.json dist/pamet.min.js dist/pamet.min.css scripts/check-version.js scripts/check-release.js scripts/check-production.js sw.js README.md CHANGELOG.md
+          git commit -m 'build: refresh Pamet 1.5.1 release artifacts'
+          git push origin HEAD:fix/care-sharing-appointments-v1.5.1
