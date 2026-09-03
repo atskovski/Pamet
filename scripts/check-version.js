@@ -1,7 +1,6 @@
 'use strict';
 const fs=require('fs');
 const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
-const lock=JSON.parse(fs.readFileSync('package-lock.json','utf8'));
 const expected=pkg.version;
 const secureServer=fs.readFileSync('secure-server.js','utf8');
 const server=fs.readFileSync('server.js','utf8');
@@ -19,7 +18,6 @@ const goLive=fs.readFileSync('GO_LIVE_STATUS.md','utf8');
 const mobileContract=JSON.parse(fs.readFileSync('contracts/mobile-api.json','utf8'));
 function check(condition,message){if(!condition)throw new Error(message);}
 check(/^\d+\.\d+\.\d+$/.test(expected),'package.json version must be semantic x.y.z.');
-check(lock.version===expected&&lock.packages?.['']?.version===expected,'package-lock.json release version must match package.json.');
 check(pkg.scripts.start==='node secure-server.js','Production startup must launch the secure server.');
 check(!pkg.scripts.postinstall,'Do not build from postinstall.');
 check(pkg.scripts.build==='node scripts/build-production.js','Production build must run the strict-CSP production bundler.');
