@@ -7,11 +7,14 @@ const assert = require('node:assert/strict');
 
 const securityUi = fs.readFileSync('js/security-v1.1.0.js', 'utf8');
 const authUi = fs.readFileSync('js/auth.js', 'utf8');
+const accountSwitch = fs.readFileSync('js/account-switch-v1.2.0.js', 'utf8');
 const feedbackUi = fs.readFileSync('js/feedback-v1.0.3.js', 'utf8');
 const releaseCss = fs.readFileSync('css/release-v1.1.0.css', 'utf8');
+const mobileCss = fs.readFileSync('css/mobile-v1.2.0.css', 'utf8');
 const secureServer = fs.readFileSync('secure-server.js', 'utf8');
 const edgeAccount = fs.readFileSync('lib/edge-account.js', 'utf8');
 const qrSource = fs.readFileSync('js/qr-v1.2.0.js', 'utf8');
+const main = fs.readFileSync('js/main.js', 'utf8');
 const index = fs.readFileSync('index.html', 'utf8');
 
 test('all security and recovery dialogs use the centered Pamet modal backdrop', () => {
@@ -19,7 +22,8 @@ test('all security and recovery dialogs use the centered Pamet modal backdrop', 
   assert.doesNotMatch(securityUi, /className\s*=\s*["']modal-overlay security-overlay/);
   assert.match(releaseCss, /\.pamet-modal-backdrop[\s\S]*position:\s*fixed!important/);
   assert.match(releaseCss, /place-items:\s*center!important/);
-  assert.match(releaseCss, /max-height:\s*calc\(100dvh/);
+  assert.match(mobileCss, /\.pamet-modal-backdrop\.security-overlay[\s\S]*place-items:center!important/);
+  assert.match(mobileCss, /height:100dvh!important/);
 });
 
 test('password reset keeps a stable form reference across asynchronous work', () => {
@@ -28,10 +32,14 @@ test('password reset keeps a stable form reference across asynchronous work', ()
   assert.doesNotMatch(securityUi, /await[\s\S]{0,500}event\.currentTarget\.reset\(\)/);
 });
 
-test('login keeps an explicit create-account path', () => {
+test('login keeps explicit create-account and account-switch paths', () => {
   assert.match(index, /id="showRegister">Create one<\/a>/);
   assert.match(securityUi, /switcher\.hidden = false/);
   assert.match(securityUi, /createLink\.hidden = false/);
+  assert.match(main, /account-switch-v1\.2\.0\.js/);
+  assert.match(accountSwitch, /Use a different account/);
+  assert.match(accountSwitch, /S\.wipeAll\(\)/);
+  assert.match(accountSwitch, /health data is not mixed between accounts/);
 });
 
 test('legacy accounts migrate to server password sessions instead of dead-ending on recovery', () => {
@@ -74,19 +82,22 @@ test('private QR encoder produces a bounded version-10 SVG without network acces
   assert.doesNotMatch(qrSource, /fetch\(|XMLHttpRequest|https?:\/\//);
 });
 
-test('feedback success is prominent and automatically clears after five seconds', () => {
+test('feedback success is prominent, screen-centered, and automatically clears after five seconds', () => {
   assert.match(feedbackUi, /feedback-success/);
   assert.match(feedbackUi, /5000/);
-  assert.match(releaseCss, /#feedbackStatus\.feedback-success/);
-  assert.match(releaseCss, /text-align:\s*center/);
+  assert.match(mobileCss, /#feedbackStatus\.feedback-success/);
+  assert.match(mobileCss, /position:fixed!important/);
+  assert.match(mobileCss, /left:50%!important/);
+  assert.match(mobileCss, /translateX\(-50%\)/);
 });
 
 test('mobile layout covers safe areas, narrow phones, and input zoom prevention', () => {
   assert.match(releaseCss, /env\(safe-area-inset-top\)/);
   assert.match(releaseCss, /@media\(max-width:390px\)/);
   assert.match(releaseCss, /@media\(max-width:340px\)/);
-  assert.match(releaseCss, /font-size:\s*16px!important/);
-  assert.match(releaseCss, /\.app-shell\s*\{[^}]*width:\s*100vw/);
+  assert.match(mobileCss, /font-size:16px!important/);
+  assert.match(mobileCss, /\.app-shell[\s\S]*width:100vw!important/);
+  assert.match(mobileCss, /orientation:landscape/);
 });
 
 test('script CSP no longer permits executable inline script attributes', () => {
