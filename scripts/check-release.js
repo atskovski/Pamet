@@ -38,7 +38,7 @@ check(phase2.includes('Currently viewing')&&phase2.includes('Invitation sent')&&
 check(store.includes('return [];')&&!store.includes('function sampleEntries'),'New users must start with no sample health entries.');
 check(app.includes('Entry saved — Pamet is updating your patterns.'),'Saved-entry feedback must use Pamet language.');
 check(manifest.display==='standalone','PWA manifest must remain standalone.');
-check(html.includes("navigator.serviceWorker.register('sw.js?v=1200')")&&!main.includes('navigator.serviceWorker.register'),'Service worker must register once from the page shell.');
+check(main.includes("navigator.serviceWorker.register('sw.js?v=1511')"),'Service worker must register from the external production bundle so CSP can keep inline scripts disabled.');
 check(worker.includes('pamet-shell-v151-1')&&worker.includes('dist/pamet.min.js?v=151')&&worker.includes('ignoreSearch:true'),'1.5.1 service worker must use fast version-tolerant shell caching.');
 check(worker.includes('u.pathname.startsWith("/api/")||u.pathname.startsWith("/share")'),'Sensitive API/share routes must bypass cache.');
 check(updateFlow.includes('New Pamet version available')&&!updateFlow.includes('localStorage.clear'),'Safe update flow must remain visible and non-destructive.');
