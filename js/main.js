@@ -14,6 +14,7 @@ import "./e2e-sync-v1.1.0.js";
 import "./qr-v1.2.0.js";
 import "./security-v1.1.0.js";
 import "./release-v1.1.0.js";
+import "./version-update-v1.2.2.js";
 
 function applyReleaseVersion(version) {
   const normalized = String(version || '').trim() || PAMET_VERSION;
