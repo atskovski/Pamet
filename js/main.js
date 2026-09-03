@@ -47,15 +47,24 @@ function protectReleaseFooter() {
   document.addEventListener('pamet:settings-rendered', () => applyReleaseVersion(PAMET_VERSION));
 }
 
+function checkServerRelease() {
+  fetch('/api/health', { credentials: 'same-origin', cache: 'no-store' })
+    .then((response) => response.ok ? response.json() : null)
+    .then((health) => {
+      if (!health?.version) return;
+      window.PametServerVersion = health.version;
+      if (health.version !== PAMET_VERSION) window.PametOfferVersionUpdate?.(health.version);
+    })
+    .catch(() => {});
+}
+
 protectReleaseFooter();
-fetch('/api/health', { credentials: 'same-origin', cache: 'no-store' })
-  .then((response) => response.ok ? response.json() : null)
-  .then((health) => {
-    if (!health?.version) return;
-    window.PametServerVersion = health.version;
-    if (health.version !== PAMET_VERSION) window.PametOfferVersionUpdate?.(health.version);
-  })
-  .catch(() => {});
+
+/* Release identity is non-critical startup work. Let the first interactive frame render before calling the edge. */
+window.addEventListener('load', () => {
+  if ('requestIdleCallback' in window) window.requestIdleCallback(checkServerRelease, { timeout: 1500 });
+  else setTimeout(checkServerRelease, 250);
+}, { once: true });
 
 /* Register from the external bundle so production CSP can keep inline scripts disabled. */
 if ('serviceWorker' in navigator) {
