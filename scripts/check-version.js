@@ -25,6 +25,7 @@ check(secureServer.includes("app.get('/api/health'") && secureServer.includes('v
 check(secureServer.includes("app.use('/api/ready'") && secureServer.includes('{ ...body, version: VERSION }'), 'The readiness endpoint must be normalized to the canonical release version.');
 check(secureServer.includes('renderVersionedIndex') && secureServer.includes('X-Pamet-Version'), 'The production edge must render release identity into HTML and response headers.');
 check(main.includes(`const PAMET_VERSION = '${expected}'`) && main.includes('window.PametLoadedVersion = PAMET_VERSION'), 'Browser runtime must expose the actually loaded release version.');
+check(main.includes('protectReleaseFooter()') && main.includes('new MutationObserver'), 'The release entrypoint must protect the Settings footer from legacy feature-layer version writes.');
 check(main.includes("fetch('/api/health'") && main.includes('PametOfferVersionUpdate?.(health.version)'), 'A newer server release must trigger the safe update prompt instead of disguising the loaded version.');
 check(!main.includes('applyReleaseVersion(health.version)'), 'A stale bundle must never overwrite its displayed loaded version with the server version.');
 check(main.includes("navigator.serviceWorker.register('sw.js?v=1230')"), 'PWA registration must reference the current release worker.');
