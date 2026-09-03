@@ -1,0 +1,43 @@
+name: Refresh final Pamet 1.3.0 bundle
+
+on:
+  push:
+    branches:
+      - feature/pamet-v1.3.0-care-workspaces
+    paths:
+      - '.github/workflows/refresh-v130-final.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/pamet-v1.3.0-care-workspaces
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Build and validate final release assets
+        run: |
+          npm ci --ignore-scripts
+          npm run build
+          npm run check
+          npm test
+          npm audit --omit=dev --audit-level=high
+      - name: Commit generated release bundles
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add dist/pamet.min.js dist/pamet.min.css
+          if git diff --cached --quiet; then
+            echo 'Generated bundles already current.'
+            exit 0
+          fi
+          git commit -m 'build: refresh final Pamet 1.3.0 bundles'
+          git push origin HEAD:feature/pamet-v1.3.0-care-workspaces
