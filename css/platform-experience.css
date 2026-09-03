@@ -1,0 +1,47 @@
+/* Pamet platform Settings experience. */
+.platform-settings-card {
+  margin: 24px 0;
+  padding: 20px;
+  border: 1px solid var(--border, #D9E1DE);
+  border-radius: 18px;
+  background: var(--surface, #FFFFFF);
+}
+.platform-settings-head { display:flex; justify-content:space-between; gap:16px; align-items:flex-start; margin-bottom:4px; }
+.platform-settings-kicker { margin:0 0 5px; font-size:11px; font-weight:800; letter-spacing:.12em; color:var(--text-tertiary, #66736F); }
+.platform-settings-card h3 { margin:0; font-size:18px; }
+.platform-setting-row { display:flex; justify-content:space-between; align-items:center; gap:20px; padding:18px 0; border-top:1px solid var(--border, #D9E1DE); }
+.platform-setting-row:first-of-type { margin-top:14px; }
+.platform-setting-row p { margin:5px 0 0; max-width:720px; color:var(--text-secondary, #5D6965); line-height:1.45; }
+.platform-setting-actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+.platform-setting-action { white-space:nowrap; }
+.platform-setting-status { font-size:13px; font-weight:600; }
+.platform-setting-status[data-state="attention"] { color:var(--warning-text, #8A5A20); }
+.platform-setting-status[data-state="ok"] { color:var(--success-text, #2C7358); }
+.platform-setting-help { font-size:12px; }
+@media (max-width:720px) {
+  .platform-setting-row { align-items:stretch; flex-direction:column; }
+  .platform-setting-actions { justify-content:flex-start; }
+  .platform-setting-action { width:100%; }
+}
+html.dark .platform-settings-card,
+body.dark .platform-settings-card,
+[data-theme="dark"] .platform-settings-card {
+  background:#141A1E;
+  border-color:#2A333A;
+  color:#F2F5F4;
+}
+html.dark .platform-setting-row,
+body.dark .platform-setting-row,
+[data-theme="dark"] .platform-setting-row { border-color:#2A333A; }
+html.dark .platform-setting-row p,
+body.dark .platform-setting-row p,
+[data-theme="dark"] .platform-setting-row p { color:#AAB5B2; }
+html.dark .platform-settings-kicker,
+body.dark .platform-settings-kicker,
+[data-theme="dark"] .platform-settings-kicker { color:#86C5BA; }
+html.dark .platform-setting-status[data-state="attention"],
+body.dark .platform-setting-status[data-state="attention"],
+[data-theme="dark"] .platform-setting-status[data-state="attention"] { color:#F2C27B; }
+html.dark .platform-setting-status[data-state="ok"],
+body.dark .platform-setting-status[data-state="ok"],
+[data-theme="dark"] .platform-setting-status[data-state="ok"] { color:#7FD0B6; }
