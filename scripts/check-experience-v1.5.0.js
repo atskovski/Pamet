@@ -18,7 +18,7 @@ check(insights.includes('First seen') && insights.includes('Last seen') && insig
 check(insights.includes('Why am I seeing this?') && insights.includes('Supporting history'), 'Evidence expansion must be available.');
 check(insights.includes('Data completeness') && insights.includes('Missing fields are not treated as zero'), 'Insights must explain data completeness.');
 check(insights.includes('pamet_archived_observations') && insights.includes('underlying journal entries remain unchanged'), 'Archive must be view-only state and never delete health entries.');
-check(insights.includes('does not establish') && insights.includes('does not infer') && !/\bcauses?\b/i.test(insights), 'Insights language must remain observational and non-causal.');
+check(insights.includes('does not establish') && insights.includes('does not infer') && !/(?:\bcauses\b|\bcaused by\b|\bleads to\b|→)/i.test(insights), 'Insights language must remain observational and non-causal.');
 check(icons.includes('window.PametIcons') && icons.includes('stroke-width="1.8"') && icons.includes('aria-hidden="true"'), 'Central icon registry must standardize stroke and accessibility semantics.');
 check(css.includes('--pamet-type-meta') && css.includes('--pamet-type-helper') && css.includes('--pamet-type-body') && css.includes('--pamet-type-control') && css.includes('--pamet-type-section') && css.includes('--pamet-type-page'), 'Formal type scale must define all approved roles.');
 check(css.includes('--pamet-primary:#0f3d3e') && css.includes('--pamet-sage') && css.includes('--pamet-amber') && css.includes('--pamet-rose'), 'Semantic production colors must use teal plus health-state sage/amber/rose.');
