@@ -57,4 +57,9 @@ fetch('/api/health', { credentials: 'same-origin', cache: 'no-store' })
   })
   .catch(() => {});
 
-/* Service-worker registration lives in index.html. Avoid a second registration/update check here. */
+/* Register from the external bundle so production CSP can keep inline scripts disabled. */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js?v=1511').catch(() => {});
+  });
+}
