@@ -4,7 +4,6 @@ const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
 const expected='1.5.1';
 const secureServer=fs.readFileSync('secure-server.js','utf8');
 const main=fs.readFileSync('js/main.js','utf8');
-const html=fs.readFileSync('index.html','utf8');
 const feedback=fs.readFileSync('js/feedback-v1.0.3.js','utf8');
 const worker=fs.readFileSync('sw.js','utf8');
 const updateFlow=fs.readFileSync('js/version-update.js','utf8');
@@ -19,7 +18,7 @@ check(pkg.scripts.build?.includes('esbuild js/main.js'),'Production build comman
 check(secureServer.includes("require('./package.json').version"),'Production edge must source version from package.json.');
 check(secureServer.includes("app.get('/api/health'")&&secureServer.includes('version: VERSION'),'Health must report canonical version.');
 check(main.includes(`const PAMET_VERSION = '${expected}'`)&&main.includes('window.PametLoadedVersion = PAMET_VERSION'),'Browser runtime must expose loaded version.');
-check(html.includes("navigator.serviceWorker.register('sw.js?v=1200')")&&!main.includes('navigator.serviceWorker.register'),'PWA registration must occur once from the page shell.');
+check(main.includes("navigator.serviceWorker.register('sw.js?v=1511')"),'PWA registration must execute from the CSP-compatible external production bundle.');
 check(main.includes('performance-v1.5.1.js')&&main.includes('icons-v1.5.0.js')&&main.includes('insights-v1.5.0.js')&&main.includes('experience-v1.5.0.js'),'Pamet product-system and performance modules must load.');
 check(main.includes('version-update.js'),'Production bundle must use the stable update module.');
 check(updateFlow.includes('New Pamet version available')&&updateFlow.includes('Update now')&&updateFlow.includes('does not clear your saved Pamet data'),'Safe update prompt must remain explicit.');
