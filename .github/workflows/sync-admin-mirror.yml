@@ -1,0 +1,23 @@
+name: Trigger Pamet Admin Mirror
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  trigger-admin-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger private pamet-admin mirror when token is configured
+        env:
+          GH_TOKEN: ${{ secrets.PAMET_ADMIN_SYNC_TOKEN }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::notice::PAMET_ADMIN_SYNC_TOKEN is not configured. pamet-admin will use its 15-minute scheduled pull-sync fallback."
+            exit 0
+          fi
+          gh workflow run admin-sync.yml --repo atskovski/pamet-admin --ref main
+          echo "Triggered pamet-admin mirror for production commit ${GITHUB_SHA}."
