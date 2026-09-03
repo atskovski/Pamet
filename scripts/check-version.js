@@ -27,5 +27,9 @@ check(worker.includes(`Pamet v${expected}`)&&worker.includes('pamet-shell-v151-1
 check(worker.includes('SKIP_WAITING')&&worker.includes('ignoreSearch:true'),'Service worker must support safe activation and version-tolerant shell caching.');
 check(bundle.includes('/api/health')&&bundle.includes(expected),'Generated bundle must contain current release identity.');
 check(readme.includes(`Version ${expected}`)&&readme.includes('Current State'),'README must state current release.');
+check(readme.includes(`### Pamet ${expected}`),`README Current State must include a Pamet ${expected} release heading.`);
+const currentState=readme.split('## Current State')[1]?.split('\n## ')[0]||'';
+const staleReleaseHeading=currentState.match(/^### Pamet (\d+\.\d+\.\d+)$/m);
+check(!staleReleaseHeading||staleReleaseHeading[1]===expected,`README Current State heading must match ${expected}.`);
 check(changelog.includes(`## [${expected}]`),'CHANGELOG must contain current release.');
 console.log(`Pamet ${expected} version checks passed.`);
