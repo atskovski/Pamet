@@ -22,6 +22,11 @@ const json = express.json({ limit: '256kb', strict: true });
 const sha = (value) => crypto.createHash('sha256').update(String(value || '')).digest('hex');
 const normalizedEmail = (req) => String(req.body && req.body.email || '').trim().toLowerCase().slice(0, 254);
 const releaseAssetVersion = VERSION.replace(/\D/g, '') || 'current';
+const indexTemplate = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+const versionedIndex = indexTemplate
+  .replace(/Pamet v\d+\.\d+\.\d+ · Your health history, finally useful\./g, `Pamet v${VERSION} · Your health history, finally useful.`)
+  .replace(/dist\/pamet\.min\.css\?v=\d+/g, `dist/pamet.min.css?v=${releaseAssetVersion}`)
+  .replace(/dist\/pamet\.min\.js\?v=\d+/g, `dist/pamet.min.js?v=${releaseAssetVersion}`);
 
 function hardenedCsp(value) {
   return String(value || '')
@@ -64,15 +69,8 @@ function parseAuthJson(req, res, next) {
   });
 }
 
-function renderVersionedIndex(req, res, next) {
-  fs.readFile(path.join(__dirname, 'index.html'), 'utf8', (error, source) => {
-    if (error) return next(error);
-    const versioned = source
-      .replace(/Pamet v\d+\.\d+\.\d+ · Your health history, finally useful\./g, `Pamet v${VERSION} · Your health history, finally useful.`)
-      .replace(/dist\/pamet\.min\.css\?v=\d+/g, `dist/pamet.min.css?v=${releaseAssetVersion}`)
-      .replace(/dist\/pamet\.min\.js\?v=\d+/g, `dist/pamet.min.js?v=${releaseAssetVersion}`);
-    res.type('html').set('Cache-Control', 'no-store').send(versioned);
-  });
+function renderVersionedIndex(req, res) {
+  res.type('html').set('Cache-Control', 'no-store').send(versionedIndex);
 }
 
 const accountLoginLimit = distributedRateLimit({
