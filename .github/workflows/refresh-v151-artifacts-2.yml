@@ -39,7 +39,8 @@ jobs:
           if '## [1.5.1]' not in s: s=s.replace('# Pamet Change Log\n\n','# Pamet Change Log\n\n'+section,1)
           p.write_text(s)
           PY
-      - run: |
+      - name: Build and validate
+        run: |
           npm install --package-lock-only --ignore-scripts
           npm ci --ignore-scripts
           npm run build
