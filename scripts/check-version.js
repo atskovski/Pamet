@@ -1,6 +1,7 @@
 'use strict';
 const fs=require('fs');
 const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
+const lock=JSON.parse(fs.readFileSync('package-lock.json','utf8'));
 const expected=pkg.version;
 const assetVersion=expected.replace(/\D/g,'');
 const secureServer=fs.readFileSync('secure-server.js','utf8');
@@ -17,9 +18,13 @@ const readme=fs.readFileSync('README.md','utf8');
 const changelog=fs.readFileSync('CHANGELOG.md','utf8');
 const threatModel=fs.readFileSync('THREAT_MODEL.md','utf8');
 const goLive=fs.readFileSync('GO_LIVE_STATUS.md','utf8');
+const productionReadiness=fs.readFileSync('PRODUCTION_READINESS.md','utf8');
+const realAcceptance=fs.readFileSync('REAL_ENVIRONMENT_ACCEPTANCE.md','utf8');
+const versioning=fs.readFileSync('VERSIONING.md','utf8');
 const mobileContract=JSON.parse(fs.readFileSync('contracts/mobile-api.json','utf8'));
 function check(condition,message){if(!condition)throw new Error(message);}
 check(/^\d+\.\d+\.\d+$/.test(expected),'package.json version must be semantic x.y.z.');
+check(lock.version===expected&&lock.packages?.['']?.version===expected,'package-lock.json root metadata must match package.json version.');
 check(pkg.scripts.start==='node secure-server.js','Production startup must launch the secure server.');
 check(!pkg.scripts.postinstall,'Do not build from postinstall.');
 check(pkg.scripts.build==='node scripts/build-production.js','Production build must run the strict-CSP production bundler.');
@@ -59,6 +64,9 @@ check(!staleReleaseHeading||staleReleaseHeading[1]===expected,`README Current St
 check(changelog.includes(`## [${expected}]`),'CHANGELOG must contain current release.');
 check(threatModel.includes(`v${expected}`)&&!threatModel.includes('Pamet v1.2.0'),'THREAT_MODEL must identify the current release baseline.');
 check(goLive.includes(`Pamet ${expected}`)&&goLive.includes('CI automation')&&goLive.includes('Independent penetration test'),'Go-live dashboard must track current release and independent gates.');
+check(productionReadiness.includes(`Pamet v${expected} Production Readiness Review`),`PRODUCTION_READINESS must identify Pamet ${expected}.`);
+check(realAcceptance.includes(`Expected repository release: **${expected}**`),`REAL_ENVIRONMENT_ACCEPTANCE must identify Pamet ${expected}.`);
+check(versioning.includes(`current stable release line is \`v${expected}\``),`VERSIONING policy must identify Pamet ${expected} as the current stable release line.`);
 check(mobileContract.backendVersion===expected,'Mobile API contract backendVersion must match package.json version.');
 check(mobileContract.minimumBackendVersion==='1.5.1','Current release must preserve the compatible native minimum backend baseline.');
 check(Number(mobileContract.contractVersion)>=2,'Mobile API contract must use supported contractVersion.');
