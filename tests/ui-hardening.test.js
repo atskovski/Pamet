@@ -5,15 +5,15 @@ const vm = require('vm');
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const securityUi = fs.readFileSync('js/security-v1.1.0.js', 'utf8');
+const securityUi = fs.readFileSync('js/security.js', 'utf8');
 const authUi = fs.readFileSync('js/auth.js', 'utf8');
-const accountSwitch = fs.readFileSync('js/account-switch-v1.2.0.js', 'utf8');
-const feedbackUi = fs.readFileSync('js/feedback-v1.0.3.js', 'utf8');
-const releaseCss = fs.readFileSync('css/release-v1.1.0.css', 'utf8');
-const mobileCss = fs.readFileSync('css/mobile-v1.2.0.css', 'utf8');
+const accountSwitch = fs.readFileSync('js/account-switch.js', 'utf8');
+const feedbackUi = fs.readFileSync('js/feedback.js', 'utf8');
+const releaseCss = fs.readFileSync('css/login-experience.css', 'utf8');
+const mobileCss = fs.readFileSync('css/mobile.css', 'utf8');
 const secureServer = fs.readFileSync('secure-server.js', 'utf8');
 const edgeAccount = fs.readFileSync('lib/edge-account.js', 'utf8');
-const qrSource = fs.readFileSync('js/qr-v1.2.0.js', 'utf8');
+const qrSource = fs.readFileSync('js/qr-sharing.js', 'utf8');
 const main = fs.readFileSync('js/main.js', 'utf8');
 const index = fs.readFileSync('index.html', 'utf8');
 
@@ -36,7 +36,7 @@ test('login keeps explicit create-account and account-switch paths', () => {
   assert.match(index, /id="showRegister">Create one<\/a>/);
   assert.match(securityUi, /switcher\.hidden = false/);
   assert.match(securityUi, /createLink\.hidden = false/);
-  assert.match(main, /account-switch-v1\.2\.0\.js/);
+  assert.match(main, /\.\/account-switch\.js/);
   assert.match(accountSwitch, /Use a different account/);
   assert.match(accountSwitch, /S\.wipeAll\(\)/);
   assert.match(accountSwitch, /health data is not mixed between accounts/);
@@ -100,9 +100,10 @@ test('mobile layout covers safe areas, narrow phones, and input zoom prevention'
   assert.match(mobileCss, /orientation:landscape/);
 });
 
-test('script CSP no longer permits executable inline script attributes', () => {
+test('script and style CSP no longer permit unsafe inline execution or attributes', () => {
   assert.match(secureServer, /script-src-attr 'none'/);
-  assert.match(secureServer, /replace\("script-src 'self' 'unsafe-inline'", "script-src 'self'"\)/);
+  assert.match(secureServer, /style-src-attr 'none'/);
   const authHeaderBlock = secureServer.match(/function authSecurityHeaders[\s\S]*?function parseAuthJson/)[0];
   assert.doesNotMatch(authHeaderBlock, /script-src 'self' 'unsafe-inline'/);
+  assert.doesNotMatch(authHeaderBlock, /style-src 'self' 'unsafe-inline'/);
 });
