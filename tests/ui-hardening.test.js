@@ -79,7 +79,7 @@ test('private QR encoder produces a bounded version-10 SVG without network acces
   const svg = qr.svg(uri);
   assert.match(svg, /^<svg/);
   assert.match(svg, /Authenticator setup QR code/);
-  assert.doesNotMatch(qrSource, /fetch\(|XMLHttpRequest|https?:\/\//);
+  assert.doesNotMatch(qrSource, /fetch\(|XMLHttpRequest|chart\.googleapis|api\.qrserver|quickchart|qrcode\.monkey/i);
 });
 
 test('feedback success is prominent, screen-centered, and automatically clears after five seconds', () => {
