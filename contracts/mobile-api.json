@@ -1,0 +1,72 @@
+{
+  "contractVersion": 2,
+  "backendVersion": "1.5.1",
+  "minimumBackendVersion": "1.5.1",
+  "apiBaseURL": "https://pamet.wasmer.app",
+  "healthPath": "/api/health",
+  "readinessPath": "/api/ready",
+  "source": "atskovski/Pamet@main",
+  "session": {
+    "transport": "secure-http-only-cookie",
+    "csrfOriginEnforced": true
+  },
+  "plans": {
+    "free": {
+      "correlations": false,
+      "unlimitedHistory": false,
+      "sharing": false,
+      "appointmentWorkspace": false,
+      "multipleProfiles": false,
+      "advancedVisitBrief": false,
+      "encryptedSync": false
+    },
+    "pro": {
+      "correlations": true,
+      "unlimitedHistory": true,
+      "sharing": true,
+      "appointmentWorkspace": false,
+      "multipleProfiles": false,
+      "advancedVisitBrief": false,
+      "encryptedSync": false
+    },
+    "ultra": {
+      "correlations": true,
+      "unlimitedHistory": true,
+      "sharing": true,
+      "appointmentWorkspace": true,
+      "multipleProfiles": true,
+      "advancedVisitBrief": true,
+      "encryptedSync": true
+    }
+  },
+  "endpoints": [
+    "/api/health",
+    "/api/ready",
+    "/api/auth/register",
+    "/api/auth/login",
+    "/api/auth/session",
+    "/api/auth/logout",
+    "/api/entitlements",
+    "/api/account/recovery/request",
+    "/api/security/devices",
+    "/api/security/mfa/setup",
+    "/api/security/mfa/confirm",
+    "/api/security/mfa/disable",
+    "/api/billing/config",
+    "/api/billing/status",
+    "/api/billing/create-subscription",
+    "/api/billing/sync",
+    "/api/billing/portal",
+    "/api/sharing/invites",
+    "/api/appointments",
+    "/api/notifications/config",
+    "/api/notifications/subscriptions",
+    "/api/sync/:profileId"
+  ],
+  "safety": {
+    "diagnostic": false,
+    "emergencyMonitoring": false,
+    "medicationRecommendations": false,
+    "liveCaregiverSurveillance": false
+  }
+}
