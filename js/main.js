@@ -1,5 +1,5 @@
-/* Pamet v1.2.3 production entrypoint. Keep dependency order explicit here. */
-const PAMET_VERSION = '1.2.3';
+/* Pamet v1.3.0 production entrypoint. Keep dependency order explicit here. */
+const PAMET_VERSION = '1.3.0';
 window.PametVersion = PAMET_VERSION;
 window.PametLoadedVersion = PAMET_VERSION;
 
@@ -15,7 +15,7 @@ import "./e2e-sync-v1.1.0.js";
 import "./qr-v1.2.0.js";
 import "./security-v1.1.0.js";
 import "./release-v1.1.0.js";
-import "./version-update-v1.2.3.js";
+import "./version-update-v1.3.0.js";
 
 function releaseFooterText(version = PAMET_VERSION) {
   const normalized = String(version || '').trim() || PAMET_VERSION;
@@ -54,6 +54,6 @@ fetch('/api/health', { credentials: 'same-origin', cache: 'no-store' })
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js?v=1230').catch(() => { /* core local-first use remains available without SW registration */ });
+    navigator.serviceWorker.register('sw.js?v=1300').catch(() => { /* core local-first use remains available without SW registration */ });
   });
 }
