@@ -5,6 +5,7 @@ const server = fs.readFileSync('server.js', 'utf8');
 const secureServer = fs.readFileSync('secure-server.js', 'utf8');
 const edgeAccount = fs.readFileSync('lib/edge-account.js', 'utf8');
 const app = fs.readFileSync('js/app.js', 'utf8');
+const main = fs.readFileSync('js/main.js', 'utf8');
 const billing = fs.readFileSync('js/v1.0.3.js', 'utf8');
 const auth = fs.readFileSync('js/auth.js', 'utf8');
 const securityUi = fs.readFileSync('js/security-v1.1.0.js', 'utf8');
@@ -26,8 +27,10 @@ check(!server.includes("express.static(path.join(__dirname),"), 'The repository 
 check(server.includes("app.use('/assets'") && server.includes("app.use('/dist'") && !server.includes("app.use('/js'") && !server.includes("app.use('/css'"), 'Production must expose only assets and built bundles, not source modules.');
 check(server.includes('immutable: false') && server.includes('maxAge: 0'), 'Unversioned application assets must revalidate after deployments.');
 check(fs.readFileSync('index.html', 'utf8').includes('dist/pamet.min.js?v=1200'), 'Executable assets must use the release bundle URL.');
+check(main.includes("navigator.serviceWorker.register('sw.js?v=1210')"), 'PWA service-worker registration must execute from the CSP-compatible external production bundle.');
 check(server.includes('Content-Security-Policy') && server.includes('Strict-Transport-Security') && server.includes("app.disable('x-powered-by')"), 'Production security headers must remain enabled.');
 check(secureServer.includes("script-src-attr 'none'") && secureServer.includes('hardenedCsp') && secureServer.includes("replace(\"script-src 'self' 'unsafe-inline'\", \"script-src 'self'\")"), 'Production CSP must block inline script attributes and remove executable unsafe-inline permission.');
+check(secureServer.includes("const VERSION = require('./package.json').version") && secureServer.includes("app.get('/api/health'") && secureServer.includes('version: VERSION'), 'The production edge must report the canonical package release version.');
 check(server.includes('distributedRateLimit') && limiter.includes('REDIS_URL') && limiter.includes('pExpire') && server.includes('limits.billing'), 'Sensitive handlers must use shared Redis/Valkey rate limits.');
 check(server.includes('priceIsValid') && [699, 5999, 1299, 9999].every((amount) => server.includes(`amount: ${amount}`)), 'Stripe prices must be verified against the approved catalog.');
 check(server.includes('idempotencyKey') && server.includes('pamet_stripe_events') && server.includes('INSERT IGNORE INTO pamet_stripe_events'), 'Stripe writes and webhooks must be idempotent.');
@@ -59,22 +62,11 @@ check(ci.includes('integration:') && ci.includes('mysql:') && ci.includes('PAMET
 check(ci.includes('backup-restore-drill.sh') && backupDrill.includes('mysqldump') && backupDrill.includes('pamet_restore_drill'), 'CI must retain a disposable MySQL backup and separate-schema restore drill.');
 check(uiTests.includes('centered Pamet modal backdrop') && uiTests.includes('legacy accounts migrate') && uiTests.includes('script CSP'), 'UI/security regression tests must remain in the quality gate.');
 check(
-  integrationTests.includes('/api/auth/register') &&
-  integrationTests.includes('/api/auth/password') &&
-  integrationTests.includes('/api/security/devices/') &&
-  integrationTests.includes('/api/sharing/invites') &&
-  integrationTests.includes('/api/share/') &&
-  integrationTests.includes('/api/stripe/webhook') &&
-  integrationTests.includes('/api/entitlements') &&
-  integrationTests.includes('/api/sync/') &&
-  integrationTests.includes('currentRevision'),
+  integrationTests.includes('/api/auth/register') && integrationTests.includes('/api/auth/password') && integrationTests.includes('/api/security/devices/') && integrationTests.includes('/api/sharing/invites') && integrationTests.includes('/api/share/') && integrationTests.includes('/api/stripe/webhook') && integrationTests.includes('/api/entitlements') && integrationTests.includes('/api/sync/') && integrationTests.includes('currentRevision'),
   'Integration coverage must retain auth, entitlement, device, sharing/revocation, Stripe, and encrypted-sync lifecycle assertions.'
 );
 check(
-  localEncryptionThreatModel.includes('random per-profile DEK') &&
-  localEncryptionThreatModel.includes('user-held RRK') &&
-  localEncryptionThreatModel.includes('password reset') &&
-  localEncryptionThreatModel.includes('intentionally unrecoverable'),
+  localEncryptionThreatModel.includes('random per-profile DEK') && localEncryptionThreatModel.includes('user-held RRK') && localEncryptionThreatModel.includes('password reset') && localEncryptionThreatModel.includes('intentionally unrecoverable'),
   'Local encryption work must retain the explicit key/recovery threat-model gate before implementation.'
 );
 
