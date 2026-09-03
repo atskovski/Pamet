@@ -58,7 +58,7 @@
         "Daily logging & calendar",
         "Up to 10 Pamet patterns",
         "5 custom fields per category",
-        "Doctor report (PDF)",
+        "Visit Brief (PDF)",
         "Dark mode"
       ]
     },

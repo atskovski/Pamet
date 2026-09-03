@@ -2,6 +2,56 @@
 
 This file is the repository system of record for completed product and engineering changes. It is not rendered inside the Pamet application.
 
+## [1.5.0] — 2026-09-03
+
+### Insights becomes an observational workspace
+
+- Added 7 / 30 / 90-day comparison windows.
+- Added filters for **Symptoms**, **Lifestyle**, **Medications**, and **Sleep / Stress**.
+- Added per-observation first-seen, last-seen, supporting-entry count, and recent-vs-earlier direction.
+- Added **Why am I seeing this?** evidence expansion with the actual comparison logic explained in plain language.
+- Added data-completeness scoring across symptoms, sleep, stress, hydration, activity, medications, and notes.
+- Added Archive / Restore for observations without deleting or mutating underlying journal entries.
+- Reframed correlations as recorded co-occurrence and comparison only; Pamet does not infer diagnosis, direction, medication effectiveness, or cause.
+- Kept quiet/no-observation states explicit rather than manufacturing a conclusion from sparse data.
+
+### Visit Brief
+
+- Renamed the user-facing **Doctor Report** surface to **Visit Brief**.
+- Updated the primary sharing action to **Email visit brief** while retaining PDF export.
+- Added compatibility normalization so historical feature-layer strings render with the current product name.
+
+### Unified visual system
+
+- Added a centralized `PametIcons` registry with one stroke weight, one coordinate system, and consistent accessibility semantics.
+- Migrated primary navigation, appearance, profile, Visit Brief, Calendar, and new Insights controls onto the shared icon system.
+- Formalized metadata, helper, body, control, section-heading, and page-heading type roles.
+- Formalized production semantic colors: teal for navigation/actions; neutral for structure; sage/amber/rose for health-state meaning.
+- Prevented the 1.5 production design layer from introducing Admin purple.
+
+### Calendar evolution
+
+- Added a **Today** shortcut.
+- Added long-history text search across dates, symptoms, medications, activities, mood, and notes.
+- Added symptom filtering and visual dimming for non-matching days in the current month.
+- Added searchable history results that jump back to the matching calendar date.
+
+### Accessibility hardening
+
+- Added a keyboard-visible **Skip to Pamet content** link.
+- Added stronger `aria-current`, screen labelling, accessible icon handling, and Escape support for profile dialogs.
+- Standardized visible focus states and reduced-motion behavior.
+- Added a release gate for the new accessibility/design-system requirements.
+- External WCAG 2.2 AA review remains an independent assurance requirement and is not self-certified by this release.
+
+### Release discipline
+
+- Promoted Pamet to **1.5.0**.
+- Rotated the PWA shell to `pamet-shell-v150-0`.
+- Added static product-system regression checks for Insights behavior, observational language, type scale, semantic color usage, Calendar tools, icon consistency, and accessibility affordances.
+
+---
+
 ## [1.4.0] — 2026-09-03
 
 ### Product clarity
