@@ -1,0 +1,227 @@
+/* Pamet v1.6.0 — unified dark-mode surface, typography, and contrast system. */
+body.dark {
+  color-scheme: dark;
+  --app-background: #0B0F12;
+  --surface: #141A1E;
+  --surface-soft: #1B2328;
+  --surface-secondary: #1B2328;
+  --card-bg: #141A1E;
+  --border-color: #334048;
+  --text-primary: #F2F5F4;
+  --text-secondary: #AAB5B2;
+  --text-tertiary: #7E8D89;
+  --pamet-primary: #74C4B5;
+  --pamet-primary-soft: #172824;
+  --pamet-neutral-950: #F2F5F4;
+  --pamet-neutral-700: #AAB5B2;
+  --pamet-neutral-500: #7E8D89;
+  --pamet-neutral-300: #334048;
+  --pamet-neutral-100: #1B2328;
+  --warm-light: #2A211D;
+  --sage-light: #192820;
+  --rose-light: #2B1D22;
+  --amber-light: #2B2518;
+  --shadow-card: 0 1px 2px rgba(0,0,0,.28), 0 8px 28px rgba(0,0,0,.24);
+  --shadow-float: 0 -4px 30px rgba(0,0,0,.42);
+  background: #0B0F12;
+  color: var(--text-primary);
+}
+
+body.dark .app-shell,
+body.dark .topbar,
+body.dark .sheet {
+  background: var(--app-background);
+  color: var(--text-primary);
+}
+
+/* One dark surface family: elevated content never flips back to white. */
+body.dark .settings-card,
+body.dark .section-card,
+body.dark .metric-card,
+body.dark .entry-row,
+body.dark .cal-card,
+body.dark .pattern-card,
+body.dark .report-doc,
+body.dark .pamet-modal,
+body.dark .pamet-support-shell,
+body.dark .completeness-card,
+body.dark .observation-card,
+body.dark .insights-empty,
+body.dark .calendar-search,
+body.dark .calendar-filter,
+body.dark .calendar-history-drawer {
+  background: var(--surface);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-card);
+}
+
+body.dark .insights-readiness,
+body.dark .pamet-current-plan,
+body.dark .feedback-form,
+body.dark .phase2-tool-grid button,
+body.dark .care-ux-status,
+body.dark .care-ux-report-preview,
+body.dark .care-save-explainer,
+body.dark .care-sync-help,
+body.dark .care-guide,
+body.dark .care-confirm-date,
+body.dark .observation-evidence {
+  background: var(--surface-soft);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+body.dark .insights-readiness {
+  background: linear-gradient(135deg, #172824, #1B2328);
+}
+
+/* High-legibility type hierarchy. */
+body.dark .screen-title,
+body.dark .greeting,
+body.dark .section-title,
+body.dark .settings-card h3,
+body.dark .section-card h3,
+body.dark .observation-card h3,
+body.dark .completeness-card h3,
+body.dark .insights-readiness h3,
+body.dark .insights-empty h3,
+body.dark .pamet-support-shell h2,
+body.dark .pamet-support-shell h3,
+body.dark strong {
+  color: var(--text-primary);
+}
+
+body.dark .pamet-helper,
+body.dark .setting-help,
+body.dark .today-date,
+body.dark .notification-note,
+body.dark .observation-summary,
+body.dark .observation-history span,
+body.dark .observation-caution,
+body.dark .insights-empty p,
+body.dark .insights-readiness p,
+body.dark .completeness-card .pamet-helper,
+body.dark .care-ux-report-preview span,
+body.dark .care-save-explainer span,
+body.dark .care-guide span,
+body.dark .care-sync-help p,
+body.dark .pamet-support-shell p,
+body.dark .pamet-support-shell li {
+  color: var(--text-secondary);
+}
+
+body.dark .pamet-eyebrow,
+body.dark .observation-category,
+body.dark .quick-profile-eyebrow,
+body.dark .pattern-readiness-label,
+body.dark .pamet-support-kicker,
+body.dark .readiness-score strong,
+body.dark .completeness-item strong,
+body.dark .history-date {
+  color: var(--pamet-primary);
+}
+
+/* Controls recede until selected; selected states remain obvious. */
+body.dark .chip-btn,
+body.dark .sym-btn,
+body.dark .chip {
+  background: #182126;
+  color: #C8D1CF;
+  border-color: #415056;
+  box-shadow: none;
+}
+
+body.dark .chip-btn:hover,
+body.dark .chip-btn:focus-visible,
+body.dark .sym-btn:hover,
+body.dark .chip:hover {
+  border-color: #74C4B5;
+  color: #E8FAF6;
+}
+
+body.dark .chip-btn.active,
+body.dark .sym-btn.selected,
+body.dark .chip.active {
+  background: #24564F;
+  border-color: #4A9B8E;
+  color: #FFFFFF;
+}
+
+body.dark .link-btn,
+body.dark a:not(.btn) {
+  color: #79C7E3;
+}
+
+/* Data-completeness meters need visible track/fill separation. */
+body.dark .mini-meter {
+  background: rgba(255,255,255,.10);
+}
+body.dark .mini-meter span {
+  background: #4A9B8E;
+}
+body.dark .completeness-item > div:first-child span {
+  color: var(--text-secondary);
+}
+
+/* Empty states stay inside the same dark visual system. */
+body.dark .insights-empty {
+  background: var(--surface);
+}
+body.dark .insights-empty > [data-pamet-icon] {
+  background: #172824;
+  color: #74C4B5;
+}
+
+/* Form controls remain readable without becoming bright blocks. */
+body.dark .text-input,
+body.dark .notes-input,
+body.dark .pamet-form input,
+body.dark .pamet-form select,
+body.dark .feedback-form select,
+body.dark .feedback-form textarea,
+body.dark .calendar-search input,
+body.dark .calendar-filter select {
+  background: #10171B;
+  border-color: #415056;
+  color: var(--text-primary);
+}
+body.dark input::placeholder,
+body.dark textarea::placeholder {
+  color: #71817D;
+  opacity: 1;
+}
+
+body.dark .icon-btn {
+  color: #AAB5B2;
+}
+body.dark .icon-btn:hover {
+  background: var(--surface-soft);
+  color: var(--text-primary);
+}
+
+body.dark .trend-badge.stable {
+  background: #253137;
+  color: #C9D2D0;
+}
+body.dark .trend-badge.developing {
+  background: #172824;
+  color: #8DD6C8;
+}
+body.dark .trend-badge.weakening {
+  background: #192820;
+  color: #A6D2B3;
+}
+body.dark .trend-badge.strengthening {
+  background: #2B2518;
+  color: #E4C17A;
+}
+
+body.dark button:focus-visible,
+body.dark a:focus-visible,
+body.dark input:focus-visible,
+body.dark select:focus-visible,
+body.dark textarea:focus-visible,
+body.dark [tabindex]:focus-visible {
+  outline-color: #87D7C8;
+}
