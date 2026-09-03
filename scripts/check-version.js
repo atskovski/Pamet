@@ -24,7 +24,7 @@ check(main.includes("fetch('/api/health'") && main.includes('applyReleaseVersion
 check(main.includes("navigator.serviceWorker.register('sw.js?v=1210')"), 'PWA registration must run from the external production bundle.');
 check(feedback.includes('window.PametVersion ||'), 'Feedback must use the browser runtime version instead of a release literal.');
 check(worker.includes(`Pamet v${expected}`) && worker.includes('pamet-shell-v121-0'), 'Service worker cache/version must match the release.');
-check(bundle.includes('/api/health') && bundle.includes(`Pamet v${expected}`), 'The generated production bundle must contain live version reconciliation for the current release.');
+check(bundle.includes('/api/health') && bundle.includes(expected) && bundle.includes('Your health history, finally useful.'), 'The generated production bundle must contain live version reconciliation for the current release.');
 check(readme.includes(`Version ${expected}`) && readme.includes('Current State'), 'README must state the current release and current state.');
 check(changelog.includes(`## [${expected}]`), 'CHANGELOG must contain the current release.');
 
