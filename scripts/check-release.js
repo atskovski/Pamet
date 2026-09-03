@@ -27,8 +27,12 @@ check(
   'The retired Custom symptoms settings card must not be rendered.'
 );
 check(
-  main.includes("const PAMET_VERSION = '1.2.1'") && main.includes('Pamet v${PAMET_VERSION} · Your health history, finally useful.'),
-  'The production browser runtime must identify Pamet v1.2.1.'
+  main.includes("const PAMET_VERSION = '1.2.1'") &&
+  main.includes('function applyReleaseVersion(version)') &&
+  main.includes('Pamet v${normalized} · Your health history, finally useful.') &&
+  main.includes("fetch('/api/health'") &&
+  main.includes('applyReleaseVersion(health.version)'),
+  'The production browser runtime must identify Pamet v1.2.1 and reconcile against deployed health.'
 );
 check(
   html.includes('Don’t have an account?') && /id="registerForm" hidden/.test(html),
