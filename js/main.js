@@ -15,8 +15,24 @@ import "./qr-v1.2.0.js";
 import "./security-v1.1.0.js";
 import "./release-v1.1.0.js";
 
-const releaseFooter = document.querySelector('.footer-line');
-if (releaseFooter) releaseFooter.textContent = `Pamet v${PAMET_VERSION} · Your health history, finally useful.`;
+function applyReleaseVersion(version) {
+  const normalized = String(version || '').trim() || PAMET_VERSION;
+  window.PametVersion = normalized;
+  document.querySelectorAll('.footer-line').forEach((footer) => {
+    footer.textContent = `Pamet v${normalized} · Your health history, finally useful.`;
+  });
+}
+
+// Render immediately from the bundled release, then reconcile against the
+// deployed server's canonical package version. This prevents a stale browser
+// bundle from displaying an older version after a backend deployment.
+applyReleaseVersion(PAMET_VERSION);
+fetch('/api/health', { credentials: 'same-origin', cache: 'no-store' })
+  .then((response) => response.ok ? response.json() : null)
+  .then((health) => {
+    if (health && health.version) applyReleaseVersion(health.version);
+  })
+  .catch(() => { /* the bundled version remains the offline fallback */ });
 
 // Keep PWA registration in the external bundle so the production CSP can block
 // executable inline scripts without silently disabling install/offline updates.

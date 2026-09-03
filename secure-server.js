@@ -82,6 +82,16 @@ async function rejectBreachedPassword(req, res, next) {
 
 app.use('/api/auth', authSecurityHeaders);
 app.get('/api/health', authSecurityHeaders, (req, res) => res.json({ ok: true, version: VERSION }));
+
+// The inner application owns dependency checks, while the production edge owns
+// release identity. Normalize readiness responses so health, readiness, logs,
+// and the Settings version can never disagree about the deployed release.
+app.use('/api/ready', (req, res, next) => {
+  const sendJson = res.json.bind(res);
+  res.json = (body) => sendJson(body && typeof body === 'object' ? { ...body, version: VERSION } : body);
+  next();
+});
+
 app.post('/api/auth/login', parseAuthJson, accountLoginLimit);
 app.post('/api/auth/register', parseAuthJson, passwordSafetyLimit, rejectBreachedPassword);
 app.post('/api/auth/password', parseAuthJson, passwordSafetyLimit, rejectBreachedPassword);
