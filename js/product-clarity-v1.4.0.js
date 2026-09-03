@@ -67,6 +67,8 @@
     const patterns = S.patterns();
     const confirmed = patterns.filter((pattern) => !pattern.isEmerging);
     const emerging = patterns.filter((pattern) => pattern.isEmerging);
+    const signature = [days, confirmed.length, emerging.length, confirmed[0]?.title || ''].join('|');
+    if (banner.dataset.readinessSignature === signature) return;
     let stage = 'Start your baseline';
     let summary = 'Log your first day to begin building an observational baseline.';
     let next = 'Start with one complete entry. Logging both symptom and symptom-free days makes later comparisons more useful.';
@@ -88,6 +90,7 @@
       summary = `Pamet found ${confirmed.length} repeat observation${confirmed.length === 1 ? '' : 's'} in your recorded history. These describe what was logged; they do not establish cause.`;
       next = `Strongest current observation: ${confirmed[0].title}. Keep logging so Pamet can strengthen, weaken, or retire observations as your history changes.`;
     }
+    banner.dataset.readinessSignature = signature;
     banner.classList.add('pattern-readiness-banner');
     banner.innerHTML = `<div class="pattern-readiness-head"><div><span class="pattern-readiness-label">Pattern readiness</span><h3>${esc(stage)}</h3></div><strong>${days} day${days === 1 ? '' : 's'}</strong></div><p>${esc(summary)}</p><div class="pattern-readiness-meter" aria-label="Pattern baseline strength"><span style="width:${Math.min(100, strength)}%"></span></div><p class="pattern-readiness-next">${esc(next)}</p>`;
   }
