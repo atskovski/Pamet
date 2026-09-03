@@ -3,6 +3,8 @@ const PAMET_VERSION = '1.5.1';
 window.PametVersion = PAMET_VERSION;
 window.PametLoadedVersion = PAMET_VERSION;
 
+/* Install the broad-observer performance guard before feature modules register observers. */
+import "./performance-v1.5.1.js";
 import "./auth.js";
 import "./store.js";
 import "./icons-v1.5.0.js";
@@ -55,8 +57,9 @@ fetch('/api/health', { credentials: 'same-origin', cache: 'no-store' })
   })
   .catch(() => {});
 
+/* Register from the external bundle so production CSP can keep inline scripts disabled. */
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js?v=1510').catch(() => {});
+    navigator.serviceWorker.register('sw.js?v=1511').catch(() => {});
   });
 }

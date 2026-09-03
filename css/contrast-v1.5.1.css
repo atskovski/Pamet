@@ -1,0 +1,25 @@
+/* Pamet v1.5.1 contrast hardening.
+   Primary/green actions always use white text in light and dark modes. */
+.btn-primary,
+.plan-cta,
+.pamet-version-update .btn-primary,
+body.dark .btn-primary,
+body.dark .plan-cta,
+body.dark .pamet-version-update .btn-primary,
+body.dark .tab-log .log-plus {
+  color: #fff !important;
+  -webkit-text-fill-color: #fff;
+}
+
+/* Keep primary actions readable against Pamet teal/sage surfaces. */
+.btn-primary,
+.plan-cta {
+  text-shadow: 0 1px 1px rgba(0,0,0,.12);
+}
+
+body.dark .btn-primary,
+body.dark .plan-cta,
+body.dark .pamet-version-update .btn-primary {
+  background: #3f8f65;
+  border-color: #3f8f65;
+}
