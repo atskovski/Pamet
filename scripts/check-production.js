@@ -11,6 +11,9 @@ const schema = fs.readFileSync('db/schema.sql', 'utf8');
 const limiter = fs.readFileSync('lib/rate-limit.js', 'utf8');
 const notifications = fs.readFileSync('js/notifications-v1.1.0.js', 'utf8');
 const encryptedSync = fs.readFileSync('js/e2e-sync-v1.1.0.js', 'utf8');
+const ci = fs.readFileSync('.github/workflows/ci.yml', 'utf8');
+const integrationTests = fs.readFileSync('tests/integration.test.js', 'utf8');
+const localEncryptionThreatModel = fs.readFileSync('LOCAL_ENCRYPTION_THREAT_MODEL.md', 'utf8');
 
 function check(condition, message) { if (!condition) throw new Error(message); }
 
@@ -42,5 +45,26 @@ check(server.includes("app.post('/api/account/recovery/request'") && server.incl
 check(server.includes("app.get('/api/entitlements'") && server.includes("app.post('/api/appointments'"), 'Paid capabilities and Ultra appointment data must be enforced by the server.');
 check(server.includes('LOG_DRAIN_URL') && server.includes('ALERT_WEBHOOK_URL') && server.includes("app.get('/api/metrics'"), 'Logs, alerts, and protected metrics must expose production integrations.');
 check(server.includes('GRAFANA_OTLP_ENDPOINT') && server.includes("sendOtlp('logs'") && server.includes("sendOtlp('metrics'"), 'Grafana Cloud must receive OTLP logs and metrics through a least-privilege deployment token.');
+
+check(ci.includes('integration:') && ci.includes('mysql:') && ci.includes('PAMET_INTEGRATION_TESTS') && ci.includes('npm run test:integration'), 'CI must retain the MySQL-backed production lifecycle integration gate.');
+check(
+  integrationTests.includes('/api/auth/register') &&
+  integrationTests.includes('/api/auth/password') &&
+  integrationTests.includes('/api/security/devices/') &&
+  integrationTests.includes('/api/sharing/invites') &&
+  integrationTests.includes('/api/share/') &&
+  integrationTests.includes('/api/stripe/webhook') &&
+  integrationTests.includes('/api/entitlements') &&
+  integrationTests.includes('/api/sync/') &&
+  integrationTests.includes('currentRevision'),
+  'Integration coverage must retain auth, entitlement, device, sharing/revocation, Stripe, and encrypted-sync lifecycle assertions.'
+);
+check(
+  localEncryptionThreatModel.includes('random per-profile DEK') &&
+  localEncryptionThreatModel.includes('user-held RRK') &&
+  localEncryptionThreatModel.includes('password reset') &&
+  localEncryptionThreatModel.includes('intentionally unrecoverable'),
+  'Local encryption work must retain the explicit key/recovery threat-model gate before implementation.'
+);
 
 console.log('Pamet production hardening checks passed.');
