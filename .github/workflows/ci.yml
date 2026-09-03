@@ -43,6 +43,7 @@ jobs:
       DB_NAME: pamet_test
       DB_USER: pamet
       DB_PASSWORD: pamet
+      MYSQL_ROOT_PASSWORD: root
       AUTO_MIGRATE: 'true'
       DISABLE_RATE_LIMITS: 'true'
       DISABLE_BREACHED_PASSWORD_CHECK: 'true'
@@ -55,3 +56,5 @@ jobs:
       - run: npm install --ignore-scripts
       - name: Run production lifecycle integration matrix
         run: npm run test:integration
+      - name: Run disposable database backup and restore drill
+        run: bash scripts/backup-restore-drill.sh
