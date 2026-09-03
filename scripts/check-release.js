@@ -21,7 +21,7 @@ function check(condition,message){if(!condition)throw new Error(message);}
 check(html.includes('href="dist/pamet.min.css?v=1200"')&&html.includes('src="dist/pamet.min.js?v=1200"'),'Edge-rewritten production bundles must remain loaded.');
 check(!html.includes('src="js/app.js')&&!html.includes('href="css/phase2.css'),'Source runtime layers must not load directly.');
 check(/\[hidden\]\s*\{[^}]*display:\s*none\s*!important/.test(css),'Native hidden state must remain reliable.');
-check(main.includes("const PAMET_VERSION = '1.5.0'")&&main.includes('insights-v1.5.0.js')&&main.includes('experience-v1.5.0.js')&&main.includes('icons-v1.5.0.js')&&main.includes('version-update.js'),'1.5.0 runtime modules must be explicit.');
+check(main.includes("const PAMET_VERSION = '1.5.1'")&&main.includes('insights-v1.5.0.js')&&main.includes('experience-v1.5.0.js')&&main.includes('icons-v1.5.0.js')&&main.includes('version-update.js'),'1.5.1 runtime modules must be explicit.');
 check(secureServer.includes('appointmentReminderJob')&&secureServer.includes("/api/jobs/appointment-reminders"),'Production edge must retain appointment reminders.');
 check(reminders.includes("appointment.reminder_sent")&&reminders.includes("pamet-appointment-${appointment.id}")&&reminders.includes('GET_LOCK'),'Appointment reminders must remain deduplicated, tagged, and serialized.');
 check(workflow.includes("cron: '*/15 * * * *'")&&workflow.includes('/api/jobs/appointment-reminders'),'Appointment reminder scheduler must remain active every 15 minutes.');
@@ -34,8 +34,8 @@ check(phase2.includes('Currently viewing')&&phase2.includes('Invitation sent')&&
 check(store.includes('return [];')&&!store.includes('function sampleEntries'),'New users must start with no sample health entries.');
 check(app.includes('Entry saved — Pamet is updating your patterns.'),'Saved-entry feedback must use Pamet language.');
 check(manifest.display==='standalone','PWA manifest must remain standalone.');
-check(main.includes("navigator.serviceWorker.register('sw.js?v=1500')"),'Service worker registration must reference 1.5.0.');
-check(worker.includes('pamet-shell-v150-0')&&worker.includes('dist/pamet.min.js?v=150'),'1.5.0 service worker must use fresh shell assets.');
+check(main.includes("navigator.serviceWorker.register('sw.js?v=1510')"),'Service worker registration must reference 1.5.0.');
+check(worker.includes('pamet-shell-v151-0')&&worker.includes('dist/pamet.min.js?v=151'),'1.5.1 service worker must use fresh shell assets.');
 check(worker.includes('u.pathname.startsWith("/api/")||u.pathname.startsWith("/share")'),'Sensitive API/share routes must bypass cache.');
 check(updateFlow.includes('New Pamet version available')&&!updateFlow.includes('localStorage.clear'),'Safe update flow must remain visible and non-destructive.');
-console.log('Pamet v1.5.0 release checks passed.');
+console.log('Pamet v1.5.1 release checks passed.');
