@@ -2,6 +2,7 @@
 import "./auth.js";
 import "./store.js";
 import "./app.js";
+import "./account-switch-v1.2.0.js";
 import "./v1.0.3.js";
 import "./feedback-v1.0.3.js";
 import "./phase2.js";
