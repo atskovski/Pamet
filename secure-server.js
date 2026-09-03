@@ -3,7 +3,7 @@
 // Backwards-compatible deployment entry point. The reviewed Express application
 // remains in server.js; this edge wrapper adds account-keyed login throttling,
 // breached-password screening, legacy identity migration, release normalization,
-// server-rendered release identity, and CSP enforcement.
+// server-rendered release identity, CSP enforcement, and release-safe scheduled jobs.
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
@@ -13,6 +13,7 @@ const inner = require('./server');
 const { distributedRateLimit } = require('./lib/rate-limit');
 const { breachedPassword } = require('./lib/security');
 const { legacyUpgrade, logoutAll } = require('./lib/edge-account');
+const { appointmentReminderJob } = require('./lib/appointment-reminders');
 
 const app = express();
 const port = Number(process.env.PORT || 8080);
@@ -98,17 +99,12 @@ async function rejectBreachedPassword(req, res, next) {
 app.use('/api/auth', authSecurityHeaders);
 app.get('/api/health', authSecurityHeaders, (req, res) => res.json({ ok: true, version: VERSION }));
 
-// The inner application owns dependency checks, while the production edge owns
-// release identity. Normalize readiness responses so health, readiness, logs,
-// and the Settings version can never disagree about the deployed release.
 app.use('/api/ready', (req, res, next) => {
   const sendJson = res.json.bind(res);
   res.json = (body) => sendJson(body && typeof body === 'object' ? { ...body, version: VERSION } : body);
   next();
 });
 
-// Serve the primary application document at the edge so release identity and
-// asset cache-busters always come from package.json rather than a stale bundle.
 app.get(['/', '/index.html'], authSecurityHeaders, renderVersionedIndex);
 
 app.post('/api/auth/login', parseAuthJson, accountLoginLimit);
@@ -116,6 +112,7 @@ app.post('/api/auth/register', parseAuthJson, passwordSafetyLimit, rejectBreache
 app.post('/api/auth/password', parseAuthJson, passwordSafetyLimit, rejectBreachedPassword);
 app.post('/api/auth/legacy-upgrade', parseAuthJson, passwordSafetyLimit, rejectBreachedPassword, legacyUpgrade);
 app.post('/api/auth/logout-all', parseAuthJson, logoutAll);
+app.post('/api/jobs/appointment-reminders', json, appointmentReminderJob);
 app.use(inner);
 app.use((error, req, res, next) => {
   if (res.headersSent) return next(error);

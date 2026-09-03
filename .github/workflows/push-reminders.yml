@@ -1,21 +1,30 @@
-name: Pamet closed-app reminder delivery
+name: Pamet reminder delivery
 
 on:
   schedule:
-    - cron: '7 * * * *'
+    - cron: '*/15 * * * *'
   workflow_dispatch:
+
+concurrency:
+  group: pamet-reminder-delivery
+  cancel-in-progress: false
 
 jobs:
   deliver:
     runs-on: ubuntu-latest
     steps:
-      - name: Deliver reminders due in each user's timezone
+      - name: Deliver appointment and daily reminders
         env:
           PAMET_APP_URL: ${{ secrets.PAMET_APP_URL }}
           PAMET_CRON_SECRET: ${{ secrets.PAMET_CRON_SECRET }}
         run: |
           test -n "$PAMET_APP_URL"
           test -n "$PAMET_CRON_SECRET"
+          curl --fail-with-body --silent --show-error \
+            -X POST "$PAMET_APP_URL/api/jobs/appointment-reminders" \
+            -H "Authorization: Bearer $PAMET_CRON_SECRET" \
+            -H "Content-Type: application/json" \
+            --data '{}'
           curl --fail-with-body --silent --show-error \
             -X POST "$PAMET_APP_URL/api/jobs/push-reminders" \
             -H "Authorization: Bearer $PAMET_CRON_SECRET" \
