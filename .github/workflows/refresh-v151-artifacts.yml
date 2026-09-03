@@ -26,7 +26,7 @@ jobs:
           from pathlib import Path
           replacements={
             'scripts/check-version.js': [("const expected='1.5.0'","const expected='1.5.1'"),("sw.js?v=1500","sw.js?v=1510"),("pamet-shell-v150-0","pamet-shell-v151-0")],
-            'scripts/check-release.js': [("const PAMET_VERSION = '1.5.0'","const PAMET_VERSION = '1.5.1'"),("Pamet v1.5.0","Pamet v1.5.1"),("sw.js?v=1500","sw.js?v=1510"),("pamet-shell-v150-0","pamet-shell-v151-0")],
+            'scripts/check-release.js': [("const PAMET_VERSION = '1.5.0'","const PAMET_VERSION = '1.5.1'"),("Pamet v1.5.0","Pamet v1.5.1"),("sw.js?v=1500","sw.js?v=1510"),("pamet-shell-v150-0","pamet-shell-v151-0"),("dist/pamet.min.js?v=150","dist/pamet.min.js?v=151")],
             'scripts/check-production.js': [("sw.js?v=1500","sw.js?v=1510"),("Pamet 1.5.0","Pamet 1.5.1")],
             'sw.js': [("Pamet v1.5.0","Pamet v1.5.1"),("pamet-shell-v150-0","pamet-shell-v151-0"),("?v=150","?v=151")],
             'README.md': [("**Version 1.5.0**","**Version 1.5.1**")],
