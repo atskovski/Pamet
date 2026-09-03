@@ -10,6 +10,7 @@ import "./account-switch-v1.2.0.js";
 import "./v1.0.3.js";
 import "./feedback-v1.0.3.js";
 import "./phase2.js";
+import "./care-workspace-v1.3.0.js";
 import "./notifications-v1.1.0.js";
 import "./e2e-sync-v1.1.0.js";
 import "./qr-v1.2.0.js";
