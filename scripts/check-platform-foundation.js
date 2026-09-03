@@ -1,0 +1,16 @@
+'use strict';
+const fs = require('fs');
+const check = (condition, message) => { if (!condition) throw new Error(message); };
+const secure = fs.readFileSync('secure-server.js', 'utf8');
+const main = fs.readFileSync('js/main.js', 'utf8');
+const platform = fs.readFileSync('lib/platform-foundation.js', 'utf8');
+const routes = fs.readFileSync('routes/platform.js', 'utf8');
+const browser = fs.readFileSync('js/platform-foundation.js', 'utf8');
+const env = fs.readFileSync('.env.example', 'utf8');
+check(secure.includes('createPlatformFoundation') && secure.includes('createPlatformRouter') && secure.includes('platform.middleware'), 'Secure edge must retain the platform foundation.');
+check(main.includes('./platform-foundation.js'), 'Browser bundle must retain the platform foundation.');
+check(platform.includes('X-Request-ID') && platform.includes('recentFailures') && platform.includes('METRICS_SECRET'), 'Platform telemetry must retain request IDs, bounded failures, and protected runtime access.');
+check(routes.includes('/api/platform/capabilities') && routes.includes('/api/ops/runtime'), 'Platform capability and protected ops routes must remain wired.');
+check(browser.includes('exportAllData') && browser.includes('notificationHealth') && browser.includes('requestIdleCallback'), 'Browser foundation must retain local export, notification health, and deferred startup work.');
+check(env.includes('PAMET_FEATURE_ENCRYPTED_JOURNAL=false') && env.includes('PAMET_FEATURE_DATA_EXPORT=true'), 'Future feature gates must default safely.');
+console.log('Pamet roadmap platform foundation checks passed.');
