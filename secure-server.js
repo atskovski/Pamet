@@ -63,6 +63,15 @@ app.use((req, res, next) => {
 app.use(platform.middleware);
 app.use(createPlatformRouter(platform));
 
+/* Private Admin bridge. It does not exist in production mode and never exposes METRICS_SECRET to browser code. */
+if (process.env.PAMET_ADMIN_MODE === 'true' && process.env.PAMET_ADMIN_DB_ACK === 'separate') {
+  app.get('/api/admin/ops/runtime', (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('X-Pamet-Environment', 'admin-test');
+    res.json(platform.runtimeSnapshot());
+  });
+}
+
 app.use('/api', (req, res, next) => {
   const authorization = String(req.headers.authorization || '');
   const bearer = authorization.startsWith('Bearer ') ? authorization.slice(7).trim() : '';
