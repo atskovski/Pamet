@@ -9,8 +9,8 @@ jobs:
   quality:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 20
       - run: npm install --ignore-scripts
@@ -51,8 +51,8 @@ jobs:
       DISABLE_BREACHED_PASSWORD_CHECK: 'true'
       IDENTITY_ENCRYPTION_KEY: '1111111111111111111111111111111111111111111111111111111111111111'
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 20
       - run: npm install --ignore-scripts
