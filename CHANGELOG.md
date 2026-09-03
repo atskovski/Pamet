@@ -2,20 +2,41 @@
 
 This file is the repository system of record for completed product and engineering changes. It is not rendered inside the Pamet application.
 
+## [1.2.3] — 2026-09-03
+
+### Safe application updates
+
+- Added an in-app **New Pamet version available** prompt.
+- Added **Update now** and **Later** actions.
+- Checks `/api/health` with cache bypass on load, when the app returns to the foreground, and every 15 minutes while open.
+- Separates the **actually loaded client version** from the **server version**, preventing a stale client from falsely displaying itself as current.
+- Keeps the Settings footer tied to the loaded application release until the refresh completes.
+- `Update now` requests a service-worker update/activation and reloads with a release-specific cache-buster.
+- The update path does not clear localStorage, IndexedDB, journal entries, or other local Pamet data.
+- Added service-worker `SKIP_WAITING` message support.
+- Refreshed the PWA shell to `pamet-shell-v123-0` and service-worker registration to `sw.js?v=1230`.
+- Added release assertions that fail if update detection is removed, local data clearing is introduced, or stale clients disguise their loaded version.
+- Added responsive update-prompt styling with safe-area/mobile handling.
+
+---
+
 ## [1.2.2] — 2026-09-03
 
 ### Deployment and release identity hardening
 
 - Bumped the stabilization patch release to **1.2.2**.
-- Made the production edge serve `index.html` and inject the canonical release into the Settings footer.
-- Added `X-Pamet-Version` to production responses so live release identity can be verified without relying on client JavaScript.
-- Normalized `/api/health`, `/api/ready`, rendered Settings version, and browser runtime around the same `package.json` release.
-- Rewrites the production JS/CSS cache-buster query strings from the current release before serving the application document.
-- Moved `esbuild` into production dependencies so Wasmer can rebuild the browser bundle even if deployment installation omits devDependencies.
-- Refreshed the PWA shell to `pamet-shell-v122-0` and forces network refresh for current shell assets before falling back to cache.
-- Updated the browser fallback and service-worker registration to 1.2.2.
-- Strengthened release checks so CI fails if server-rendered version identity, production build tooling, or 1.2.2 PWA cache/version signals drift.
-- Continued the real-environment acceptance work and kept Wasmer deployment synchronization as an explicit production gate until direct live evidence matches GitHub `main`.
+- Made `package.json` the canonical production version source.
+- Made the production edge serve the primary app document and inject the release into the Settings footer.
+- Added `X-Pamet-Version` for direct deployed-release verification.
+- Normalized `/api/health` and `/api/ready` to the same canonical release.
+- Added production asset cache-buster rewriting.
+- Refreshed the PWA shell to `pamet-shell-v122-0`.
+- Added live environment acceptance checks for deployed release identity and readiness.
+- Diagnosed Wasmer Anybuild failures from production logs: `npm install` ran before source copy, so a `postinstall: npm run build` hook could not resolve `js/main.js`.
+- Removed the invalid `postinstall` build and kept `npm start` deterministic as `node secure-server.js`.
+- Retained the explicit `npm run build` command for Wasmer's post-source-copy build phase.
+- Regenerated `package-lock.json` and committed production bundles after stale artifact drift was found.
+- Restored successful Wasmer promotion from GitHub `main` and verified production `/api/health`, `/api/ready`, and the Settings footer on 1.2.2.
 
 ---
 
@@ -23,46 +44,33 @@ This file is the repository system of record for completed product and engineeri
 
 ### Stability and release discipline
 
-- Standardized the current release as **1.2.1** under semantic versioning.
-- Declared `package.json` the canonical application release version.
-- Added `VERSIONING.md` rules for patch, minor, and major releases plus a required release checklist.
-- Added `scripts/check-version.js` so CI fails when important release surfaces drift.
-- Reworked the README into a concise current-state / future-state / production-gates dashboard.
+- Standardized semantic versioning and made `package.json` canonical.
+- Added release-version consistency checks to CI.
+- Reworked README/release-status documentation around current state vs future state.
 
 ### Security and account UX
 
-- Centered Account Security and password-recovery dialogs in the viewport with safe-area and short-screen handling.
+- Centered Account Security and password-recovery dialogs.
 - Fixed the asynchronous password-reset form-reference crash.
-- Preserved a visible Create Account path and added a deliberate **Use a different account** flow after logout.
-- Added safe account switching that warns before clearing the previous account's browser-local journal so data is not mixed between accounts.
-- Replaced the legacy-device sign-in dead end with a one-time authorized migration into normal server password/session authentication.
-- Added **Sign out everywhere** to revoke all server sessions.
-- Rebuilt Account Security around device review/revocation, retry/error states, MFA setup/disable, and fresh authenticator setup on each attempt.
-- Added a local-only authenticator QR encoder. The TOTP secret is not sent to a third-party QR service.
-- MFA activation remains confirmation-gated until a valid authenticator code is verified.
+- Added safe account switching and local-data isolation between accounts.
+- Replaced the legacy-device sign-in dead end with authorized migration to normal account sessions.
+- Added **Sign out everywhere**.
+- Rebuilt Account Security around devices, sessions, MFA setup/disable, and retry/error states.
+- Added a local-only authenticator QR encoder.
 
 ### Mobile and PWA hardening
 
-- Added safe-area, narrow-phone, landscape, input-zoom, touch-target, settings, report, QR, and modal responsive safeguards.
-- Made product-feedback confirmation prominent and auto-dismiss after five seconds.
-- Moved service-worker registration into the external production JavaScript bundle so CSP hardening cannot silently prevent PWA registration.
-- Refreshed the PWA shell cache to `pamet-shell-v121-0`.
-- Explicitly excludes API and sensitive share paths from service-worker caching.
+- Added safe-area, narrow-phone, landscape, input-zoom, touch-target, settings, report, QR, and modal safeguards.
+- Made feedback confirmation prominent and auto-dismiss after five seconds.
+- Moved service-worker registration into the external production bundle for CSP compatibility.
+- Explicitly excluded API and sensitive sharing routes from service-worker caching.
 
-### Production assurance improvements
+### Production assurance
 
-- Extended CI with MySQL-backed legacy-upgrade and all-session-revocation integration coverage.
-- Retained the full account/Stripe/device/sharing/encrypted-sync production lifecycle matrix.
-- Added a disposable MySQL logical backup → separate-schema restore drill and integrity assertions.
-- Added/updated provider restore, staging acceptance, legacy-auth sunset, and external-assurance runbooks.
-- Added a tested, disabled-by-default local journal encryption implementation framework using per-profile DEKs, AES-256-GCM, a user-held recovery root key, HKDF-derived wrapping keys, staged migration, decrypt/compare verification, and explicit review gates.
-- Kept local journal encryption disabled until independent review and migration/recovery/key-loss testing are complete.
-- Kept production-provider restore evidence, legacy bearer retirement, final CSP style cleanup, penetration testing, accessibility review, privacy/legal review, and production acceptance exercises open rather than self-certifying them.
-
-### Release verification
-
-- Quality checks, UI/security regression tests, local-crypto tests, dependency audit, MySQL integration lifecycle tests, and the backup/restore drill are release gates.
-- `/api/health` on the production edge reports the canonical 1.2.1 release identity.
+- Extended MySQL integration coverage for legacy upgrades and all-session revocation.
+- Retained account/Stripe/device/sharing/encrypted-sync lifecycle coverage.
+- Added a disposable MySQL backup → isolated restore drill.
+- Added a disabled-by-default local journal encryption implementation framework with explicit review/recovery gates.
 
 ---
 
@@ -70,96 +78,42 @@ This file is the repository system of record for completed product and engineeri
 
 ### Production architecture
 
-- Consolidated production assets into one minified JavaScript bundle and one minified stylesheet.
-- Added cross-device email/password authentication with server-side scrypt verifiers, expiring/revocable HttpOnly sessions, same-origin mutation protections, and a legacy-device migration boundary.
-- Added one-time emailed password reset, optional authenticator verification, server password replacement, session revocation, and automatic sign-in after successful reset.
-- Added server-authoritative entitlements and persisted Ultra appointment records.
-- Added explicit sharing/session deletion and Stripe customer cleanup.
-- Added Wasmer-compatible idempotent MySQL migration handling and locked automatic production migration off after controlled migration.
-- Added an atomic MySQL distributed-rate-limit fallback for deployments without Redis/Valkey.
-- Added direct Grafana Cloud OTLP/HTTP logs and request metrics with readiness integration.
-- Added production VAPID, metrics, cron, identity-encryption, and Ultra deployment configuration boundaries outside Git.
-
-### Product refinements
-
-- Refined Ultra around appointment preparation, Advanced Visit Briefs, multi-profile care, sharing, encrypted sync, and advanced care coordination.
-- Renamed “Longitudinal analysis” to **Health history over time**.
-- Rebuilt shipped icon sizes from the approved folded-leaf mark.
-- Restored account creation after account deletion and improved authentication guidance.
+- Consolidated the browser runtime into one minified JavaScript bundle and one minified stylesheet.
+- Added cross-device email/password authentication with revocable HttpOnly sessions.
+- Added password-reset email flow and account recovery.
+- Added server-authoritative Stripe entitlements and persisted Ultra appointment records.
+- Added explicit sharing/session deletion and Stripe cleanup.
+- Added Wasmer/MySQL migration hardening and distributed-rate-limit fallback.
+- Added Grafana Cloud OTLP logs/metrics and readiness integration.
 
 ---
 
-## [1.1.0] — 2026-09-02
+## [1.1.0]
 
-- Added Redis/Valkey-backed distributed rate limiting with production fail-closed behavior and readiness reporting.
-- Added closed-app Web Push subscriptions, VAPID delivery, timezone-aware reminder scheduling, click-through handling, and a delivery workflow.
-- Added per-device credentials, remote device revocation, single-use email recovery, and authenticator-app MFA with encrypted TOTP seeds.
-- Added Ultra browser-encrypted sync using AES-256-GCM, HKDF profile separation, optimistic revisions, and opaque server storage.
-- Added centralized structured logs, metrics, and alert integration frameworks.
-- Added external penetration, accessibility, and privacy/legal review scopes without claiming self-certification.
-
----
-
-## [1.0.5] — 2026-09-02
-
-- Rebuilt dark mode around neutral charcoal-teal surfaces, accessible text/control contrast, sky-blue information accents, and sage affirmative actions.
-- Replaced app icon sizes with the approved folded-leaf mark.
-- Added rotating Pamet landscape scenes to authentication and improved in-form login guidance.
-- Added consent-based reminders and new-observation notifications with browser plus in-app fallback.
-- Refined Ultra positioning to **Advanced care coordination** and simplified settings/plan presentation.
+- Added remote device revocation and Account Security.
+- Added authenticator MFA.
+- Added Web Push infrastructure.
+- Added encrypted Ultra sync infrastructure.
+- Added distributed rate limiting and observability frameworks.
 
 ---
 
-## [1.0.4] — 2026-09-01
+## [1.0.5]
 
-### Production hardening
+- Dark-mode and authentication-brand refinements.
 
-- Normalized the release line and adopted semantic versioning.
-- Consolidated the runtime into one Express application and removed duplicate billing/webhook implementations.
-- Replaced repository-root static serving with explicit app-asset routes.
-- Added CSP, HSTS, frame/content-type/referrer/permissions protections, request IDs, no-store API responses, strict JSON/body limits, safe production errors, and endpoint rate limits.
-- Added dependency readiness, live Stripe price-catalog validation, checkout/customer idempotency, webhook event idempotency, and entitlement verification.
-- Removed browser self-upgrade paths; paid entitlements became backend-authoritative.
-- Made backend account deletion authoritative before local erasure.
-- Upgraded local password derivation and automatic legacy-hash migration.
-- Expanded CSV/JSON portability and protected CSV output against formula execution.
-- Removed the inaccurate end-to-end-encryption setting.
-- Added strict share validation, revocation auditing, production assertions, HTTP security smoke tests, service-worker release isolation, and database cold-start hardening.
+## [1.0.4]
 
-### Advanced capabilities
+- Production runtime consolidation, entitlement hardening, and advanced plan capabilities.
 
-- Added expanded starter logging choices and custom-field removal controls.
-- Added Ultra multi-profile management with separate local entry storage.
-- Added Ultra appointment preparation, 90-day comparisons with data-strength context, Advanced Visit Briefs, and advanced sharing metadata.
-- Added complete authenticated backend account deletion with Stripe subscription/customer cleanup.
+## [1.0.3]
 
----
+- Truthful empty state with no sample health history.
+- Pamet pattern language instead of AI-first labels.
+- Privacy-minimal product feedback.
 
-## [1.0.3] — 2026-09-01
+## [1.0.2]
 
-- Added truthful first-use Home state with no sample entries, fake metrics, observations, streaks, or recent-entry content.
-- Added **No symptoms today** and required a valid symptom state, mood, and activity before save.
-- Added privacy-minimal **Help improve Pamet** feedback storage without account or health fields.
-- Replaced AI-first labels with **Pamet pattern detection**, **Pamet observations**, and **Pamet pattern summary**.
-- Added complete PWA icon/manifest/offline-shell foundations.
-
----
-
-## [1.0.2] — 2026-08-31
-
-- Added the **Warm Clinical Minimalism** visual system and approved Pamet mark.
-- Added the Free — Track / Pro — Understand / Ultra — Prepare product hierarchy.
-- Added persistent sign-in, deliberate account creation, What Changed?, caregiver access, Primary Care Access, weekly digest email, registration email, sharing links, and Stripe subscription foundations.
-- Removed visible Custom symptoms from Settings, removed “No ads” as a paid benefit, and confirmed no advertising on any plan.
-- Removed unsupported end-to-end-encryption claims and live caregiver/emergency/live-doctor-portal expectations.
-
----
-
-## [1.0.1]
-
-- Initial browser-based account gate.
-- Home, Log, Calendar, Patterns, Report, and Settings foundations.
-- Local symptom/mood/activity/medication custom fields.
-- Local pattern detection and metrics.
-- CSV/JSON export and print-to-PDF report.
-- PWA manifest/service-worker foundations.
+- Warm Clinical Minimalism brand system.
+- Pro/Ultra plan architecture.
+- Sharing, email, Stripe, persistent-login, and custom-symptom-management foundations.
