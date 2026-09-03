@@ -15,8 +15,9 @@ const changelog = fs.readFileSync('CHANGELOG.md', 'utf8');
 function check(condition, message) { if (!condition) throw new Error(message); }
 
 check(version === expected, `package.json must identify Pamet ${expected}.`);
-check(pkg.scripts.start.startsWith('npm run build &&'), 'Production startup must rebuild the browser bundle before serving traffic.');
-check(Boolean(pkg.dependencies && pkg.dependencies.esbuild), 'Production startup build requires esbuild to be a production dependency.');
+check(pkg.scripts.start === 'node secure-server.js', 'Production startup must launch the server immediately without rebuilding the deployment filesystem.');
+check(pkg.scripts.postinstall === 'npm run build', 'Production install must build the browser bundle before runtime startup.');
+check(Boolean(pkg.dependencies && pkg.dependencies.esbuild), 'Production deployment build requires esbuild to be a production dependency.');
 check(secureServer.includes("require('./package.json').version"), 'The production edge must source its version from package.json.');
 check(secureServer.includes("app.get('/api/health'") && secureServer.includes('version: VERSION'), 'The production health endpoint must report the canonical release version.');
 check(secureServer.includes("app.use('/api/ready'") && secureServer.includes('{ ...body, version: VERSION }'), 'The readiness endpoint must be normalized to the canonical release version.');
