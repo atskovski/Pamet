@@ -3,8 +3,10 @@
 // Backwards-compatible deployment entry point. The reviewed Express application
 // remains in server.js; this edge wrapper adds account-keyed login throttling,
 // breached-password screening, legacy identity migration, release normalization,
-// and CSP enforcement.
+// server-rendered release identity, and CSP enforcement.
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 const express = require('express');
 const VERSION = require('./package.json').version;
 const inner = require('./server');
@@ -18,6 +20,7 @@ const nodeEnv = process.env.NODE_ENV || 'development';
 const json = express.json({ limit: '256kb', strict: true });
 const sha = (value) => crypto.createHash('sha256').update(String(value || '')).digest('hex');
 const normalizedEmail = (req) => String(req.body && req.body.email || '').trim().toLowerCase().slice(0, 254);
+const releaseAssetVersion = VERSION.replace(/\D/g, '') || 'current';
 
 function hardenedCsp(value) {
   return String(value || '')
@@ -28,6 +31,7 @@ function hardenedCsp(value) {
 app.use((req, res, next) => {
   const setHeader = res.setHeader.bind(res);
   res.setHeader = (name, value) => setHeader(name, String(name).toLowerCase() === 'content-security-policy' ? hardenedCsp(value) : value);
+  res.setHeader('X-Pamet-Version', VERSION);
   next();
 });
 
@@ -56,6 +60,17 @@ function parseAuthJson(req, res, next) {
   json(req, res, (error) => {
     if (error) return res.status(400).json({ error: 'Invalid JSON request.' });
     next();
+  });
+}
+
+function renderVersionedIndex(req, res, next) {
+  fs.readFile(path.join(__dirname, 'index.html'), 'utf8', (error, source) => {
+    if (error) return next(error);
+    const versioned = source
+      .replace(/Pamet v\d+\.\d+\.\d+ · Your health history, finally useful\./g, `Pamet v${VERSION} · Your health history, finally useful.`)
+      .replace(/dist\/pamet\.min\.css\?v=\d+/g, `dist/pamet.min.css?v=${releaseAssetVersion}`)
+      .replace(/dist\/pamet\.min\.js\?v=\d+/g, `dist/pamet.min.js?v=${releaseAssetVersion}`);
+    res.type('html').set('Cache-Control', 'no-store').send(versioned);
   });
 }
 
@@ -91,6 +106,10 @@ app.use('/api/ready', (req, res, next) => {
   res.json = (body) => sendJson(body && typeof body === 'object' ? { ...body, version: VERSION } : body);
   next();
 });
+
+// Serve the primary application document at the edge so release identity and
+// asset cache-busters always come from package.json rather than a stale bundle.
+app.get(['/', '/index.html'], authSecurityHeaders, renderVersionedIndex);
 
 app.post('/api/auth/login', parseAuthJson, accountLoginLimit);
 app.post('/api/auth/register', parseAuthJson, passwordSafetyLimit, rejectBreachedPassword);

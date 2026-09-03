@@ -1,5 +1,5 @@
-/* Pamet v1.2.1 production entrypoint. Keep dependency order explicit here. */
-const PAMET_VERSION = '1.2.1';
+/* Pamet v1.2.2 production entrypoint. Keep dependency order explicit here. */
+const PAMET_VERSION = '1.2.2';
 window.PametVersion = PAMET_VERSION;
 
 import "./auth.js";
@@ -23,9 +23,6 @@ function applyReleaseVersion(version) {
   });
 }
 
-// Render immediately from the bundled release, then reconcile against the
-// deployed server's canonical package version. This prevents a stale browser
-// bundle from displaying an older version after a backend deployment.
 applyReleaseVersion(PAMET_VERSION);
 fetch('/api/health', { credentials: 'same-origin', cache: 'no-store' })
   .then((response) => response.ok ? response.json() : null)
@@ -34,10 +31,8 @@ fetch('/api/health', { credentials: 'same-origin', cache: 'no-store' })
   })
   .catch(() => { /* the bundled version remains the offline fallback */ });
 
-// Keep PWA registration in the external bundle so the production CSP can block
-// executable inline scripts without silently disabling install/offline updates.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js?v=1210').catch(() => { /* core local-first use remains available without SW registration */ });
+    navigator.serviceWorker.register('sw.js?v=1220').catch(() => { /* core local-first use remains available without SW registration */ });
   });
 }
