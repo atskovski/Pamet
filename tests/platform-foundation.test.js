@@ -6,13 +6,16 @@ const { EventEmitter } = require('events');
 const { createPlatformFoundation, safePath } = require('../lib/platform-foundation');
 const { clampBatchSize } = require('../lib/batch');
 
-test('platform capabilities keep external gates explicit and data export available', () => {
+test('platform capabilities keep external gates explicit and implemented device features available', () => {
   const platform = createPlatformFoundation({ version: '1.6.1', nodeEnv: 'test', env: { METRICS_SECRET: 'secret' } });
   const snapshot = platform.capabilitySnapshot();
   assert.equal(snapshot.version, '1.6.1');
   assert.equal(snapshot.features.dataExport.enabled, true);
+  assert.equal(snapshot.features.pushHealth.enabled, true);
   assert.equal(snapshot.features.encryptedJournal.enabled, false);
   assert.equal(snapshot.externalReviewRequired.penetrationTest, 'external-required');
+  assert.equal(snapshot.externalReviewRequired.cryptographicReview, 'external-required');
+  assert.equal(snapshot.externalReviewRequired.alertDeliveryAcceptance, 'operator-required');
 });
 
 test('ops runtime authorization requires the metrics secret', () => {

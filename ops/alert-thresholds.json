@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "service": "pamet",
+  "purpose": "Source-controlled alert policy to implement in Grafana or another operator-owned alert destination. Thresholds are recommendations until production acceptance evidence is recorded.",
+  "alerts": [
+    {
+      "id": "http-5xx-rate",
+      "severity": "critical",
+      "signal": "pamet.http.requests",
+      "condition": "5xx responses >= 5 in 5 minutes OR >= 5% of API requests for 5 minutes",
+      "for": "5m",
+      "runbook": "Check /api/ready, protected /api/ops/runtime, recent failures, database/Redis/Stripe provider status and latest deployment."
+    },
+    {
+      "id": "http-latency",
+      "severity": "warning",
+      "signal": "pamet.http.request.duration",
+      "condition": "p95 API latency >= 1500ms for 10 minutes",
+      "for": "10m",
+      "runbook": "Inspect protected runtime route counters, database latency, external provider calls and cold-start frequency."
+    },
+    {
+      "id": "stripe-webhook-failure",
+      "severity": "critical",
+      "signal": "structured log event / webhook HTTP failures",
+      "condition": "Any repeated Stripe webhook processing failure or signature/configuration failure across 3 events in 10 minutes",
+      "for": "0m",
+      "runbook": "Verify Stripe endpoint configuration/signing secret, inspect idempotency event table, and do not manually grant paid entitlements."
+    },
+    {
+      "id": "scheduled-job-failure",
+      "severity": "warning",
+      "signal": "job.* / push.delivery_failed / digest.email_failed / billing.reconcile_failed",
+      "condition": "Scheduled job fails entirely OR failure rate >= 10% for one completed run",
+      "for": "0m",
+      "runbook": "Check provider configuration, bounded job result counters and the appropriate Resend/Web Push/Stripe provider status."
+    },
+    {
+      "id": "readiness-failure",
+      "severity": "critical",
+      "signal": "/api/ready",
+      "condition": "launchReady=false or HTTP failure for 3 consecutive probes",
+      "for": "3 probes",
+      "runbook": "Do not promote a new release. Inspect readiness checks and provider configuration before retrying."
+    }
+  ]
+}

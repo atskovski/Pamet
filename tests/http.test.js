@@ -34,6 +34,16 @@ test('unconfigured billing fails closed', async () => {
   assert.equal(body.ultraEnabled, false);
 });
 
+test('operational runtime and synthetic alert endpoints are not public', async () => {
+  const runtime = await fetch(`${base}/api/ops/runtime`);
+  assert.equal(runtime.status, 401);
+  assert.deepEqual(await runtime.json(), { error: 'Unauthorized.' });
+
+  const alert = await fetch(`${base}/api/ops/test-alert`, { method: 'POST' });
+  assert.equal(alert.status, 401);
+  assert.deepEqual(await alert.json(), { error: 'Unauthorized.' });
+});
+
 test('unknown and malformed requests do not leak internals', async () => {
   const missing = await fetch(`${base}/api/not-a-route`);
   assert.equal(missing.status, 404);
