@@ -50,7 +50,8 @@ transformFile('app.js', (input) => {
 transformFile('v1.0.3.js', (input) => input
   .replace('class="btn btn-primary btn-block" style="margin-top:14px"', 'class="btn btn-primary btn-block payment-confirm"')
   .replace('class="data-btn" data-close style="margin-top:8px"', 'class="data-btn modal-secondary-action" data-close')
-  .replace('id="includeNotes" type="checkbox" style="width:auto;margin-right:6px"', 'id="includeNotes" type="checkbox" class="share-notes-checkbox"'));
+  .replace('id="includeNotes" type="checkbox" style="width:auto;margin-right:6px"', 'id="includeNotes" type="checkbox" class="share-notes-checkbox"')
+  .replace("p.style.cssText='margin:18px 0 0;padding-top:12px;border-top:1px solid var(--border-color);font-size:11px;color:var(--text-tertiary)';", ''));
 
 transformFile('insights-v1.5.0.js', (input) => replaceRequired(input,
   '<div class="mini-meter" aria-hidden="true"><span style="width:${value}%"></span></div>',
