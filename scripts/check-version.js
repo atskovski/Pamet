@@ -1,6 +1,7 @@
 'use strict';
 const fs=require('fs');
 const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
+const lock=JSON.parse(fs.readFileSync('package-lock.json','utf8'));
 const expected=pkg.version;
 const secureServer=fs.readFileSync('secure-server.js','utf8');
 const server=fs.readFileSync('server.js','utf8');
@@ -18,13 +19,18 @@ const goLive=fs.readFileSync('GO_LIVE_STATUS.md','utf8');
 const mobileContract=JSON.parse(fs.readFileSync('contracts/mobile-api.json','utf8'));
 function check(condition,message){if(!condition)throw new Error(message);}
 check(/^\d+\.\d+\.\d+$/.test(expected),'package.json version must be semantic x.y.z.');
+check(lock.version===expected&&lock.packages?.['']?.version===expected,'package-lock.json release version must match package.json.');
 check(pkg.scripts.start==='node secure-server.js','Production startup must launch the secure server.');
 check(!pkg.scripts.postinstall,'Do not build from postinstall.');
 check(pkg.scripts.build==='node scripts/build-production.js','Production build must run the strict-CSP production bundler.');
 check(secureServer.includes("require('./package.json').version"),'Production edge must source version from package.json.');
+check(server.includes("const VERSION = require('./package.json').version;"),'Application server must source canonical release identity from package.json.');
+check(!server.includes("const VERSION = '1.2.0';"),'Application server must not retain the historical 1.2.0 release constant.');
 check(secureServer.includes("app.get('/api/health'")&&secureServer.includes('version: VERSION'),'Health must report canonical version.');
 check(!secureServer.includes("style-src 'self' 'unsafe-inline' https://fonts.googleapis.com"),'Emitted production style CSP must not permit unsafe-inline.');
+check(!server.includes("script-src 'self' 'unsafe-inline'")&&!server.includes("style-src 'self' 'unsafe-inline'"),'Inner application CSP must not reintroduce unsafe-inline.');
 check(secureServer.includes("style-src 'self' https://fonts.googleapis.com; style-src-attr 'none'"),'Production CSP must use external/self styles and block inline style attributes.');
+check(server.includes("script-src-attr 'none'")&&server.includes("style-src-attr 'none'"),'Inner application CSP must block inline script/style attributes.');
 check(main.includes(`const PAMET_VERSION = '${expected}'`)&&main.includes('window.PametLoadedVersion = PAMET_VERSION'),'Browser runtime must expose loaded version.');
 check(main.includes("navigator.serviceWorker.register('sw.js?v=1600')"),'PWA registration must match Pamet 1.6.0 release assets.');
 const requiredModules=['performance.js','icons.js','account-switch.js','billing-sharing.js','feedback.js','care-planning.js','care-workspace.js','notifications.js','encrypted-sync.js','qr-sharing.js','security.js','login-experience.js','product-clarity.js','insights.js','experience.js','care-ux.js','legal-support.js','version-update.js'];
@@ -50,5 +56,4 @@ check(goLive.includes(`Pamet ${expected}`)&&goLive.includes('CI automation')&&go
 check(mobileContract.backendVersion===expected,'Mobile API contract backendVersion must match package.json version.');
 check(mobileContract.minimumBackendVersion==='1.5.1','Pamet 1.6.0 must preserve the compatible native minimum backend baseline.');
 check(Number(mobileContract.contractVersion)>=2,'Mobile API contract must use supported contractVersion.');
-check(server.includes("const VERSION = '1.2.0';"),'Legacy inner runtime version remains a documented next server-refactor slice; secure-server/package identity is authoritative for this release.');
 console.log(`Pamet ${expected} version, CSP, module ownership, and governance checks passed.`);
