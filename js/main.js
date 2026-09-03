@@ -7,5 +7,6 @@ import "./feedback-v1.0.3.js";
 import "./phase2.js";
 import "./notifications-v1.1.0.js";
 import "./e2e-sync-v1.1.0.js";
+import "./qr-v1.2.0.js";
 import "./security-v1.1.0.js";
 import "./release-v1.1.0.js";
