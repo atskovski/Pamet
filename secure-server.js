@@ -14,10 +14,13 @@ const { distributedRateLimit } = require('./lib/rate-limit');
 const { breachedPassword } = require('./lib/security');
 const { legacyUpgrade, logoutAll } = require('./lib/edge-account');
 const { appointmentReminderJob } = require('./lib/appointment-reminders');
+const { createPlatformFoundation } = require('./lib/platform-foundation');
+const { createPlatformRouter } = require('./routes/platform');
 
 const app = express();
 const port = Number(process.env.PORT || 8080);
 const nodeEnv = process.env.NODE_ENV || 'development';
+const platform = createPlatformFoundation({ version: VERSION, nodeEnv });
 const json = express.json({ limit: '256kb', strict: true });
 const sha = (value) => crypto.createHash('sha256').update(String(value || '')).digest('hex');
 const normalizedEmail = (req) => String(req.body && req.body.email || '').trim().toLowerCase().slice(0, 254);
@@ -54,11 +57,15 @@ app.use((req, res, next) => {
   next();
 });
 
+/* Edge request context adds request IDs and bounded in-memory runtime telemetry without storing health data. */
+app.use(platform.middleware);
+app.use(createPlatformRouter(platform));
+
 app.use('/api', (req, res, next) => {
   const authorization = String(req.headers.authorization || '');
   const bearer = authorization.startsWith('Bearer ') ? authorization.slice(7).trim() : '';
   if (/^[a-f0-9]{64}$/i.test(bearer) && !req.path.startsWith('/jobs/') && req.path !== '/metrics') {
-    console.log(JSON.stringify({ service: 'pamet', version: VERSION, event: 'identity.legacy_bearer_observed', method: req.method, path: req.path, at: new Date().toISOString() }));
+    console.log(JSON.stringify({ service: 'pamet', version: VERSION, event: 'identity.legacy_bearer_observed', method: req.method, path: req.path, requestId: req.pametRequestId || null, at: new Date().toISOString() }));
   }
   next();
 });
@@ -134,8 +141,9 @@ app.post('/api/jobs/appointment-reminders', json, appointmentReminderJob);
 app.use(inner);
 app.use((error, req, res, next) => {
   if (res.headersSent) return next(error);
-  console.error('secure_edge_error', { path: req.path, message: error.message });
   const status = Number(error.status || 500);
+  platform.recordFailure({ requestId: req.pametRequestId || null, method: req.method, path: platform.safePath(req), status, message: error.message });
+  console.error('secure_edge_error', { requestId: req.pametRequestId || null, path: req.path, message: error.message });
   res.status(status).json({ error: status === 503 ? 'Service temporarily unavailable.' : 'Request failed.' });
 });
 
