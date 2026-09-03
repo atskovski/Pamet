@@ -2,6 +2,23 @@
 
 This file is the repository system of record for completed product and engineering changes. It is not rendered inside the Pamet application.
 
+## [1.2.2] — 2026-09-03
+
+### Deployment and release identity hardening
+
+- Bumped the stabilization patch release to **1.2.2**.
+- Made the production edge serve `index.html` and inject the canonical release into the Settings footer.
+- Added `X-Pamet-Version` to production responses so live release identity can be verified without relying on client JavaScript.
+- Normalized `/api/health`, `/api/ready`, rendered Settings version, and browser runtime around the same `package.json` release.
+- Rewrites the production JS/CSS cache-buster query strings from the current release before serving the application document.
+- Moved `esbuild` into production dependencies so Wasmer can rebuild the browser bundle even if deployment installation omits devDependencies.
+- Refreshed the PWA shell to `pamet-shell-v122-0` and forces network refresh for current shell assets before falling back to cache.
+- Updated the browser fallback and service-worker registration to 1.2.2.
+- Strengthened release checks so CI fails if server-rendered version identity, production build tooling, or 1.2.2 PWA cache/version signals drift.
+- Continued the real-environment acceptance work and kept Wasmer deployment synchronization as an explicit production gate until direct live evidence matches GitHub `main`.
+
+---
+
 ## [1.2.1] — 2026-09-03
 
 ### Stability and release discipline
