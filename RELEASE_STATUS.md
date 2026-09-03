@@ -1,6 +1,6 @@
 # Pamet 1.2.1 Release Status
 
-This is the concise engineering status ledger for the current stabilization release. `README.md` is the product/current-state overview; `CHANGELOG.md` is historical; `PRODUCTION_READINESS.md` contains detailed launch gates.
+This is the concise engineering status ledger for the current stabilization release. `README.md` is the product/current-state overview; `CHANGELOG.md` is historical; `PRODUCTION_READINESS.md` contains detailed launch gates; `REAL_ENVIRONMENT_ACCEPTANCE.md` records deployed-environment evidence.
 
 ## Release candidate
 
@@ -25,24 +25,43 @@ This is the concise engineering status ledger for the current stabilization rele
 - Disabled/review-gated local journal encryption framework and recovery tests.
 - Semantic versioning rules and automated version consistency gate.
 - README current-state/future-state dashboard and updated changelog.
+- Production startup now rebuilds the browser bundle before serving traffic.
+- Settings version reconciles against the deployed `/api/health` version rather than trusting a stale bundle alone.
+- `/api/ready` version is normalized at the production edge to the canonical package release.
+- Repeatable `npm run check:live` real-environment acceptance checker.
 
 ## Required before merge to main
 
+- `npm run build` green.
 - `npm run check` green.
 - Unit/security/UI/local-crypto tests green.
 - Dependency audit green at configured severity.
 - MySQL integration lifecycle green.
 - Backup/restore CI drill green.
 
+## Current deployed-environment evidence
+
+Collected against `https://pamet.wasmer.app` before this fix branch:
+
+- `/api/health`: **PASS**, HTTP 200, version **1.2.1**.
+- `/api/ready` dependency health: **PASS**, HTTP 200, `launchReady=true`; database, distributed rate limit, push, email, log drain, metrics, alerts, and identity encryption healthy.
+- Billing/email public configuration: **PASS**, Pro enabled, Ultra enabled, email enabled.
+- Unauthenticated entitlements/device/sharing APIs: **PASS**, fail closed with HTTP 401.
+- Health/readiness version agreement: **FAIL before fix** (`1.2.1` vs `1.2.0`).
+- Settings footer version: **FAIL before fix**, rendered `Pamet v1.1.0` because the deployed browser bundle was stale.
+
+The two version failures above are the specific deployment defects addressed by the current branch and must be re-tested after deployment.
+
 ## Required after deployment before calling the deployed release stable
 
-- `/api/health` returns 200 with version `1.2.1`.
-- `/api/ready` returns 200 and required dependencies are healthy.
+- `npm run check:live` passes against production.
+- `/api/health` and `/api/ready` both return 200 and the same current version.
+- Settings footer renders `Pamet v1.2.1 · Your health history, finally useful.`.
 - Login/create-account/password-reset smoke test.
 - Account Security/MFA/device-management smoke test.
 - Log/save/history/export smoke test on desktop and phone-width viewport.
 - PWA/service-worker registration smoke test with no CSP-blocked registration dependency.
-- Controlled billing and push exercises as described in `STAGING_ACCEPTANCE.md` when using those production capabilities.
+- Controlled billing, sharing, push, observability, and alert exercises documented in `REAL_ENVIRONMENT_ACCEPTANCE.md`.
 
 ## External / production-only gates still open
 
