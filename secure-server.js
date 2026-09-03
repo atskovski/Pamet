@@ -51,6 +51,10 @@ const passwordSafetyLimit = distributedRateLimit({
 async function rejectBreachedPassword(req, res, next) {
   const password = String(req.body && (req.body.newPassword || req.body.password) || '');
   if (password.length < 12) return next();
+  // CI must be deterministic and must never depend on an external breach corpus.
+  // This escape hatch is intentionally restricted to NODE_ENV=test so it cannot
+  // silently disable production password screening through configuration drift.
+  if (nodeEnv === 'test' && process.env.DISABLE_BREACHED_PASSWORD_CHECK === 'true') return next();
   try {
     if (await breachedPassword(password)) return res.status(400).json({ error: 'Choose a password that has not appeared in known data breaches.' });
   } catch (error) {
