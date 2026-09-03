@@ -14,6 +14,8 @@ jobs:
         with:
           node-version: 20
       - run: npm install --ignore-scripts
+      - name: Build production bundles
+        run: npm run build
       - run: npm run check
       - run: npm test
       - run: npm audit --omit=dev --audit-level=high
@@ -54,6 +56,8 @@ jobs:
         with:
           node-version: 20
       - run: npm install --ignore-scripts
+      - name: Build production bundles
+        run: npm run build
       - name: Run production lifecycle integration matrix
         run: npm run test:integration
       - name: Run disposable database backup and restore drill
