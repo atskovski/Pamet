@@ -1,5 +1,5 @@
-/* Pamet v1.6.0 production entrypoint. Keep dependency order explicit here. */
-const PAMET_VERSION = '1.6.0';
+/* Pamet v1.6.1 production entrypoint. Keep dependency order explicit here. */
+const PAMET_VERSION = '1.6.1';
 window.PametVersion = PAMET_VERSION;
 window.PametLoadedVersion = PAMET_VERSION;
 
@@ -67,9 +67,9 @@ window.addEventListener('load', () => {
   else setTimeout(checkServerRelease, 250);
 }, { once: true });
 
-/* Register from the external bundle so production CSP can keep inline scripts disabled. */
+/* The query token is intentionally release-specific so browsers fetch the new worker after every patch. */
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js?v=1600').catch(() => {});
+    navigator.serviceWorker.register('sw.js?v=1610').catch(() => {});
   });
 }
