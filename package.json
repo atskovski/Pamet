@@ -5,7 +5,8 @@
   "description": "Pamet — privacy-first personal health journal",
   "main": "secure-server.js",
   "scripts": {
-    "start": "npm run build && node secure-server.js",
+    "start": "node secure-server.js",
+    "postinstall": "npm run build",
     "build": "esbuild js/main.js --bundle --minify --outfile=dist/pamet.min.js && esbuild css/main.css --bundle --minify --external:../assets/* --outfile=dist/pamet.min.css",
     "check:live": "node scripts/check-live-environment.js",
     "test": "node --test tests/http.test.js tests/security.test.js tests/ui-hardening.test.js tests/crypto-ui.test.js tests/integration.test.js tests/edge-account.integration.test.js",
