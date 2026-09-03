@@ -4,31 +4,49 @@ This document turns the production-readiness review into an executable engineeri
 
 ## Already present in the current runtime
 
-The external review was performed against an earlier snapshot. The current runtime already has Grafana OTLP log/metric export, optional structured log drain, protected metrics, alert webhook support, Redis/MySQL distributed rate limiting, strict CSP, Stripe webhook verification, Web Push, appointment reminders, sharing invites, and local JSON data export primitives. The roadmap work should extend these systems rather than add overlapping vendors by default.
+The external review was performed against an earlier snapshot. The current runtime already has Grafana OTLP log/metric export, optional structured log drain, protected metrics, alert webhook support, Redis/MySQL distributed rate limiting, strict CSP, Stripe webhook verification, Web Push, appointment reminders, sharing invites, and local JSON data export primitives. The roadmap work extends these systems rather than adding overlapping vendors by default.
 
-## Foundation delivered in this branch
+## Delivered engineering framework
 
-### Operations / v1.7 groundwork
+### Operations / v1.7 foundation
 
 - Every `/api/` request receives an `X-Request-ID` when one is not already supplied.
-- API runtime telemetry keeps bounded in-memory route/status/latency counters and the 25 most recent 5xx failures.
+- API runtime telemetry keeps bounded in-memory route/status/latency counters and the 25 most recent 5xx failure summaries.
 - Paths are normalized so UUIDs and share tokens do not enter runtime telemetry.
-- Actor correlation uses a short one-way hash of the request credential; raw bearer/session material is never logged by the new layer.
+- Actor correlation uses a short one-way hash of request credentials; raw bearer/session material is never stored by the new layer.
 - `GET /api/ops/runtime` exposes the bounded runtime snapshot only when `METRICS_SECRET` is supplied as a Bearer token or `X-Metrics-Key`.
+- `POST /api/ops/test-alert` provides a protected, non-health-data synthetic alert-delivery test for the operator acceptance exercise.
 - `GET /api/platform/capabilities` exposes non-secret feature/readiness capability state to clients.
-- A cursor-style bounded batch helper is available for converting unbounded background queries without a big-bang server rewrite.
+- Push reminders, weekly digests, and Stripe reconciliation are intercepted at the secure edge and processed in bounded cursor batches instead of unbounded full-table scans.
+- UUID/string cursors are supported by `lib/batch.js`; batch size and the temporary scheduled-job pool are bounded by configuration.
+- `ops/alert-thresholds.json` defines desired 5xx, latency, webhook/job and readiness alert policy for Grafana/operator configuration.
 
-### Browser / product groundwork
+### Browser / product foundation
 
 - `window.PametPlatform` loads capability state only after first-load idle time.
 - `window.PametPlatform.exportPayload()` reuses the existing `PametStore.exportAllData()` contract.
-- `window.PametPlatform.downloadJson()` provides a browser-side full JSON export foundation without uploading health data to a new service.
-- Notification health can report unsupported, denied, granted-but-unsubscribed, and healthy states so a later UI can tell users when closed-app reminders are degraded.
-- Future features are represented as explicit server capability gates instead of partially exposing unfinished UI.
+- Settings now exposes **Download my Pamet data**, generating the JSON export locally in the browser rather than uploading health data to a new export service.
+- Settings now exposes notification health for unsupported, denied, granted-but-unsubscribed, and healthy states, with repair/recheck guidance.
+- Data export and notification health default on because their implementations and release checks exist.
+- Future clinical/collaboration/encryption capabilities remain represented by explicit server feature gates instead of partially exposed unfinished UI.
 
-### Future feature gates
+### CI / release enforcement
 
-The following default to **off** until the implementation and acceptance criteria are complete:
+- Production CI blocks on build, static/release checks, the unit/security suite, integration lifecycle tests, the disposable backup/restore drill, and `npm audit --omit=dev --audit-level=high`.
+- The operations job runners have focused tests for bounded UUID batching, digest batching, Stripe reconciliation, and trial entitlement behavior.
+- The platform Settings experience has a strict-CSP/release guard.
+- Protected operational endpoints are covered by HTTP regression tests.
+
+## Capability state
+
+Implemented and safe to expose now:
+
+- local JSON data export;
+- notification-health status/recovery guidance;
+- protected runtime telemetry for operators;
+- bounded scheduled jobs.
+
+The following remain **off** until their implementation and acceptance criteria are complete:
 
 - pattern confidence / change summaries;
 - per-visit Visit Brief selection;
@@ -36,67 +54,66 @@ The following default to **off** until the implementation and acceptance criteri
 - care circles;
 - appointment-prep auto-drafts;
 - encrypted working journal;
-- notification-health UI;
-- ops dashboard UI.
+- public/user-facing ops dashboard (operations stay Admin-only).
 
-Local data export defaults to on because the store already supports an export contract.
+## Next code work Pamet can deliver
 
-## What can be delivered entirely in code
+### Maintainability / v1.8 window
 
-### v1.7 — operations
+1. Extract shared database ownership so `server.js`, scheduled jobs, account edge helpers, and reminders use one canonical pool/service implementation.
+2. Extract auth/account routes into a dedicated router while preserving exact route contracts and integration tests.
+3. Extract billing/webhook/reconciliation logic into a dedicated billing service/router.
+4. Continue replacing remaining ad hoc `console.*` messages with the structured operational-event/log transport.
+5. Apply any code findings returned by the independent security/accessibility reviews.
 
-1. Continue replacing ad hoc `console.*` calls with the existing operational-event/OTLP system.
-2. Convert push/digest scans to bounded batches using `lib/batch.js`.
-3. Add alert thresholds in Grafana for 5xx rate, webhook failures, latency, and background-job failures.
-4. Surface `/api/ops/runtime` in the private Admin control center, never in the production user UI.
-5. Add CI assertions that the new platform layer remains wired and protected.
-
-### v1.8 — maintainability and remediation window
-
-1. Extract auth and billing route modules incrementally from `server.js`; preserve route behavior and tests on every extraction.
-2. Add accessibility fixes found by the outside audit.
-3. Add security fixes found by the penetration test.
-4. Keep encrypted-journal support disabled until independent crypto/security review accepts the design.
-
-### v1.9 — journal depth
+### Journal depth / v1.9
 
 1. Add observation confidence scoring with minimum evidence rules and explicit uncertainty language.
 2. Add a “what changed” summary that describes observations, never diagnosis or causation.
 3. Add per-visit selection state for Visit Brief generation and printable output.
 4. Add quick-log chips using the user’s recent frequent symptoms; retain the full log form as the source of truth.
 
-### v2.0 — care collaboration
+### Care collaboration / v2.0
 
 1. Extend the existing sharing-invite model into permission-scoped care-circle membership rather than creating a parallel sharing system.
 2. Build appointment prep from recent user-selected observations and discussion prompts.
-3. Add encrypted working-journal storage only after review, with migration, recovery, key-rotation, and data-loss tests.
+3. Add encrypted working-journal storage only after independent cryptographic review, with migration, recovery, key-rotation, and data-loss tests.
 
-### v2.1+ — platform maturity
+### Platform maturity / v2.1+
 
-1. Expose JSON export in Settings and add a generated PDF package where appropriate.
-2. Surface notification health and re-enable guidance without nagging the user.
-3. Build an Admin-only ops dashboard on top of protected runtime, Grafana/OTLP, readiness, and job status data.
+1. Add a clinician-friendly PDF export package in addition to JSON portability.
+2. Surface delivery/subscription degradation trends in Admin.
+3. Build the Admin-only operations dashboard over the protected runtime/readiness endpoints and existing Grafana/OTLP signals.
 
-## What code cannot legitimately close
+## Parked external/operator gates
 
-These are launch-evidence gates, not coding tasks:
+These are tracked as open GitHub issues so they cannot disappear into prose:
 
-| Gate | Why code cannot close it | Resolution |
+| Gate | Tracking issue | Why code cannot close it |
 | --- | --- | --- |
-| Independent penetration test | Self-authored tests are not independent adversarial assurance. | Hire a qualified tester, define production/staging scope, remediate findings, retain report and retest evidence. |
-| WCAG 2.2 AA review | Automated checks cannot certify real keyboard/screen-reader workflows. | Commission an accessibility audit including manual keyboard, VoiceOver/NVDA, zoom/reflow and contrast testing; remediate and retest. |
-| Legal/compliance determination | Applicability depends on business model, contracts, geography and actual data flows. | Obtain scoped health/privacy counsel covering HIPAA applicability, state consumer-health laws, privacy policy/consent, retention/deletion and app-store disclosures. |
-| Stripe live-mode dry run evidence | Correct code is not evidence of live provider configuration. | Execute a controlled live subscription → webhook → plan entitlement → cancellation → failed-payment/recovery test and retain timestamps/event IDs with secrets redacted. |
-| Production backup/restore RPO/RTO | CI disposable databases do not measure provider recovery. | Take a real provider backup, restore to an isolated database, time detection/restore/validation, and record actual RPO/RTO. |
-| Grafana/alert operational acceptance | Alert code cannot prove notifications reach the right human. | Trigger synthetic 5xx/webhook/job alerts, confirm delivery/escalation, document owner and response runbook. |
+| Independent penetration test | #43 | Self-authored tests are not independent adversarial assurance. |
+| Independent WCAG 2.2 AA review | #44 | Automated checks cannot certify real keyboard/screen-reader workflows. |
+| Legal/privacy/HIPAA determination | #45 | Applicability depends on business model, contracts, geography and actual data flows. |
+| Stripe production live-mode lifecycle acceptance | #46 | Correct code is not evidence of the live provider/account configuration. |
+| Provider backup/restore with measured RPO/RTO | #47 | CI disposable databases do not measure provider recovery. |
+| Independent cryptographic review | #48 | Encryption design cannot independently approve itself. |
+| Production alert delivery/escalation acceptance | #49 | Sending code cannot prove the intended human received and acknowledged the alert. |
 
-## Recommended sequence
+## Resolution sequence for parked gates
 
-1. Merge this foundation only after CI is green.
-2. Configure no new production feature flags except `PAMET_FEATURE_DATA_EXPORT=true` until each feature is finished.
-3. Run the Stripe and backup/restore evidence exercises.
-4. Complete external penetration, accessibility and legal reviews.
-5. Remediate those findings in the stable v1.8 window.
-6. Turn on v1.9/v2.0 product capabilities one at a time behind acceptance tests rather than releasing the entire roadmap at once.
+1. **Stripe #46:** execute controlled production subscription → webhook → entitlement → portal/cancellation → failure/recovery validation and retain redacted event evidence.
+2. **Backup #47:** restore a real provider backup into an isolated database/deployment and record measured RPO/RTO.
+3. **Alerting #49:** configure the source-controlled alert thresholds, call the protected synthetic alert endpoint, and record receipt/acknowledgement/escalation evidence.
+4. **Pen test #43:** provide staging/test accounts, architecture and route scope to an independent tester; remediate and retest Critical/High findings.
+5. **Accessibility #44:** commission manual keyboard/screen-reader/zoom/reflow/contrast review; remediate and retest.
+6. **Legal/privacy #45:** provide counsel the data-flow/subprocessor/retention/sharing/mobile-distribution package and implement required policy/contract/product changes.
+7. **Crypto #48:** keep working-journal encryption disabled until an independent review accepts the key lifecycle, migration, recovery and threat model.
 
-This keeps Pamet’s production safety posture intact while giving the frontend, backend, Admin mirror and future mobile clients a common capability contract to build against.
+## Release discipline
+
+- Do not enable future health/collaboration/encryption flags just because the code compiles.
+- Enable one capability at a time only after its frontend/backend acceptance matrix passes.
+- Keep code evidence, production/provider evidence, and independent evidence separate in `GO_LIVE_STATUS.md`.
+- Never put metrics secrets, webhook tokens, Stripe keys, database credentials, recovery secrets, or health data into tickets, screenshots, committed evidence, or operator dashboards.
+
+This keeps Pamet’s production safety posture intact while giving the web app, Admin mirror and future iOS/Android clients a common capability contract to build against.
