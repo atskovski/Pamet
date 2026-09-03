@@ -66,6 +66,12 @@ app.post('/api/auth/login', parseAuthJson, accountLoginLimit);
 app.post('/api/auth/register', parseAuthJson, passwordSafetyLimit, rejectBreachedPassword);
 app.post('/api/auth/password', parseAuthJson, passwordSafetyLimit, rejectBreachedPassword);
 app.use(inner);
+app.use((error, req, res, next) => {
+  if (res.headersSent) return next(error);
+  console.error('secure_edge_error', { path: req.path, message: error.message });
+  const status = Number(error.status || 500);
+  res.status(status).json({ error: status === 503 ? 'Service temporarily unavailable.' : 'Request failed.' });
+});
 
 if (require.main === module) app.listen(port, () => console.log(`Pamet v1.2.0 listening securely on ${port}`));
 
