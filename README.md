@@ -1,6 +1,6 @@
 # Pamet — Personal Health Journal
 
-**Version 1.2.1 — stability, security UX, mobile hardening, and production-readiness improvements**  
+**Version 1.2.2 — deployment synchronization, server-authoritative release identity, and production acceptance hardening**  
 **Your health history, finally useful.**
 
 Pamet is a privacy-first personal health journal for recording symptoms, medications, lifestyle factors, and user-provided health information over time, then organizing those observations into a clearer history for personal review and healthcare conversations.
@@ -13,7 +13,7 @@ Pamet is not an emergency-monitoring system, clinical decision tool, diagnostic 
 
 ## Current State
 
-Pamet is an actively developed web/PWA product deployed from GitHub `main` to Wasmer. Version 1.2.1 is a stabilization release focused on reducing production risk rather than adding a large new feature set.
+Pamet is an actively developed web/PWA product deployed from GitHub `main` to Wasmer. Version 1.2.2 is a patch stabilization release focused on making the deployed release identity and production asset path deterministic, while continuing the 1.2.1 security/mobile hardening work.
 
 ### Working today
 
@@ -33,6 +33,20 @@ Pamet is an actively developed web/PWA product deployed from GitHub `main` to Wa
 - Grafana Cloud OTLP logs/metrics integration and dependency readiness checks.
 - Responsive phone layouts, safe-area handling, centered security/recovery dialogs, and narrow-screen safeguards.
 - CI-backed MySQL lifecycle tests and disposable backup → isolated-restore verification.
+- Real-environment acceptance checklist and non-destructive deployed health/readiness/billing/auth-boundary checks.
+
+### Release 1.2.2 stabilization work
+
+- Makes `package.json` 1.2.2 the canonical release source.
+- Serves the primary application document through the production edge and injects the current release into the Settings footer.
+- Adds the `X-Pamet-Version` response header for direct deployed-release verification.
+- Normalizes `/api/health` and `/api/ready` to the same release version.
+- Rewrites JS/CSS cache-buster query strings from the current release at the server edge.
+- Refreshes the PWA service-worker cache generation to 1.2.2 and requests fresh network content for shell updates.
+- Keeps production startup rebuilding the browser bundles before serving traffic.
+- Moves `esbuild` into production dependencies so a deployment that omits devDependencies can still complete the startup build.
+- Preserves the 1.2.1 runtime reconciliation logic so the browser footer also confirms the server-reported version.
+- Strengthens release checks to fail if the server-rendered footer/version path or production build dependency is removed.
 
 ### Release 1.2.1 stabilization work
 
@@ -40,7 +54,6 @@ Pamet is an actively developed web/PWA product deployed from GitHub `main` to Wa
 - Made the production edge report the canonical `package.json` version through `/api/health`.
 - Added browser-level release identity for visible version text and feedback metadata.
 - Moved PWA service-worker registration into the external production bundle so CSP hardening does not silently disable registration.
-- Refreshed the service-worker cache generation for 1.2.1 and explicitly keeps API/share data out of offline caching.
 - Added a release-version consistency gate to CI.
 - Preserved the 1.2.0 security hardening work: centered Account Security, safe account switching, legacy-login migration, logout-all, local authenticator QR generation, feedback confirmation, and mobile scaling.
 
@@ -133,7 +146,9 @@ This repository remains the backend/API source of truth. The versioned mobile AP
 
 A release must pass the following before merge:
 
+- production bundle build
 - JavaScript syntax/static release checks
+- server-rendered release/version assertions
 - security/production assertions
 - unit/security tests
 - UI-hardening regression tests
@@ -144,36 +159,38 @@ A release must pass the following before merge:
 - device/session/sharing/sync integration assertions
 - disposable MySQL backup → separate-schema restore drill
 
-Version 1.2.1 additionally requires release-version consistency checks.
+Version 1.2.2 additionally requires proof that the production edge owns the rendered Settings version and that startup build tooling is available from production dependencies.
 
 ### What CI proves
 
-CI can prove the repository behaves correctly in a controlled test environment, including account lifecycle, session revocation, legacy migration, Stripe event handling, sharing revocation, encrypted-sync conflicts, and database backup/restore integrity.
+CI can prove the repository behaves correctly in a controlled test environment, including account lifecycle, session revocation, legacy migration, Stripe event handling, sharing revocation, encrypted-sync conflicts, database backup/restore integrity, release version consistency, and successful production bundle generation.
 
 ### What CI cannot prove
 
 CI does **not** replace production-provider or independent external evidence. The following remain separate launch/assurance gates:
 
-1. Real Wasmer/database-provider backup or point-in-time restore with measured RPO/RTO.
-2. Controlled deployed Stripe acceptance, including checkout, trial, cancellation, failed-payment, and reconciliation paths.
-3. Deployed MFA/recovery/device-revocation exercises.
-4. Deployed Web Push permission/delivery/closed-app testing.
-5. Deployed encrypted-sync/key-recovery/lost-key exercises.
-6. Independent penetration testing.
-7. Independent WCAG 2.2 AA / screen-reader / keyboard / reflow review.
-8. Privacy/legal review of the deployed data flows, health-related claims, sharing model, and vendor agreements.
-9. Final review and staged migration before local journal encryption is enabled.
-10. Removal of the remaining legacy bearer compatibility path after measured migration/sunset criteria are satisfied.
-11. Removal of CSP `style-src 'unsafe-inline'` after remaining inline style usage is migrated.
+1. Confirm Wasmer deploys the current GitHub `main` head and re-run the live acceptance checker after every release.
+2. Real Wasmer/database-provider backup or point-in-time restore with measured RPO/RTO.
+3. Controlled deployed Stripe acceptance, including checkout, trial, cancellation, failed-payment, and reconciliation paths.
+4. Deployed MFA/recovery/device-revocation exercises.
+5. Deployed Web Push permission/delivery/closed-app testing.
+6. Deployed encrypted-sync/key-recovery/lost-key exercises.
+7. Independent penetration testing.
+8. Independent WCAG 2.2 AA / screen-reader / keyboard / reflow review.
+9. Privacy/legal review of the deployed data flows, health-related claims, sharing model, and vendor agreements.
+10. Final review and staged migration before local journal encryption is enabled.
+11. Removal of the remaining legacy bearer compatibility path after measured migration/sunset criteria are satisfied.
+12. Removal of CSP `style-src 'unsafe-inline'` after remaining inline style usage is migrated.
 
-These gates are tracked in `PRODUCTION_READINESS.md`, `STAGING_ACCEPTANCE.md`, `ASSURANCE_HANDOFF.md`, `BACKUP_RESTORE_RUNBOOK.md`, and `LEGACY_AUTH_SUNSET.md`.
+These gates are tracked in `PRODUCTION_READINESS.md`, `STAGING_ACCEPTANCE.md`, `REAL_ENVIRONMENT_ACCEPTANCE.md`, `ASSURANCE_HANDOFF.md`, `BACKUP_RESTORE_RUNBOOK.md`, and `LEGACY_AUTH_SUNSET.md`.
 
 ---
 
 ## Current State vs Future State
 
-| Area | Current state — 1.2.1 | Future state |
+| Area | Current state — 1.2.2 | Future state |
 | --- | --- | --- |
+| Release identity | Server-authoritative health/readiness/footer path with cache-busted assets | Provider deploy automation that proves the exact `main` revision promoted |
 | Accounts | Email/password, HttpOnly sessions, reset/change, device/session controls | Complete legacy bearer retirement |
 | MFA | Authenticator-app setup with local QR and recovery flow | Independent deployed recovery review |
 | Local journal | Local-first browser storage | Reviewed encrypted-at-rest local journal migration |
@@ -194,7 +211,7 @@ These gates are tracked in `PRODUCTION_READINESS.md`, `STAGING_ACCEPTANCE.md`, `
 
 Pamet uses semantic versioning.
 
-- `1.2.0 → 1.2.1`: compatible fixes, reliability, security hardening, styling, tests, and small workflow changes.
+- `1.2.1 → 1.2.2`: compatible deployment/release fixes, cache/version hardening, and production acceptance improvements.
 - `1.2.x → 1.3.0`: substantial backward-compatible capability.
 - `1.x → 2.0.0`: intentionally breaking migration.
 
@@ -212,6 +229,7 @@ Historical filenames such as `security-v1.1.0.js` identify the feature layer whe
 | `VERSIONING.md` | Semantic versioning and release discipline |
 | `PRODUCTION_READINESS.md` | Production configuration and unresolved launch gates |
 | `STAGING_ACCEPTANCE.md` | Real-environment acceptance exercises |
+| `REAL_ENVIRONMENT_ACCEPTANCE.md` | Non-destructive live checks plus post-deploy evidence ledger |
 | `BACKUP_RESTORE_RUNBOOK.md` | Provider recovery exercise and evidence requirements |
 | `ASSURANCE_HANDOFF.md` | External security/privacy/accessibility review package |
 | `SECURITY.md` | Security architecture and reporting expectations |
@@ -245,6 +263,7 @@ The detailed release record is maintained in `CHANGELOG.md`.
 
 Major milestones:
 
+- **1.2.2** — deployment/version synchronization hardening, server-rendered Settings release identity, production build dependency fix, live acceptance expansion.
 - **1.2.1** — stability, version discipline, PWA/CSP compatibility, current-state documentation.
 - **1.2.0** — cross-device account architecture, password reset, production deployment architecture, Grafana telemetry, Wasmer/MySQL hardening.
 - **1.1.0** — device revocation, MFA, Web Push, encrypted Ultra sync, distributed rate limiting, observability frameworks.
