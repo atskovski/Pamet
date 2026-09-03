@@ -6,6 +6,7 @@ const html = fs.readFileSync('index.html', 'utf8');
 const store = fs.readFileSync('js/store.js', 'utf8');
 const app = fs.readFileSync('js/app.js', 'utf8');
 const phase2 = fs.readFileSync('js/phase2.js', 'utf8');
+const careWorkspace = fs.readFileSync('js/care-workspace-v1.3.0.js', 'utf8');
 const theme = fs.readFileSync('css/phase2.css', 'utf8');
 const releaseTheme = fs.readFileSync('css/release-v1.1.0.css', 'utf8');
 const server = fs.readFileSync('server.js', 'utf8');
@@ -23,6 +24,7 @@ check(phase2.includes('Currently viewing') && phase2.includes('Fresh profile · 
 check(phase2.includes('Existing profiles and health data are preserved') && phase2.includes('S.switchProfile(profile.id)'), 'Creating a profile must preserve existing data and explicitly switch only after approval.');
 check(phase2.includes('Appointment workspace') && phase2.includes('Discussion guide') && phase2.includes('Local planning mode') && phase2.includes('Save draft on this device'), 'Appointment preparation must remain usable when server authentication needs reconnection.');
 check(phase2.includes('Visit type') && phase2.includes('Reminder timing') && phase2.includes('Patterns to mention') && phase2.includes('Before the visit'), 'Appointment workspace must provide visit planning, reminder timing, patterns, and a discussion checklist.');
+check(careWorkspace.includes("#appointmentForm .pamet-form-actions .btn-primary:not([type])") && careWorkspace.includes("button.type = 'submit'"), 'Appointment form submit semantics must be explicit after dynamic rendering.');
 check(phase2.includes('Invitation sent') && phase2.includes('Sending a secure invitation') && phase2.includes('emailEnabled'), 'Advanced sharing must keep send progress and confirmation inside the sharing window and verify email configuration.');
 check(phase2.includes('/api/sharing/invites') && server.includes("app.post('/api/sharing/invites'") && server.includes('await mail(recipient'), 'Advanced sharing must use the real backend email invitation route.');
 check(server.includes("app.get('/api/appointments', auth") && server.includes("app.post('/api/appointments'") && server.includes("app.delete('/api/appointments/:id'"), 'Appointment workspace must use authenticated Ultra backend persistence.');
