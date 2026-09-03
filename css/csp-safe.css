@@ -1,0 +1,58 @@
+/* Pamet 1.6.0 — presentation utilities that replace browser inline styles. */
+[hidden] { display: none !important; }
+body.modal-open { overflow: hidden; }
+
+.metric-icon.tone-warm { --icon-bg: var(--warm-light); }
+.metric-icon.tone-sage { --icon-bg: var(--sage-light); }
+.metric-badge.tone-terracotta { --badge: var(--warm-terracotta); }
+.metric-badge.tone-sage { --badge: var(--sage-green); }
+.metric-badge.tone-rose { --badge: var(--rose-pink); }
+.legend-swatch.tone-warm { background: var(--warm-light); }
+.legend-swatch.tone-rose { background: var(--rose-light); }
+.legend-swatch.tone-sage { background: var(--sage-light); }
+
+.tier-badge.tier-beast { --tier-color: #7C5CBF; }
+.tier-badge.tier-platinum { --tier-color: #A7B8C8; }
+.tier-badge.tier-gold { --tier-color: #D9A441; }
+.tier-badge.tier-silver { --tier-color: #8C9AA3; }
+.tier-badge.tier-bronze { --tier-color: #B8784E; }
+
+.tone-rose { --pamet-tone: var(--rose-pink); color: var(--rose-pink); }
+.tone-amber { --pamet-tone: var(--warm-amber); color: var(--warm-amber); }
+.tone-sage { --pamet-tone: var(--sage-green); color: var(--sage-green); }
+.tone-neutral { --pamet-tone: var(--ink-tertiary); color: var(--ink-tertiary); }
+.pattern-icon.tone-rose { background: color-mix(in srgb, var(--rose-pink) 16%, transparent); }
+.pattern-icon.tone-amber { background: color-mix(in srgb, var(--warm-amber) 16%, transparent); }
+.pattern-icon.tone-sage { background: color-mix(in srgb, var(--sage-green) 16%, transparent); }
+.pattern-icon.tone-neutral { background: color-mix(in srgb, var(--ink-tertiary) 16%, transparent); }
+.conf-value { font-weight: 800; }
+
+.conf-progress,
+.mini-meter progress,
+.pattern-readiness-meter progress {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+}
+.conf-progress::-webkit-progress-bar,
+.mini-meter progress::-webkit-progress-bar,
+.pattern-readiness-meter progress::-webkit-progress-bar { background: transparent; }
+.conf-progress::-webkit-progress-value { background: var(--pamet-tone, var(--ink-tertiary)); border-radius: inherit; }
+.conf-progress::-moz-progress-bar { background: var(--pamet-tone, var(--ink-tertiary)); border-radius: inherit; }
+.mini-meter progress::-webkit-progress-value,
+.pattern-readiness-meter progress::-webkit-progress-value { background: currentColor; border-radius: inherit; }
+.mini-meter progress::-moz-progress-bar,
+.pattern-readiness-meter progress::-moz-progress-bar { background: currentColor; border-radius: inherit; }
+
+.payment-confirm { margin-top: 14px; }
+.modal-secondary-action { margin-top: 8px; }
+.share-notes-checkbox { width: auto; margin-right: 6px; }
+.report-value { text-align: right; font-weight: 600; }
+
+.login-scene-sunrise { --login-scene: url("../assets/login-sunrise.jpg"); }
+.login-scene-morning { --login-scene: url("../assets/login-morning.jpg"); }
+.login-scene-dusk { --login-scene: url("../assets/login-dusk.jpg"); }
