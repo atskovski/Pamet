@@ -1,6 +1,6 @@
 # Pamet — Personal Health Journal
 
-**Version 1.5.0**  
+**Version 1.5.1**  
 **Your health history, finally useful.**
 
 Pamet is a privacy-first personal health journal for recording symptoms, medications, mood, activity, lifestyle factors, notes, and other user-provided health information over time, then organizing those observations for personal review and healthcare conversations.

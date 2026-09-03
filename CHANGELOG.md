@@ -1,5 +1,20 @@
 # Pamet Change Log
 
+## [1.5.1] — 2026-09-03
+
+### Care sharing and appointment clarity
+
+- Replaced Caregiver access and Primary Care Access toggles with explicit sharing actions.
+- Keeps sending, error, and success confirmations inside the active sharing window.
+- Returns to Settings automatically after a successful secure invitation.
+- Gives caregivers a deliberately limited summary while Primary Care receives a richer patient-generated Visit Brief with supported observations, medications, context, and discussion prompts.
+- Refreshes the quick-profile badge when profiles are added or removed.
+- Adds explicit date/time confirmation before saving an appointment.
+- Makes local draft storage and secure appointment storage visibly distinct.
+- Retries secure appointment sync before suggesting authentication and never logs the user out as a recovery shortcut.
+
+---
+
 This file is the repository system of record for completed product and engineering changes. It is not rendered inside the Pamet application.
 
 ## [1.5.0] — 2026-09-03
