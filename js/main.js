@@ -23,6 +23,7 @@ import "./product-clarity-v1.4.0.js";
 import "./insights-v1.5.0.js";
 import "./experience-v1.5.0.js";
 import "./care-ux-v1.5.1.js";
+import "./legal-support-v1.5.1.js";
 import "./version-update.js";
 
 function releaseFooterText(version = PAMET_VERSION) {
