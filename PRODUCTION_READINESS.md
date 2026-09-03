@@ -1,64 +1,77 @@
-# Pamet v1.2.0 Production Readiness Review
+# Pamet v1.2.1 Production Readiness Review
 
-Reviewed 2026-09-02. Updated after the production-lifecycle integration gate was merged. This is an engineering readiness record, not a compliance certification.
+Updated for the 1.2.1 stabilization release. This is an engineering readiness record, not a compliance certification.
+
+## Release posture
+
+Version 1.2.1 is a patch-level stability and hardening release. The repository has automated production/security checks, MySQL-backed lifecycle integration coverage, dependency auditing, and a disposable backup → isolated-restore drill. It is suitable for a **scoped beta/staged production rollout** when deployed readiness checks are healthy. It is not yet appropriate to describe as broadly production-assured for sensitive health workflows until the external and production-only gates below have evidence.
 
 ## Implemented and verified
 
 | Area | Production control |
 |---|---|
-| Runtime | One Express application; thin process entry point; explicit health and database-readiness handlers |
-| Public files | Only the application shell, share page, manifest, service worker, and asset directories are served |
-| HTTP security | CSP, HSTS in production, frame denial, MIME sniffing prevention, referrer policy, permissions policy, request IDs, no-store API/share responses |
-| Input/abuse controls | Strict JSON/body limits, route validation, generic production errors, distributed endpoint limits, plus account-keyed login throttling; a configured-but-unavailable shared limiter fails closed in production |
-| Authentication | Server-side scrypt password verification, breached-password screening, expiring HttpOnly sessions, cross-device login, legacy device migration, remote revocation, one-time recovery, and encrypted TOTP secrets |
-| Billing | Server-owned entitlements, exact price validation, idempotent customer/subscription creation, raw-body webhook signatures, database webhook deduplication |
-| Data lifecycle | All-profile CSV/JSON export; backend-first account deletion; explicit share/session cleanup; active subscription cancellation; Stripe customer deletion |
-| Sharing | Random hash-only tokens, expiry, revocation, plan enforcement, view/download permissions, snapshot size limits, failed-email rollback |
-| Encrypted sync | Ultra API stores versioned AES-256-GCM ciphertext created in the browser; recovery keys are never transmitted to Pamet |
-| Closed-app reminders | User-consented Web Push subscriptions, VAPID delivery, timezone-aware deduplication, stale-subscription disabling, hourly scheduler |
-| Privacy claims | No claim that local browser storage is encrypted; no diagnosis, emergency monitoring, drug interaction, live portal, or treatment claim |
-| Quality gates | Bundled/minified production assets, syntax checks, production/security assertions, dependency audit, continuous dependency monitoring, unit/HTTP tests, and a MySQL-backed full lifecycle integration job on every PR and main push |
-| Observability hooks | Structured events, authenticated log drain, protected Prometheus counters, alert webhook, OTLP export, and readiness visibility for required launch integrations |
-| Encryption design gate | `LOCAL_ENCRYPTION_THREAT_MODEL.md` separates account authentication from content encryption and defines recovery, key loss, migration, rotation, and independent-review requirements before working-journal encryption can ship |
+| Runtime | One reviewed Express application behind a thin hardened production edge; explicit health and database-readiness handlers |
+| Release identity | `package.json` is canonical; production edge `/api/health`, browser runtime, feedback metadata, and PWA release controls are checked for version consistency |
+| Public files | Only the application shell, share page, manifest, service worker, and approved asset/bundle directories are served |
+| HTTP security | CSP, production HSTS, frame denial, MIME-sniffing prevention, referrer/permissions policies, request IDs, and no-store API/share responses |
+| CSP | Executable inline-script permission is removed and script attributes are blocked; remaining inline styles are tracked for later migration |
+| Input/abuse controls | Strict JSON/body limits, route validation, generic production errors, distributed endpoint limits, account-keyed login throttling, and production fail-closed behavior when a configured shared limiter is unavailable |
+| Authentication | Server-side scrypt password verification, breached-password screening, expiring HttpOnly sessions, cross-device login, one-time authorized legacy migration, remote device/session revocation, password recovery, and encrypted TOTP secrets |
+| Security UX | Centered/scroll-safe security and recovery dialogs, Sign out everywhere, safe account switching, locally rendered authenticator QR, and confirmation-gated MFA setup |
+| Billing | Server-owned entitlements, exact Stripe price validation, idempotent customer/subscription creation, raw-body webhook signatures, and database webhook deduplication |
+| Data lifecycle | All-profile CSV/JSON export, backend-first account deletion, explicit share/session cleanup, active subscription cancellation, and Stripe customer deletion |
+| Sharing | Random hash-only tokens, expiry, revocation, plan enforcement, view/download permissions, snapshot limits, and failed-email rollback |
+| Encrypted sync | Ultra API stores versioned AES-256-GCM ciphertext produced in the browser; recovery keys are never transmitted to Pamet |
+| Local encryption | A tested implementation/migration framework exists but remains disabled and review-gated; Pamet does not claim the working local journal is encrypted at rest |
+| Closed-app reminders | User-consented Web Push subscriptions, VAPID delivery, timezone-aware deduplication, stale-subscription disabling, and scheduler infrastructure |
+| PWA | Service-worker registration executes from the external production bundle so CSP hardening does not silently disable registration; API/share routes are excluded from caching |
+| Privacy claims | No diagnosis, emergency monitoring, drug interaction, treatment, live caregiver monitoring, or live clinician-portal claim |
+| Quality gates | Bundled assets, syntax/release/version checks, production/security assertions, dependency audit, unit/HTTP/UI/crypto tests, and MySQL-backed lifecycle integration on PRs and main |
+| Recovery gate | CI performs a logical database backup and restores it into a separate schema with structural/integrity checks |
+| Observability | Structured events, protected metrics, alert integration, Grafana Cloud OTLP logs/metrics, and readiness visibility |
+| Encryption design | Threat model defines per-profile DEKs, user-held recovery-root-key wrapping, key-loss behavior, staged migration, rotation, and independent-review requirements |
 
 ## Automated lifecycle integration gate
 
-GitHub Actions now starts a disposable MySQL 8.4 service and launches the same `secure-server.js` entry point used in deployment. The integration test uses synthetic data and test-only network interception; it does not use production credentials, production customer records, real Stripe charges, or real email delivery.
+GitHub Actions starts a disposable MySQL 8.4 service and launches the same `secure-server.js` production entry point used in deployment. Synthetic/test data and test-only network interception are used; production credentials, customer data, real charges, and real email delivery are not used.
 
-The gate proves these behaviors together rather than as isolated unit tests:
+The gate covers:
 
-- register → authenticated session → second login → logout → revoked session denial;
-- password change invalidates other sessions while preserving the active changing session, and the old password stops authenticating;
-- locally signed Stripe webhook → server-owned Free-to-Ultra entitlement transition → replay idempotency → canceled subscription back to Free;
-- device inventory and revocation → revoked bearer credential stops authenticating;
-- sharing invite creation → delivered-token retrieval → public snapshot access → revocation → post-revocation 404;
-- encrypted-sync first write → read-back of opaque ciphertext → stale `expectedRevision` conflict → correct next revision;
-- Ultra-only sharing/sync capabilities close again after entitlement downgrade.
+- registration → authenticated session → second login → logout → revoked-session denial;
+- password change invalidating other sessions while preserving the active changing session;
+- legacy-device authorization → one-time password/session migration;
+- Sign out everywhere → revocation of all server sessions;
+- locally signed Stripe webhook → server-owned entitlement transition → replay idempotency → downgrade closure;
+- device inventory/revocation and revoked-credential denial;
+- sharing creation → public snapshot retrieval → revocation → post-revocation denial;
+- encrypted-sync first write → opaque read-back → stale revision conflict → correct next revision;
+- paid capabilities closing after entitlement downgrade.
 
-`scripts/check-production.js` also asserts that this CI job and its core lifecycle coverage remain present, so removing the integration gate accidentally will fail the normal production hardening check.
+The CI integration job is followed by a logical MySQL backup → separate-schema restore drill. This proves automated recoverability of the tested schema, not the production provider's backup/PITR service.
 
 ## Local encryption and recovery decision
 
-Pamet still does **not** claim that the working browser journal is encrypted at rest. Before implementation, `LOCAL_ENCRYPTION_THREAT_MODEL.md` now establishes the approved design direction: a random per-profile data-encryption key, user-held recovery-root-key wrapping, and a separate device-local wrapper where browser support is verified. The resettable Pamet account password is deliberately not the journal encryption key.
+Pamet still does **not** claim that the browser working journal is encrypted at rest.
 
-Account/password recovery must not become a decryption backdoor. A trusted device or the user-held recovery key can restore encrypted journal access; if every valid key source is lost, historical encrypted content is intentionally unrecoverable by Pamet. Plaintext-to-encrypted migration must use a copy → verify → switch sequence that preserves at least one verified copy through interruptions. The current Ultra sync format remains unchanged until a separately reviewed, versioned migration exists.
+The implementation framework follows the approved direction in `LOCAL_ENCRYPTION_THREAT_MODEL.md` and `LOCAL_ENCRYPTION_IMPLEMENTATION_PLAN.md`: random per-profile data-encryption keys, AES-256-GCM content encryption, a user-held recovery root key, HKDF-derived wrapping keys, and staged copy → decrypt/compare → switch migration semantics.
 
-This document records the design gate only. Do not market the working journal as encrypted at rest until the implementation, migration, browser persistence, recovery UX, failure-injection tests, and independent cryptographic/security review defined in that threat model are complete.
+The resettable Pamet account password is deliberately not the journal encryption key. A trusted device or user-held recovery material may restore encrypted journal access; if every valid key source is lost, historical encrypted content is intentionally unrecoverable by Pamet.
+
+The framework remains disabled until independent cryptographic/security review plus browser persistence, interruption, recovery, migration, rotation, and lost-key acceptance are complete.
 
 ## Deployment configuration required
 
-Pamet fails safely when a required service is absent. Configure these as deployment secrets, never in Git:
+Configure production secrets outside Git:
 
-- MySQL: `DATABASE_URL`, or `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`; use `DB_SSL=true` and keep certificate validation enabled.
-- Apply `db/schema.sql` during deployment. Keep `AUTO_MIGRATE=false` in production so request cold starts never execute DDL.
-- Stripe: publishable/secret/webhook keys and the four price IDs. Each tier is exposed only when both IDs are active live USD recurring prices with the exact approved amount and interval. `ULTRA_ENABLED` is intentionally not used.
+- MySQL: `DATABASE_URL`, or `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`; use TLS and certificate validation.
+- Apply `db/schema.sql` through the deployment migration process. Keep `AUTO_MIGRATE=false` after controlled production migration.
+- Stripe: publishable/secret/webhook keys plus four approved price IDs.
 - Email: `RESEND_API_KEY` and a verified `EMAIL_FROM`.
-- Password reset intentionally returns HTTP 503 when email delivery is not configured; readiness requires email configuration so the UI cannot claim a link was sent when delivery is impossible.
-- Scheduler: a high-entropy `CRON_SECRET` sent as a Bearer token.
-- Distributed limits: `REDIS_URL` for a TLS-protected Redis/Valkey service. The database fallback remains a resilience path, not a reason to skip the dedicated shared store for production scale.
-- Web Push: `VAPID_SUBJECT`, `VAPID_PUBLIC_KEY`, and `VAPID_PRIVATE_KEY`.
-- Identity: a randomly generated 32-byte `IDENTITY_ENCRYPTION_KEY` encoded as 64 hex characters.
-- Observability: either Grafana Cloud OTLP (`GRAFANA_OTLP_ENDPOINT`, `GRAFANA_OTLP_USERNAME`, and a least-privilege `GRAFANA_OTLP_TOKEN` with `logs:write` and `metrics:write`) or the generic drain/webhook variables (`LOG_DRAIN_URL`, `LOG_DRAIN_TOKEN`, `ALERT_WEBHOOK_URL`, and optional `ALERT_WEBHOOK_TOKEN`). Keep `METRICS_SECRET` for the protected Prometheus-compatible diagnostics endpoint.
+- Scheduler: high-entropy `CRON_SECRET`.
+- Distributed limits: TLS-protected `REDIS_URL`/Valkey where production scale requires it; atomic MySQL fallback remains a resilience path.
+- Web Push: `VAPID_SUBJECT`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`.
+- Identity: random 32-byte `IDENTITY_ENCRYPTION_KEY` encoded as 64 hex characters.
+- Observability: Grafana Cloud OTLP endpoint/username/least-privilege token or the documented generic log/alert integrations; retain `METRICS_SECRET` for protected diagnostics.
 
 Approved Stripe catalog:
 
@@ -67,20 +80,25 @@ Approved Stripe catalog:
 | Pro | $6.99 | $59.99 |
 | Ultra | $12.99 | $99.99 |
 
-After deployment, require `/api/health` to return HTTP 200 and `/api/ready` to return HTTP 200 before routing production traffic. Register the Stripe webhook at `/api/stripe/webhook` for `customer.subscription.created`, `customer.subscription.updated`, and `customer.subscription.deleted`.
+After deployment, require `/api/health` HTTP 200 reporting the intended release and `/api/ready` HTTP 200 before treating the deployment as ready.
 
 ## External and environment-specific launch gates
 
-The repository is materially better protected by automated tests now, but these gates cannot honestly be marked complete by CI alone:
+These cannot honestly be marked complete by repository CI alone:
 
-- **Backup and restore:** run a database backup plus isolated point-in-time/full restore drill; document backup frequency, encryption, retention, deletion timelines, achieved RPO/RTO, and the date/evidence of the last successful restore. This remains a broad-launch gate.
-- **Controlled live billing exercise:** confirm live Stripe checkout, seven-day trial transition, cancellation, failed payment, billing portal, webhook retry, and daily entitlement reconciliation with a controlled production account before broad launch.
-- **Production dependencies:** provision and verify Redis/Valkey, Web Push, email, database TLS, logging/metrics, and paging destinations. `/api/ready` must report the required launch integrations healthy.
-- **Staging user-security exercise:** exercise account recovery, MFA enrollment/removal, device revocation, encrypted-sync conflict handling, push delivery, and key-loss UX in a staging environment even though the underlying auth/device/sync lifecycle is now covered automatically.
-- **Independent assurance:** obtain penetration, privacy, accessibility, and applicable legal/regulatory reviews plus required vendor agreements. Do not claim independent audit, HIPAA compliance, SOC 2 compliance, or clinical validation without the applicable completed work.
-- **Sharing/legal posture:** decide and document BAA/DPA posture before positioning caregiver/provider sharing for clinical workflows.
-- **Working-journal encryption:** implement and satisfy the gates in `LOCAL_ENCRYPTION_THREAT_MODEL.md` before claiming encrypted local storage; current encrypted sync does not encrypt the browser's working copy.
-- **CSP/legacy cleanup:** complete the planned nonce/strict-CSP migration and measure/retire pre-1.0.2 legacy bearer-device authentication when migration telemetry supports safe removal.
+1. **Provider backup/restore:** perform a real production-provider backup/PITR or isolated full restore; record backup frequency, retention/encryption, achieved RPO/RTO, date, evidence, and deletion behavior.
+2. **Controlled live billing:** exercise checkout, seven-day trial, cancellation, failed payment, billing portal, webhook retry, and entitlement reconciliation with a controlled deployed account.
+3. **Deployed dependencies:** verify database TLS, cache/rate limiting as applicable, email, Web Push, logs/metrics, alert/paging destinations, and `/api/ready` results.
+4. **User-security acceptance:** deployed password recovery, MFA enrollment/removal/recovery, two-device sessions, logout-all, and device revocation.
+5. **Sync/key acceptance:** deployed encrypted-sync conflict, recovery-key restoration, and lost-all-key behavior.
+6. **Independent security assurance:** penetration testing plus remediation/retest evidence.
+7. **Independent accessibility assurance:** WCAG 2.2 AA, keyboard, screen reader, zoom/reflow, touch-target, modal, light/dark, and mobile testing.
+8. **Privacy/legal/vendor posture:** review actual deployed data flows, product claims, caregiver/provider sharing, and required BAA/DPA/vendor agreements. Do not claim HIPAA/SOC 2/clinical validation without applicable completed evidence.
+9. **Legacy auth sunset:** measure compatibility-credential use and retire the bearer path after documented migration/sunset criteria are satisfied.
+10. **Final CSP cleanup:** migrate remaining inline style usage before removing `style-src 'unsafe-inline'`.
+11. **Working-journal encryption:** complete independent review and migration/recovery/key-loss acceptance before enabling or marketing encrypted local journal storage.
+
+See `RELEASE_STATUS.md`, `STAGING_ACCEPTANCE.md`, `BACKUP_RESTORE_RUNBOOK.md`, `ASSURANCE_HANDOFF.md`, and `LEGACY_AUTH_SUNSET.md` for evidence/runbook details.
 
 ## Release commands
 
@@ -89,12 +107,10 @@ npm ci
 npm audit --omit=dev
 npm run check
 npm test
-# Integration CI runs separately with a disposable MySQL service:
-# PAMET_INTEGRATION_TESTS=true npm run test:integration
-# Apply db/schema.sql with the deployment's MySQL migration mechanism.
+# MySQL-backed integration CI runs with PAMET_INTEGRATION_TESTS=true.
 NODE_ENV=production npm start
 ```
 
 ## Release decision
 
-The repository is now suitable for a **scoped beta/staged production rollout** once the deployed `/api/ready` dependencies are healthy. It should not yet be represented as broadly production-assured for sensitive health workflows until the backup/restore drill and independent security/privacy/accessibility/legal gates above are completed. Feature breadth should remain secondary to proving recovery, durability, and trust controls.
+The 1.2.1 repository should be considered a **stabilized scoped-beta candidate**, contingent on green CI and a successful post-deployment smoke check. The open external/production gates above remain visible prerequisites for stronger production-assurance claims.

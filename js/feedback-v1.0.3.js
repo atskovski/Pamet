@@ -1,4 +1,4 @@
-/* Pamet v1.2.0 — privacy-minimal product feedback */
+/* Pamet v1.2.1 — privacy-minimal product feedback */
 (function () {
   "use strict";
 
@@ -54,7 +54,7 @@
       category: document.querySelector("#feedbackCategory").value,
       rating: rating ? Number(rating.value) : null,
       message: document.querySelector("#feedbackMessage").value.trim(),
-      appVersion: "1.2.0",
+      appVersion: window.PametVersion || "unknown",
       screen: "settings"
     };
 
@@ -75,7 +75,6 @@
     }
   });
 
-  // Email features stay out of the interface until the deployment enables them.
   fetch("/api/billing/config", { credentials: "same-origin" })
     .then((response) => response.ok ? response.json() : null)
     .then((config) => {

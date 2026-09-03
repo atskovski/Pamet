@@ -1,300 +1,262 @@
 # Pamet — Personal Health Journal
 
-**Version 1.2.0 — secure accounts, appointment preparation, and production architecture** · **Your health history, finally useful.**
+**Version 1.2.1 — stability, security UX, mobile hardening, and production-readiness improvements**  
+**Your health history, finally useful.**
 
-Pamet is a privacy-first personal health journal designed to help people consistently document symptoms, medications, lifestyle factors, and user-provided medical information, then turn those observations into useful, understandable health history.
+Pamet is a privacy-first personal health journal for recording symptoms, medications, lifestyle factors, and user-provided health information over time, then organizing those observations into a clearer history for personal review and healthcare conversations.
 
-> **Track what you feel. See what changes. Bring the story to your doctor.**
+> **Pamet observes. Pamet does not diagnose.**
 
-Pamet is observational, not diagnostic: **Pamet observes. Pamet does not diagnose.** It is not an emergency-monitoring system, clinical decision tool, or replacement for professional medical care.
-
-## Executive Summary
-
-Most symptom trackers are good at collecting information but leave the user responsible for interpreting it. Pamet is designed around a clearer progression:
-
-- **Free — Track:** Build a reliable health history.
-- **Pro — Understand:** Identify trends, patterns, and relationships in that history.
-- **Ultra — Prepare:** Turn that history into useful information for appointments and coordinated care.
-
-**Track → Understand → Prepare**
-
-The v1.2.0 production architecture uses a bundled PWA client, an Express/MySQL backend, server-verified Stripe entitlements, revocable HttpOnly account sessions, password-reset email links, distributed rate limiting (Redis/Valkey preferred with an atomic MySQL fallback), Web Push, encrypted Ultra sync, and explicit dependency readiness checks. Deployment requirements and external review gates are tracked in `PRODUCTION_READINESS.md`.
-
-### Current deployment status
-
-- GitHub `main` is deployed to Wasmer as Pamet v1.2.0.
-- The Wasmer MySQL schema is migrated with version-compatible, idempotent column checks; automatic runtime migrations are locked off after the controlled migration.
-- Database-backed distributed rate limiting, VAPID push signing, protected metrics, cron authentication, identity-secret encryption, and the Ultra deployment variable are configured outside Git.
-- Live authentication reaches the database and returns a normal invalid-credential response instead of HTTP 503.
-- Password-reset delivery is configured through Resend. The deployment currently uses Resend's test sender; a verified Pamet sending domain is still required before sending to arbitrary production users.
-- Structured logs and request metrics are exported to Grafana Cloud over OTLP/HTTP with a least-privilege deployment token. Independent penetration, screen-reader accessibility, and HIPAA-adjacent legal reviews remain external launch gates rather than claims made by the codebase.
-
-## Product Vision
-
-Create the most trusted personal health journal for turning everyday symptoms and health observations into information people can actually use.
-
-Pamet should help a person answer:
-
-- What have I been experiencing?
-- When did it change?
-- Is there a pattern?
-- What has changed since my last appointment?
-- What should I remember to tell my doctor?
-- Can I show my doctor a concise history instead of trying to remember everything?
-
-### Product Promise
-
-> **Don't just track your symptoms. Understand them.**
-
-The long-term vision is a longitudinal health-history layer: a structured record of what a person experiences between medical appointments that complements medical care rather than replacing it.
-
-## Product Principles
-
-1. **Pamet observes; it does not diagnose.** Trends and relationships are described as observations, not diagnoses or causal conclusions.
-2. **Logging must remain easy.** The core habit is capture, and meaningful entries should take seconds: **Three taps. That's the whole log.**
-3. **Build trust before monetizing.** Privacy language, data handling, subscription terms, cancellation, export, and deletion should be clear and non-manipulative.
-4. **Data accumulation creates value.** Free users receive enough history and functionality to experience real value before an upgrade is requested.
-
-## Core Product Architecture
-
-Pamet is organized around six areas:
-
-| Area | Purpose |
-| --- | --- |
-| **Today** | Fast logging of symptoms, medications, mood, sleep, activity, lifestyle factors, notes, and custom trackers. |
-| **History** | Timeline/calendar review, date filtering, symptom/medication/lifestyle history, notes, and record references. |
-| **Insights** | Trends, comparisons, **What Changed?**, correlation observations, and data-strength context. |
-| **Medical Records** | A structured home for user-provided health records. Clinical integrations are not implied by the MVP. |
-| **Reports** | Concise, doctor-ready summaries. The core artifact is the **Visit Brief**. |
-| **Care** | Explicit, revocable sharing with trusted people. Care is coordination, not continuous monitoring. |
-
-The core loop is **Log → Accumulate → Understand → Summarize → Share → Return**.
-
-## Plans
-
-Pamet contains **no advertising on any plan**.
-
-|  | Free — **Track** | Pro — **Understand** | Ultra — **Prepare** |
-| --- | --- | --- | --- |
-| Price | $0 | $6.99/mo or $59.99/yr | $12.99/mo or $99.99/yr |
-| Logging | Unlimited | Unlimited | Unlimited |
-| History | 90-day rolling view | Unlimited | Unlimited |
-| Weekly summary | ✓ | ✓ | ✓ |
-| Custom trackers | 3 | Unlimited | Unlimited |
-| Reminders | 1 | Unlimited | Unlimited |
-| Correlation insights | — | ✓ | ✓ |
-| Advanced trends / What Changed? | — | ✓ | Advanced |
-| Visit Briefs | 1/month | Unlimited | Unlimited |
-| CSV / JSON data export | ✓ | ✓ | ✓ |
-| Basic sharing | — | ✓ | ✓ |
-| Multiple caregivers / roles | — | — | ✓ |
-| Appointment workspace | — | — | ✓ |
-| Health history over time | — | — | ✓ |
-| Multiple separate profiles | — | — | ✓ |
-| Advanced Visit Brief | — | — | ✓ |
-
-**Pro is the recommended plan for most individual users.** Its annual option saves about 28%. Ultra is positioned as **Advanced care coordination** for families, caregivers, and people preparing for more complex care conversations. A tier is purchasable only when both of its Stripe price IDs pass Pamet's live catalog validation.
-
-## v1.2.0 Highlights
-
-- Consolidated the browser runtime into one minified JavaScript bundle and one minified stylesheet while keeping source modules maintainable.
-- Added cross-device email/password authentication with revocable, expiring HttpOnly sessions; legacy device credentials remain migration-only.
-- Added a complete password-reset workflow: privacy-preserving email request, one-time 30-minute link, optional authenticator verification, server password replacement, session revocation, and automatic sign-in after success.
-- Restored account creation immediately after account deletion and centered the plain-language password protection message.
-- Re-rendered every favicon, PWA, Apple-touch, and notification surface from the approved Pamet folded-leaf master mark.
-- Added server-authoritative capability claims, a persisted Ultra appointment workspace, explicit account-deletion cleanup, and Stripe customer deletion.
-- Renamed “Longitudinal analysis” to **Health history over time** and refined Ultra around visit preparation and care-team coordination.
-- Added a Wasmer-compatible idempotent MySQL migration path and an atomic database fallback for distributed rate limiting, eliminating the production authentication 503 without requiring a separate cache service.
-- Added direct Grafana Cloud OTLP/HTTP export for structured operational logs and request metrics, and connected telemetry availability to deployment readiness.
-
-## v1.1.0 Highlights
-
-- Three rotating, brand-aligned landscape scenes and a clearer authentication card with plain-language local-account guidance.
-- A neutral charcoal-teal dark palette with measurable WCAG AA text contrast, 3:1 control boundaries, sky-blue information accents, and sage reserved for affirmative actions.
-- Consent-based 8pm reminders and new-observation alerts. They use standard browser/PWA notifications when permission is granted and always retain an in-app fallback while Pamet is open.
-- One approved folded-leaf mark across the browser favicon, installed-app icons, notification icon, header, and authentication screen.
-- **Advanced care coordination** positioning for Ultra, a compact plan CTA, minimized successful feedback, and removal of the redundant Active profile settings card.
-- Ten useful starting choices in each logging category: physical symptoms, emotional feelings, activity, and medication types.
-- Paired **+ / −** controls in every category; removing a custom option identifies it by name and requires confirmation.
-- A lighter, layered dark palette with WCAG AA text contrast and 3:1 control-boundary contrast.
-- Tap/click Settings explanations with keyboard support, outside-click dismissal, and correct behavior inside toggle labels.
-- Data export on every plan, a validated local password-change workflow, persistent logout, and complete account deletion across local storage, backend account data, sharing records, audit records, and active Stripe billing.
-- Ultra multi-profile management with separate on-device entry storage for every profile.
-- Ultra appointment preparation, 90-day longitudinal comparisons with data-strength context, Advanced Visit Briefs, and role/expiration-based sharing.
-
-## v1.0.3 Highlights
-
-- New accounts begin with a truthful empty health history: no sample entries, fake dashboard metrics, observations, streaks, or recent-entry content.
-- Home replaces empty metrics with one focused first-log prompt. Metrics and Recent entries appear only after a real entry exists.
-- “Pamet pattern detection” and observational Pamet language replace AI-first product labels.
-- Logging requires a symptom status, mood, and activity before saving; **No symptoms today** remains a valid entry.
-- **Help improve Pamet** records privacy-minimal product feedback without account identifiers or health data.
-- Refined scalable Pamet mark plus complete installable-PWA icons, manifest metadata, shortcut, and offline shell.
-
-## v1.0.2 Foundations
-
-- Persistent sign-in across browser restarts until explicit logout.
-- Account creation is hidden on devices that already have a Pamet account.
-- New **Warm Clinical Minimalism** brand system using Deep Teal, Sage, Sky Blue, warm neutrals, Inter UI typography, restrained surfaces, and an organic Pamet mark.
-- **Custom symptoms** removed from Settings; custom fields remain managed from the Log flow.
-- **Caregiver access** and **Primary Care Access** are Pro-or-higher features with entitlement checks before access can be configured.
-- Caregiver/provider sharing uses explicit invitations, read-only snapshots, expiration, and revocation. It does **not** provide live monitoring or a live doctor portal.
-- **Weekly digest email** is explicit opt-in and uses the account email.
-- Registration confirmation email support.
-- Stripe web subscriptions with an in-app Payment Element, server-verified entitlements, webhook handling, seven-day trial support, and a customer billing portal.
-- **What Changed?** added as a signature Pro experience.
-- Pattern language rewritten to remain observational rather than causal or prescriptive.
-- Repository-only `CHANGELOG.md` added as the ongoing system of record.
-
-## Visual Identity
-
-Pamet uses **Warm Clinical Minimalism**: warm and personal enough to feel like a journal, credible enough for health information, and precise enough for insights.
-
-| Role | Color | Hex |
-| --- | --- | --- |
-| Brand primary | Deep Teal | `#0F3D3E` |
-| Primary action | Sage Green | `#4CAF7A` |
-| Information | Sky Blue | `#6EA8D8` |
-| Application background | Warm Gray | `#F4F5F2` |
-| Warm/editorial background | Soft Sand | `#F5EDE4` |
-| Secondary text | Slate | `#5B6B73` |
-| Primary text | Charcoal | `#263638` |
-| Accent | Terracotta | `#C1633D` |
-| Caution/change | Ochre | `#D9A441` |
-| Increased-symptom data accent | Muted Berry | `#8E3B4F` |
-
-**Inter** is the primary product typeface. A restrained serif may be used only for selective editorial moments. Color must never be the sole indicator of a trend, error, completion state, or permission state.
-
-## Architecture
-
-Pamet remains **local-first** for journal entries. The backend is used only for functionality that cannot safely be implemented as browser-only JavaScript:
-
-Production deployments track the protected `main` branch so only reviewed, merged releases are promoted to `pamet.wasmer.app`.
-
-Pamet also has two private, fully native client repositories:
-
-- `Pamet-iOS`: SwiftUI, SwiftData, and URLSession
-- `Pamet-Android`: Kotlin, Jetpack Compose, Room, and OkHttp
-
-This repository remains the backend and mobile API source of truth. The versioned
-`contracts/mobile-api.json` contract is synchronized into both mobile repositories
-by GitHub Actions. Shared account, entitlement, privacy, and API changes therefore
-reach both clients without copying web-only presentation code into native apps.
-
-- Stripe subscriptions and verified entitlements
-- Registration and weekly-digest email delivery
-- Secure, expiring caregiver/provider shares
-- Minimal account metadata needed to support those services
-
-Journal notes and full health history are **not automatically synchronized to the server**. Weekly digest data is an aggregate snapshot. Sharing uploads only the snapshot the user explicitly chooses to share.
-
-```text
-Pamet/
-├── index.html
-├── share.html
-├── css/styles.css
-├── css/brand-v1.0.3.css
-├── css/release-v1.0.3.css
-├── css/phase2.css
-├── js/auth.js
-├── js/store.js
-├── js/app.js
-├── js/v1.0.3.js
-├── js/feedback-v1.0.3.js
-├── js/phase2.js
-├── assets/pamet-mark.svg
-├── db/schema.sql
-├── server.js
-├── package.json
-├── manifest.webmanifest
-├── sw.js
-├── .env.example
-└── .github/workflows/weekly-digest.yml
-```
-
-## Run locally
-
-The core journal still works as a static local-first app:
-
-```bash
-python3 -m http.server 8099
-```
-
-Full billing/email/sharing services require Node 20+, MySQL, and configured environment variables:
-
-```bash
-cp .env.example .env
-npm install
-npm start
-```
-
-## Optional Email Setup
-
-Email remains disabled unless both Resend environment variables are configured. Email is not required for core logging, feedback, billing, or installability.
-
-```text
-RESEND_API_KEY=
-EMAIL_FROM=Pamet <hello@your-verified-domain.example>
-```
-
-Supported emails:
-
-- Registration confirmation: “Thanks for registering with Pamet.”
-- Weekly digest: sent only after explicit opt-in to the account email.
-- Caregiver/provider invitation: secure expiring link to the selected read-only snapshot.
-
-Email subjects intentionally avoid symptom details.
-
-## Product Feedback Storage
-
-The Settings screen includes **Help improve Pamet**. Feedback is stored in the deployment’s existing MySQL database in `pamet_feedback` with only:
-
-- category
-- optional 1–5 rating
-- message (maximum 1,000 characters)
-- app version
-- originating screen
-- created timestamp
-
-The table contains no user ID, email, device credential, IP-address field, journal-entry field, symptom field, medication field, or note field. Pamet does not automatically attach health or account data; the form also asks users not to put medical or account details in the free-text message. A valid Pamet device credential is required to submit feedback, but it is used only to authenticate the request and is not attached to the stored feedback row.
-
-## Weekly Digest Scheduling
-
-The included GitHub Action calls the protected weekly job. Configure repository Action secrets:
-
-```text
-PAMET_APP_URL=https://pamet.wasmer.app
-PAMET_CRON_SECRET=<same value as deployment CRON_SECRET>
-```
-
-## Privacy and Security Boundaries
-
-- New accounts authenticate against a scrypt password verifier on the server and receive an expiring, revocable HttpOnly session cookie. A separate PBKDF2 verifier remains on the device to unlock the local journal experience; raw passwords are never stored.
-- Stripe plan state is verified server-side; the browser cannot self-upgrade a plan.
-- Sharing links are random, expiring, revocable, and stored only as token hashes server-side.
-- Weekly digest email subjects contain no symptom details.
-- Caregiver sharing is **coordination, not monitoring**. There are no live caregiver alerts, missed-log alerts, emergency detection, or automated symptom escalation.
-- Primary-care sharing is a read-only Visit Brief link, **not** a live clinician portal.
-- The old “End-to-end encryption” toggle is hidden because v1.0.1 did not implement true E2E encryption. That claim should not return until a real encryption architecture is built and reviewed.
-
-Before production handling of sensitive health information, complete qualified security, privacy, and legal review of the deployed architecture and claims.
-
-## Roadmap Boundaries
-
-### Now — v1.2.0
-
-Local-first logging, 90-day Free history, Pro unlimited history, weekly summary/digest infrastructure, basic trends/correlations, What Changed?, Visit Brief, reminders, subscription management, export/delete, and basic read-only sharing.
-
-### Next — v1.2.0+
-
-FHIR-lite portability, independently reviewed accessibility/security/privacy controls, and formal compliance posture. v1.1.0 now includes account recovery, remote device revocation, encrypted Ultra sync, Web Push, distributed limits, and observability integration frameworks; see `PRODUCTION_READINESS.md` for configuration and external launch gates.
-
-### Not planned for initial product
-
-Live caregiver alerts, real-time symptom escalation, missed-log caregiver notifications, emergency detection, diagnosis, medication recommendations, definitive drug-interaction flagging, and a live doctor portal.
+Pamet is not an emergency-monitoring system, clinical decision tool, diagnostic service, medication-recommendation engine, or replacement for professional medical care.
 
 ---
 
-**Pamet**  
-**Your health history, finally useful.**  
-Track what you feel. See what changes. Bring the story to your doctor.
+## Current State
+
+Pamet is an actively developed web/PWA product deployed from GitHub `main` to Wasmer. Version 1.2.1 is a stabilization release focused on reducing production risk rather than adding a large new feature set.
+
+### Working today
+
+- Local-first symptom, medication, mood, activity, lifestyle, and notes logging.
+- Truthful first-use state with no fake/sample health history.
+- Calendar/history review and observational pattern summaries.
+- Free / Pro / Ultra plan architecture with server-authoritative entitlements.
+- Stripe checkout, subscription state, webhook idempotency, downgrade enforcement, and billing portal infrastructure.
+- Email/password accounts with server-side password verifiers and revocable HttpOnly sessions.
+- Password reset, password change, legacy-account migration, device/session management, and **Sign out everywhere**.
+- Authenticator-app MFA with fresh, locally rendered QR setup and confirmation before activation.
+- Privacy-minimal product feedback.
+- Data export and account deletion.
+- Read-only, expiring, revocable sharing for caregiver/provider coordination.
+- Ultra appointment preparation and encrypted-sync infrastructure.
+- Consent-based browser/PWA reminders and Web Push infrastructure.
+- Grafana Cloud OTLP logs/metrics integration and dependency readiness checks.
+- Responsive phone layouts, safe-area handling, centered security/recovery dialogs, and narrow-screen safeguards.
+- CI-backed MySQL lifecycle tests and disposable backup → isolated-restore verification.
+
+### Release 1.2.1 stabilization work
+
+- Normalized release versioning around semantic versioning.
+- Made the production edge report the canonical `package.json` version through `/api/health`.
+- Added browser-level release identity for visible version text and feedback metadata.
+- Moved PWA service-worker registration into the external production bundle so CSP hardening does not silently disable registration.
+- Refreshed the service-worker cache generation for 1.2.1 and explicitly keeps API/share data out of offline caching.
+- Added a release-version consistency gate to CI.
+- Preserved the 1.2.0 security hardening work: centered Account Security, safe account switching, legacy-login migration, logout-all, local authenticator QR generation, feedback confirmation, and mobile scaling.
+
+---
+
+## Product Model
+
+Pamet follows a simple product progression:
+
+**Track → Understand → Prepare**
+
+| Plan | Positioning | Core value |
+| --- | --- | --- |
+| **Free — Track** | Build a useful health history | Logging, rolling history, summary, export |
+| **Pro — Understand** | Make the history easier to interpret | Unlimited history, trends, correlations, What Changed?, sharing |
+| **Ultra — Prepare** | Prepare for more complex care conversations | Multi-profile, appointment workspace, advanced Visit Briefs, advanced coordination |
+
+Pamet contains **no advertising on any plan**.
+
+Current approved pricing:
+
+| Plan | Monthly | Annual |
+| --- | ---: | ---: |
+| Free | $0 | $0 |
+| Pro | $6.99 | $59.99 |
+| Ultra | $12.99 | $99.99 |
+
+A paid tier is offered only when its Stripe price configuration passes server-side catalog validation.
+
+---
+
+## Privacy and Safety Boundaries
+
+Pamet is intentionally conservative about health claims and data handling.
+
+- Observations are described as patterns, trends, and relationships—not diagnoses or causes.
+- Pamet does not provide emergency detection or automated symptom escalation.
+- Pamet does not provide live caregiver alerts or missed-log alerts.
+- Pamet does not provide medication recommendations or definitive drug-interaction advice.
+- Caregiver/provider sharing is explicit, revocable coordination—not continuous monitoring.
+- Primary-care sharing is a read-only Visit Brief link, not a live clinician portal.
+- Stripe plan state is server verified; the browser cannot grant itself a paid plan.
+- Sharing tokens are random, expiring, revocable, and stored as hashes server-side.
+- Feedback intentionally excludes user IDs, email addresses, health entries, symptoms, medications, notes, and IP-address fields from the feedback table.
+- Service-worker caching excludes `/api/` and sensitive sharing paths.
+
+### Local journal encryption status
+
+Pamet has a reviewed-design implementation framework for local journal encryption using per-profile random data-encryption keys, AES-256-GCM, a user-held recovery root key, and HKDF-derived wrapping keys.
+
+**It is intentionally not enabled in production yet.** Activation remains gated on independent security review plus migration, recovery, and lost-key testing. Pamet should not claim full local/E2E journal encryption until that gate is complete.
+
+See:
+
+- `LOCAL_ENCRYPTION_THREAT_MODEL.md`
+- `LOCAL_ENCRYPTION_IMPLEMENTATION_PLAN.md`
+- `SECURITY.md`
+- `THREAT_MODEL.md`
+
+---
+
+## Production Architecture
+
+The production web application uses:
+
+- bundled PWA/browser client
+- Node.js / Express production runtime
+- MySQL account, session, entitlement, sharing, feedback, audit, appointment, and sync metadata
+- Stripe subscriptions and webhooks
+- Redis/Valkey distributed rate limiting when configured, with atomic MySQL fallback
+- Resend email delivery
+- Web Push / VAPID
+- Grafana Cloud OTLP logs and metrics
+- GitHub Actions CI and scheduled jobs
+
+Journal entries remain local-first by default. Server storage is used only where the feature requires a server-side capability. Ultra encrypted sync stores opaque ciphertext rather than plaintext journal content.
+
+### Native clients
+
+Pamet also has private native-client repositories:
+
+- `Pamet-iOS` — SwiftUI / SwiftData / URLSession
+- `Pamet-Android` — Kotlin / Jetpack Compose / Room / OkHttp
+
+This repository remains the backend/API source of truth. The versioned mobile API contract is synchronized into the native repositories.
+
+---
+
+## Production Quality Gates
+
+A release must pass the following before merge:
+
+- JavaScript syntax/static release checks
+- security/production assertions
+- unit/security tests
+- UI-hardening regression tests
+- local-crypto framework tests
+- dependency audit
+- MySQL-backed integration lifecycle tests
+- Stripe entitlement/webhook integration assertions
+- device/session/sharing/sync integration assertions
+- disposable MySQL backup → separate-schema restore drill
+
+Version 1.2.1 additionally requires release-version consistency checks.
+
+### What CI proves
+
+CI can prove the repository behaves correctly in a controlled test environment, including account lifecycle, session revocation, legacy migration, Stripe event handling, sharing revocation, encrypted-sync conflicts, and database backup/restore integrity.
+
+### What CI cannot prove
+
+CI does **not** replace production-provider or independent external evidence. The following remain separate launch/assurance gates:
+
+1. Real Wasmer/database-provider backup or point-in-time restore with measured RPO/RTO.
+2. Controlled deployed Stripe acceptance, including checkout, trial, cancellation, failed-payment, and reconciliation paths.
+3. Deployed MFA/recovery/device-revocation exercises.
+4. Deployed Web Push permission/delivery/closed-app testing.
+5. Deployed encrypted-sync/key-recovery/lost-key exercises.
+6. Independent penetration testing.
+7. Independent WCAG 2.2 AA / screen-reader / keyboard / reflow review.
+8. Privacy/legal review of the deployed data flows, health-related claims, sharing model, and vendor agreements.
+9. Final review and staged migration before local journal encryption is enabled.
+10. Removal of the remaining legacy bearer compatibility path after measured migration/sunset criteria are satisfied.
+11. Removal of CSP `style-src 'unsafe-inline'` after remaining inline style usage is migrated.
+
+These gates are tracked in `PRODUCTION_READINESS.md`, `STAGING_ACCEPTANCE.md`, `ASSURANCE_HANDOFF.md`, `BACKUP_RESTORE_RUNBOOK.md`, and `LEGACY_AUTH_SUNSET.md`.
+
+---
+
+## Current State vs Future State
+
+| Area | Current state — 1.2.1 | Future state |
+| --- | --- | --- |
+| Accounts | Email/password, HttpOnly sessions, reset/change, device/session controls | Complete legacy bearer retirement |
+| MFA | Authenticator-app setup with local QR and recovery flow | Independent deployed recovery review |
+| Local journal | Local-first browser storage | Reviewed encrypted-at-rest local journal migration |
+| Cross-device sync | Ultra browser-encrypted opaque sync | Mature recovery UX and native-client parity |
+| Sharing | Explicit read-only expiring/revocable links | Additional reviewed care-coordination workflows without live monitoring |
+| Billing | Server-authoritative Stripe architecture | Full controlled production acceptance evidence |
+| Notifications | In-app + Web Push architecture | Cross-browser/device production acceptance evidence |
+| Observability | Structured logs, metrics, readiness, Grafana OTLP | Mature alert thresholds/on-call operating practice |
+| Database recovery | Automated logical backup/isolated restore in CI | Provider PITR/restore evidence with measured RPO/RTO |
+| Accessibility | Responsive/mobile safeguards and contrast work | Independent WCAG 2.2 AA certification-style review/retest evidence |
+| Security assurance | Automated security gates and threat models | Independent penetration test and remediation closure |
+| Compliance posture | Conservative product/data boundaries | Qualified legal/privacy determination based on actual deployment/use case |
+| Native apps | API contract and dedicated iOS/Android repos | Full native feature parity and store-release pipelines |
+
+---
+
+## Versioning
+
+Pamet uses semantic versioning.
+
+- `1.2.0 → 1.2.1`: compatible fixes, reliability, security hardening, styling, tests, and small workflow changes.
+- `1.2.x → 1.3.0`: substantial backward-compatible capability.
+- `1.x → 2.0.0`: intentionally breaking migration.
+
+The canonical release number lives in `package.json`. See `VERSIONING.md` for the release checklist and rules.
+
+Historical filenames such as `security-v1.1.0.js` identify the feature layer where a module originated; they do not indicate the current application release.
+
+---
+
+## Repository Documentation
+
+| Document | Purpose |
+| --- | --- |
+| `CHANGELOG.md` | Release-by-release work completed |
+| `VERSIONING.md` | Semantic versioning and release discipline |
+| `PRODUCTION_READINESS.md` | Production configuration and unresolved launch gates |
+| `STAGING_ACCEPTANCE.md` | Real-environment acceptance exercises |
+| `BACKUP_RESTORE_RUNBOOK.md` | Provider recovery exercise and evidence requirements |
+| `ASSURANCE_HANDOFF.md` | External security/privacy/accessibility review package |
+| `SECURITY.md` | Security architecture and reporting expectations |
+| `THREAT_MODEL.md` | General threat model |
+| `LOCAL_ENCRYPTION_THREAT_MODEL.md` | Local journal encryption key/recovery threats |
+| `LOCAL_ENCRYPTION_IMPLEMENTATION_PLAN.md` | Gated local encryption implementation/migration plan |
+| `LEGACY_AUTH_SUNSET.md` | Retirement criteria for compatibility credentials |
+| `INCIDENT_RESPONSE.md` | Security/operations response procedure |
+
+---
+
+## Run Locally
+
+Node.js 20+ is required for the full application.
+
+```bash
+npm install
+npm run build
+npm start
+```
+
+Core local-first UI development can also be served statically, but backend-dependent capabilities such as account sessions, billing, sharing, email, recovery, and encrypted sync require the Node/MySQL runtime and the appropriate environment configuration.
+
+Never commit secrets. Use deployment environment variables; `.env.example` contains placeholders only.
+
+---
+
+## Release History
+
+The detailed release record is maintained in `CHANGELOG.md`.
+
+Major milestones:
+
+- **1.2.1** — stability, version discipline, PWA/CSP compatibility, current-state documentation.
+- **1.2.0** — cross-device account architecture, password reset, production deployment architecture, Grafana telemetry, Wasmer/MySQL hardening.
+- **1.1.0** — device revocation, MFA, Web Push, encrypted Ultra sync, distributed rate limiting, observability frameworks.
+- **1.0.5** — dark-mode and authentication-brand refinements.
+- **1.0.4** — production runtime consolidation, entitlement hardening, advanced plan capabilities.
+- **1.0.3** — truthful empty state, Pamet pattern language, privacy-minimal feedback.
+- **1.0.2** — Warm Clinical Minimalism, Pro/Ultra product architecture, sharing/email/Stripe foundations.
+
+---
+
+## Product Promise
+
+**Track what you feel. See what changes. Bring the story to your doctor.**
+
+Pamet's goal is not to replace clinical care. It is to make the history between appointments easier to capture, understand, and communicate.
