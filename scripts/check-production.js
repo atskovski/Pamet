@@ -1,6 +1,8 @@
 'use strict';
 
 const fs = require('fs');
+const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+const assetVersion = pkg.version.replace(/\D/g, '');
 const server = fs.readFileSync('server.js', 'utf8');
 const secureServer = fs.readFileSync('secure-server.js', 'utf8');
 const edgeAccount = fs.readFileSync('lib/edge-account.js', 'utf8');
@@ -28,11 +30,13 @@ check(!server.includes("express.static(path.join(__dirname),"), 'The repository 
 check(server.includes("app.use('/assets'") && server.includes("app.use('/dist'") && !server.includes("app.use('/js'") && !server.includes("app.use('/css'"), 'Production must expose only assets and built bundles, not source modules.');
 check(server.includes('immutable: false') && server.includes('maxAge: 0'), 'Unversioned application assets must revalidate after deployments.');
 check(fs.readFileSync('index.html', 'utf8').includes('dist/pamet.min.js?v=1200'), 'Executable assets must use the release bundle URL; the production edge supplies the current cache-buster.');
-check(main.includes("navigator.serviceWorker.register('sw.js?v=1600')"), 'PWA service-worker registration must execute from the CSP-compatible external production bundle for Pamet 1.6.0.');
+check(main.includes(`navigator.serviceWorker.register('sw.js?v=${assetVersion}0', { updateViaCache: 'none' })`), `PWA service-worker registration must rotate with Pamet ${pkg.version} and bypass the worker HTTP cache.`);
+check(main.includes('registration.update()'), 'PWA startup must actively check the release worker for updates.');
 check(server.includes('Content-Security-Policy') && server.includes('Strict-Transport-Security') && server.includes("app.disable('x-powered-by')"), 'Production security headers must remain enabled.');
 check(server.includes("script-src-attr 'none'") && server.includes("style-src-attr 'none'") && !server.includes("script-src 'self' 'unsafe-inline'") && !server.includes("style-src 'self' 'unsafe-inline'"), 'Inner application CSP must block inline script/style attributes and unsafe-inline execution/presentation.');
 check(secureServer.includes("script-src-attr 'none'") && secureServer.includes("style-src-attr 'none'") && secureServer.includes('hardenedCsp'), 'Production edge CSP must preserve strict inline-attribute blocking.');
 check(secureServer.includes("const VERSION = require('./package.json').version") && secureServer.includes("app.get('/api/health'") && secureServer.includes('version: VERSION'), 'The production edge must report the canonical package release version.');
+check(secureServer.includes("app.get('/sw.js'") && secureServer.includes("Cache-Control', 'no-store, max-age=0'"), 'The production edge must force service-worker revalidation.');
 check(server.includes("const VERSION = require('./package.json').version;"), 'The application server must use the same canonical package release version.');
 check(secureServer.includes('renderVersionedIndex') && secureServer.includes('X-Pamet-Version'), 'Production HTML and headers must expose the canonical release version.');
 check(server.includes('distributedRateLimit') && limiter.includes('REDIS_URL') && limiter.includes('pExpire') && server.includes('limits.billing'), 'Sensitive handlers must use shared Redis/Valkey rate limits.');
@@ -75,4 +79,4 @@ check(
   'Local encryption work must retain the explicit key/recovery threat-model gate before implementation.'
 );
 
-console.log('Pamet 1.6.0 production hardening checks passed.');
+console.log(`Pamet ${pkg.version} production hardening checks passed.`);

@@ -110,6 +110,13 @@ async function rejectBreachedPassword(req, res, next) {
 app.use('/api/auth', authSecurityHeaders);
 app.get('/api/health', authSecurityHeaders, (req, res) => res.json({ ok: true, version: VERSION }));
 
+/* Service-worker scripts must bypass intermediary/browser HTTP caching so an old controller can discover a new release. */
+app.get('/sw.js', (req, res) => {
+  res.setHeader('Service-Worker-Allowed', '/');
+  res.setHeader('Cache-Control', 'no-store, max-age=0');
+  res.type('application/javascript').sendFile(path.join(__dirname, 'sw.js'));
+});
+
 app.use('/api/ready', (req, res, next) => {
   const sendJson = res.json.bind(res);
   res.json = (body) => sendJson(body && typeof body === 'object' ? { ...body, version: VERSION } : body);

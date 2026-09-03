@@ -1,5 +1,7 @@
 'use strict';
 const fs = require('fs');
+const pkg = JSON.parse(fs.readFileSync('package.json','utf8'));
+const expected = pkg.version;
 const check = (condition, message) => { if (!condition) throw new Error(message); };
 const main = fs.readFileSync('js/main.js','utf8');
 const insights = fs.readFileSync('js/insights.js','utf8');
@@ -7,10 +9,13 @@ const experience = fs.readFileSync('js/experience.js','utf8');
 const icons = fs.readFileSync('js/icons.js','utf8');
 const css = fs.readFileSync('css/design-system.css','utf8');
 const cssMain = fs.readFileSync('css/main.css','utf8');
+const darkMode = fs.readFileSync('css/dark-mode.css','utf8');
 
-check(main.includes("const PAMET_VERSION = '1.6.0'"), 'Pamet browser release must identify the 1.6.0 product-system line.');
+check(main.includes(`const PAMET_VERSION = '${expected}'`), `Pamet browser release must identify the current ${expected} product-system line.`);
 check(main.includes('./icons.js') && main.includes('./insights.js') && main.includes('./experience.js'), 'Feature-owned product-system runtime layers must remain bundled.');
 check(cssMain.includes('@import "./design-system.css";'), 'Formal design system must remain loaded.');
+check(cssMain.trim().endsWith('@import "./dark-mode.css";'), 'Unified dark mode must remain the final visual override layer.');
+check(darkMode.includes('.completeness-card') && darkMode.includes('.insights-empty') && darkMode.includes('--text-primary: #F2F5F4'), 'Dark-mode Insights surfaces and readable foreground hierarchy must remain enforced.');
 check(experience.includes("title.textContent = 'Visit Brief'") && experience.includes('Email visit brief'), 'Doctor Report must remain renamed to Visit Brief in the active product UI.');
 check(insights.includes("['all','All'],['symptom','Symptoms'],['lifestyle','Lifestyle'],['medication','Medications'],['sleepstress','Sleep / Stress']"), 'Insights must expose all approved observation categories.');
 check(insights.includes('[7,30,90]'), 'Insights must support 7/30/90-day windows.');
@@ -25,4 +30,4 @@ check(css.includes('--pamet-primary:#0f3d3e') && css.includes('--pamet-sage') &&
 check(!/#(?:6d28d9|7c3aed|8b5cf6|a855f7|9333ea)/i.test(css), 'Production design layer must not introduce admin purple.');
 check(experience.includes('data-calendar-today') && experience.includes('Search health history') && experience.includes('Filter by symptom'), 'Calendar must include Today, history search, and symptom filtering.');
 check(experience.includes('pamet-skip-link') && experience.includes("event.key === 'Escape'") && css.includes(':focus-visible') && css.includes('prefers-reduced-motion'), 'Accessibility layer must include skip navigation, Escape handling, focus visibility, and reduced motion.');
-console.log('Pamet 1.6.0 Insights/design-system checks passed.');
+console.log(`Pamet ${expected} Insights/design-system checks passed.`);

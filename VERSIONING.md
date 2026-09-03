@@ -1,18 +1,18 @@
 # Pamet versioning policy
 
-Pamet uses semantic versioning (`MAJOR.MINOR.PATCH`). The current stable release is `v1.2.1`.
+Pamet uses semantic versioning (`MAJOR.MINOR.PATCH`). The current stable release line is `v1.6.1`.
 
 ## When to increment
 
-- **PATCH** — compatible bug fixes, security hardening, copy/styling changes, tests, reliability improvements, small workflow changes, and production stabilization. Example: `1.2.0 → 1.2.1`.
-- **MINOR** — a substantial backward-compatible capability or product expansion. Example: `1.2.1 → 1.3.0` for a major new user-facing capability.
+- **PATCH** — compatible bug fixes, security hardening, copy/styling changes, cache invalidation, tests, reliability improvements, small workflow changes, and production stabilization. Example: `1.6.0 → 1.6.1`.
+- **MINOR** — a substantial backward-compatible capability or product expansion. Example: `1.6.1 → 1.7.0` for a major new user-facing capability.
 - **MAJOR** — an intentionally breaking data, API, authentication, or deployment migration that requires coordinated client or user migration.
 
 ## Release source of truth
 
 `package.json` is the canonical application release version. The production edge reads it directly for `/api/health` and operational release identity. The browser bundle carries the same release value for visible release text, feedback metadata, and service-worker registration.
 
-Historical source filenames such as `v1.0.3.js` or `security-v1.1.0.js` describe the feature layer where that module originated; they are not the current application version and should not be renamed solely for a patch release.
+Active browser source files are feature-owned rather than release-numbered. Historical release numbers belong in Git history and `CHANGELOG.md`. Compatibility values such as the mobile contract's `minimumBackendVersion` may intentionally remain older than the current release and must not be mistaken for a stale user-facing application version.
 
 ## Required release updates
 
@@ -21,13 +21,17 @@ Every release must update or verify:
 1. `package.json`
 2. production `/api/health` release identity
 3. browser runtime release identity
-4. service-worker cache key / registration version
-5. README current-state section
-6. `CHANGELOG.md`
-7. release/version CI assertions
-8. dependency audit, unit/security tests, integration tests, and backup/restore drill
+4. service-worker cache key, registration token, and static shell asset token
+5. user-facing Settings / Privacy, Safety & Support release text
+6. README current-state section
+7. `CHANGELOG.md`
+8. mobile contract backend version while preserving intentional compatibility minimums
+9. release/version CI assertions
+10. dependency audit, unit/security tests, integration tests, and backup/restore drill
 
-Git tags and release titles use the `v` prefix (`v1.2.1`). Package metadata and API version values do not.
+The release CI derives the PWA asset token from the semantic version and fails when the browser worker registration, shell cache, or CSS/JS shell URLs do not rotate with the current release. This prevents a valid source change from being hidden behind an older cache identity.
+
+Git tags and release titles use the `v` prefix (`v1.6.1`). Package metadata and API version values do not.
 
 ## Release discipline
 

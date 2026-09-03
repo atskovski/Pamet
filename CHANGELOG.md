@@ -1,5 +1,18 @@
 # Pamet Change Log
 
+## [1.6.1] — 2026-09-03
+
+### Dark-mode delivery and release consistency
+
+- Rotated the PWA service-worker registration to `sw.js?v=1610`, shell cache to `pamet-shell-v161-1`, and static bundle URLs to the 1.6.1 asset token so clients cannot remain pinned to the previous 1.6.0 CSS/JavaScript shell after a visual patch.
+- Promoted the unified dark-mode surface system across Insights Data Completeness, empty states, readiness panels, forms, chips, meters, links, and common elevated cards.
+- Standardized dark-mode primary/secondary/tertiary text contrast and muted inactive controls while preserving stronger selected/active states.
+- Updated Privacy, Safety & Support and Settings release identity to Pamet 1.6.1.
+- Generalized version CI so every future release must rotate its worker registration, shell cache, shell bundle tokens, dark-mode release marker, and user-facing safety/support fallback.
+- Published backend contract identity 1.6.1 while retaining 1.5.1 as the minimum compatible native backend baseline.
+
+---
+
 ## [1.6.0] — 2026-09-03
 
 ### Security hardening
