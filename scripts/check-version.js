@@ -8,7 +8,7 @@ const secureServer = fs.readFileSync('secure-server.js', 'utf8');
 const main = fs.readFileSync('js/main.js', 'utf8');
 const feedback = fs.readFileSync('js/feedback-v1.0.3.js', 'utf8');
 const worker = fs.readFileSync('sw.js', 'utf8');
-const updateFlow = fs.readFileSync('js/version-update-v1.2.2.js', 'utf8');
+const updateFlow = fs.readFileSync('js/version-update-v1.2.3.js', 'utf8');
 const bundle = fs.readFileSync('dist/pamet.min.js', 'utf8');
 const readme = fs.readFileSync('README.md', 'utf8');
 const changelog = fs.readFileSync('CHANGELOG.md', 'utf8');
@@ -28,7 +28,7 @@ check(main.includes(`const PAMET_VERSION = '${expected}'`) && main.includes('win
 check(main.includes("fetch('/api/health'") && main.includes('PametOfferVersionUpdate?.(health.version)'), 'A newer server release must trigger the safe update prompt instead of disguising the loaded version.');
 check(!main.includes('applyReleaseVersion(health.version)'), 'A stale bundle must never overwrite its displayed loaded version with the server version.');
 check(main.includes("navigator.serviceWorker.register('sw.js?v=1230')"), 'PWA registration must reference the current release worker.');
-check(main.includes('version-update-v1.2.2.js'), 'The production bundle must load the safe new-version update flow.');
+check(main.includes('version-update-v1.2.3.js'), 'The production bundle must load the safe new-version update flow.');
 check(updateFlow.includes('New Pamet version available') && updateFlow.includes('Update now') && updateFlow.includes('does not clear your saved Pamet data'), 'The update flow must provide a safe, explicit refresh prompt.');
 check(updateFlow.includes('PametLoadedVersion') && updateFlow.includes("fetch(`/api/health?release_check=${Date.now()}`") && updateFlow.includes("cache: 'no-store'"), 'The update flow must compare the server release with the loaded bundle and bypass caches.');
 check(feedback.includes('window.PametVersion ||'), 'Feedback must use the browser runtime version instead of a release literal.');
