@@ -24,11 +24,13 @@ check(/\[hidden\]\s*\{[^}]*display:\s*none\s*!important\s*;?[^}]*\}/.test(css), 
 check(!html.includes('id="customSymptomList"') && !html.includes('>Custom symptoms<'), 'The retired Custom symptoms settings card must not be rendered.');
 check(
   main.includes("const PAMET_VERSION = '1.2.3'") &&
+  main.includes('window.PametLoadedVersion = PAMET_VERSION') &&
   main.includes('function applyReleaseVersion(version)') &&
   main.includes('Pamet v${normalized} · Your health history, finally useful.') &&
   main.includes("fetch('/api/health'") &&
-  main.includes('applyReleaseVersion(health.version)'),
-  'The production browser runtime must identify Pamet v1.2.3 and reconcile against deployed health.'
+  main.includes('PametOfferVersionUpdate?.(health.version)') &&
+  !main.includes('applyReleaseVersion(health.version)'),
+  'The production browser runtime must identify the actually loaded Pamet v1.2.3 and offer a newer server release without disguising stale code.'
 );
 check(
   secureServer.includes('renderVersionedIndex') &&
@@ -48,6 +50,6 @@ check(main.includes("navigator.serviceWorker.register('sw.js?v=1230')"), 'Servic
 check(worker.includes('pamet-shell-v123-0') && worker.includes('dist/pamet.min.js?v=123') && !worker.slice(0, worker.indexOf('const PATHS')).includes('/api/'), 'The v1.2.3 service worker must use a fresh bundled cache and never list API data in the shell.');
 check(worker.includes('u.pathname.startsWith("/api/")||u.pathname.startsWith("/share")'), 'Service-worker fetch handling must bypass API and sensitive share routes.');
 check(updateFlow.includes('New Pamet version available') && updateFlow.includes('Update now') && updateFlow.includes('Later'), 'The app must provide a visible new-version refresh prompt.');
-check(updateFlow.includes('sessionStorage') && !updateFlow.includes('localStorage.clear') && !updateFlow.includes('indexedDB.deleteDatabase'), 'The update flow must not clear local health data.');
+check(updateFlow.includes('PametLoadedVersion') && updateFlow.includes('sessionStorage') && !updateFlow.includes('localStorage.clear') && !updateFlow.includes('indexedDB.deleteDatabase'), 'The update flow must compare against the loaded bundle and must not clear local health data.');
 
 console.log('Pamet v1.2.3 release checks passed.');
