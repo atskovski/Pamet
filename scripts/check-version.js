@@ -18,9 +18,11 @@ function check(condition,message){if(!condition)throw new Error(message);}
 check(/^\d+\.\d+\.\d+$/.test(expected),'package.json version must be semantic x.y.z.');
 check(pkg.scripts.start==='node secure-server.js','Production startup must launch the secure server.');
 check(!pkg.scripts.postinstall,'Do not build from postinstall.');
-check(pkg.scripts.build?.includes('esbuild js/main.js'),'Production build command must bundle current source.');
+check(pkg.scripts.build==='node scripts/build-production.js','Production build must run the strict-CSP production bundler.');
 check(secureServer.includes("require('./package.json').version"),'Production edge must source version from package.json.');
 check(secureServer.includes("app.get('/api/health'")&&secureServer.includes('version: VERSION'),'Health must report canonical version.');
+check(!secureServer.includes("style-src 'self' 'unsafe-inline'"),'Production style CSP must not permit unsafe-inline.');
+check(secureServer.includes("style-src-attr 'none'"),'Production CSP must block inline style attributes.');
 check(main.includes(`const PAMET_VERSION = '${expected}'`)&&main.includes('window.PametLoadedVersion = PAMET_VERSION'),'Browser runtime must expose loaded version.');
 check(main.includes("navigator.serviceWorker.register('sw.js?v=1511')"),'PWA registration must execute from the CSP-compatible external production bundle.');
 check(main.includes('performance-v1.5.1.js')&&main.includes('icons-v1.5.0.js')&&main.includes('insights-v1.5.0.js')&&main.includes('experience-v1.5.0.js'),'Pamet product-system and performance modules must load.');
@@ -32,6 +34,7 @@ check(feedback.includes('window.PametVersion ||'),'Feedback must use runtime ver
 check(worker.includes(`Pamet v${expected}`)&&worker.includes('pamet-shell-v151-1'),'Service worker cache/version must match release.');
 check(worker.includes('SKIP_WAITING')&&worker.includes('ignoreSearch:true'),'Service worker must support safe activation and version-tolerant shell caching.');
 check(bundle.includes('/api/health')&&bundle.includes(expected),'Generated bundle must contain current release identity.');
+check(!/\bstyle\s*=\s*["']/.test(bundle),'Generated production JavaScript must not emit inline style attributes.');
 check(readme.includes(`Version ${expected}`)&&readme.includes('Current State'),'README must state current release.');
 check(readme.includes(`### Pamet ${expected}`),`README Current State must include a Pamet ${expected} release heading.`);
 const currentState=readme.split('## Current State')[1]?.split('\n## ')[0]||'';
@@ -42,4 +45,4 @@ check(threatModel.includes(`v${expected}`)&&!threatModel.includes('Pamet v1.2.0'
 check(goLive.includes(`Pamet ${expected}`)&&goLive.includes('CI automation')&&goLive.includes('Independent penetration test'),'Go-live dashboard must track current release and independent gates.');
 check(mobileContract.backendVersion===expected,'Mobile API contract backendVersion must match package.json version.');
 check(Number(mobileContract.contractVersion)>=2,'Mobile API contract must use supported contractVersion.');
-console.log(`Pamet ${expected} version and governance checks passed.`);
+console.log(`Pamet ${expected} version, CSP, and governance checks passed.`);
