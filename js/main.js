@@ -1,6 +1,7 @@
 /* Pamet v1.2.3 production entrypoint. Keep dependency order explicit here. */
 const PAMET_VERSION = '1.2.3';
 window.PametVersion = PAMET_VERSION;
+window.PametLoadedVersion = PAMET_VERSION;
 
 import "./auth.js";
 import "./store.js";
@@ -18,7 +19,6 @@ import "./version-update-v1.2.2.js";
 
 function applyReleaseVersion(version) {
   const normalized = String(version || '').trim() || PAMET_VERSION;
-  window.PametVersion = normalized;
   document.querySelectorAll('.footer-line').forEach((footer) => {
     footer.textContent = `Pamet v${normalized} · Your health history, finally useful.`;
   });
@@ -28,7 +28,9 @@ applyReleaseVersion(PAMET_VERSION);
 fetch('/api/health', { credentials: 'same-origin', cache: 'no-store' })
   .then((response) => response.ok ? response.json() : null)
   .then((health) => {
-    if (health && health.version) applyReleaseVersion(health.version);
+    if (!health?.version) return;
+    window.PametServerVersion = health.version;
+    if (health.version !== PAMET_VERSION) window.PametOfferVersionUpdate?.(health.version);
   })
   .catch(() => { /* the bundled version remains the offline fallback */ });
 
