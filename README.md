@@ -1,6 +1,6 @@
 # Pamet — Personal Health Journal
 
-**Version 1.2.3 — safe in-app release updates and PWA cache recovery**  
+**Version 1.3.0 — profile-aware care workspaces and clearer Ultra workflows**  
 **Your health history, finally useful.**
 
 Pamet is a privacy-first personal health journal for recording symptoms, medications, mood, activity, lifestyle factors, notes, and other user-provided health information over time, then organizing those observations into a clearer history for personal review and healthcare conversations.
@@ -13,7 +13,7 @@ Pamet is not an emergency-monitoring system, clinical decision tool, diagnostic 
 
 ## Current State
 
-Pamet is an actively developed web/PWA product deployed from GitHub `main` to Wasmer. **1.2.3** is a patch release focused on reliable client updates after the 1.2.2 deployment/version hardening work.
+Pamet is an actively developed web/PWA product deployed from GitHub `main` to Wasmer. **1.3.0** is a backward-compatible feature release focused on making Ultra profiles, sharing, and appointment preparation usable as complete workflows instead of isolated feature cards.
 
 ### Working today
 
@@ -27,26 +27,57 @@ Pamet is an actively developed web/PWA product deployed from GitHub `main` to Wa
 - Authenticator-app MFA with fresh locally rendered QR setup and verification before activation.
 - Privacy-minimal product feedback.
 - CSV/JSON export and account deletion.
-- Read-only, expiring, revocable caregiver/provider sharing.
-- Ultra appointment preparation and encrypted-sync infrastructure.
+- Read-only, expiring, revocable caregiver/provider sharing with Resend delivery.
+- Ultra multi-profile health histories with explicit active-profile context.
+- Ultra appointment preparation with server persistence, local draft fallback, discussion-guide generation, and reminder timing.
+- Ultra advanced Visit Brief and health-history comparison surfaces.
+- Ultra encrypted-sync infrastructure.
 - Consent-based browser/PWA reminders and Web Push infrastructure.
 - Grafana Cloud OTLP logs/metrics and dependency readiness checks.
 - Responsive phone layouts, safe-area handling, centered security/recovery dialogs, and narrow-screen safeguards.
 - CI-backed MySQL lifecycle tests and disposable backup → isolated-restore verification.
 - Live `/api/health` and `/api/ready` deployment acceptance checks.
 
+### Release 1.3.0 — profiles, sharing, and appointment preparation
+
+#### Profile-aware Settings
+
+- Adds a clear **Currently viewing** profile card at the top of Settings.
+- Shows active profile name, relationship, and entry count before users enter the Profiles dialog.
+- Keeps the existing Profiles picker behavior and per-profile local journal separation.
+- New profiles are not created until the user reviews and approves a confirmation inside the Profiles dialog.
+- Confirmation explains that the current profile session will switch, the Pamet account remains signed in, existing profiles/data are preserved, and the new profile starts with **0 entries**.
+- Existing-profile switches also display an in-window confirmation explaining the effect before reload.
+- Profile creation/switching persists the current profile before changing context so existing health history is not lost.
+
+#### Advanced sharing
+
+- Keeps Advanced Sharing inside one modal from start through completion.
+- Checks Pamet email-delivery configuration before enabling invitation sending.
+- Shows send progress, delivery failures, and successful-send confirmation **inside the current sharing window** instead of behind the modal.
+- Success state shows recipient, active profile, permission level, and expiration period.
+- Supports sending another invitation without leaving the sharing workflow.
+- Uses the existing authenticated `/api/sharing/invites` backend, which stores the share, sends the invitation through Resend, and removes the DB record if email delivery fails.
+- Production email delivery requires `RESEND_API_KEY` and `EMAIL_FROM`; a verified Resend sender/domain is the recommended production configuration.
+
+#### Appointment Workspace
+
+- Renders the workspace before contacting the server, so an expired server session no longer reduces the experience to an unexplained **Authentication required** toast.
+- Adds visit type, clinician/practice, date/time, visit reason, top concerns, questions, and expanded reminder timing choices.
+- Builds a live **Discussion guide** from the active profile’s recorded history, recent symptom changes, Pamet patterns, medication information, and recent notes.
+- Adds a practical pre-visit checklist.
+- Allows a local draft to be saved on the device even if the server session needs reconnection.
+- Explains clearly when sign-in is required for server-saved appointments/reminder settings while confirming that local journal data remains safe.
+- Filters displayed server appointments to the active profile.
+- Uses the existing Ultra-only MySQL appointment APIs for create/list/delete and stores reminder timing with each saved visit.
+
 ### Release 1.2.3 — safe update flow
 
 - Adds a visible **New Pamet version available** prompt when the deployed server is newer than the currently loaded browser/PWA bundle.
 - Offers **Update now** and **Later** actions.
 - Checks for a newer release on app load, when the app returns to the foreground, and every 15 minutes while open.
-- Uses no-cache `/api/health` release checks so an old PWA shell cannot hide a newer production release.
-- Keeps **loaded app version** separate from **server version** so a stale client cannot pretend it is current just because the server reports a newer release.
-- Keeps the Settings footer tied to the actually loaded application version until the refresh completes.
-- `Update now` asks the service worker to update/activate and reloads with a release-specific cache-buster.
-- The update flow does **not** clear localStorage, IndexedDB, journal entries, or other Pamet site data.
-- Refreshes the PWA shell to `pamet-shell-v123-0` and registers `sw.js?v=1230`.
-- Adds release checks that fail if the safe-update flow is removed, starts clearing local data, or disguises a stale loaded version.
+- Keeps loaded app version separate from server version so a stale client cannot pretend it is current.
+- `Update now` asks the service worker to update/activate and reloads with a release-specific cache-buster without clearing local Pamet data.
 
 ### Release 1.2.2 — deployment hardening
 
@@ -54,10 +85,7 @@ Pamet is an actively developed web/PWA product deployed from GitHub `main` to Wa
 - Made the production edge inject the release into the Settings footer.
 - Added `X-Pamet-Version` response identity.
 - Normalized `/api/health` and `/api/ready` around the same release.
-- Fixed Wasmer Anybuild packaging after production logs showed `postinstall` was running before application source existed.
-- Keeps `npm start` deterministic as `node secure-server.js`; Wasmer runs the explicit build after source copy.
-- Regenerated the production lockfile and browser bundles after stale-artifact drift was found.
-- Restored successful Wasmer promotion from GitHub `main`.
+- Fixed Wasmer Anybuild packaging and restored successful production promotion from GitHub `main`.
 
 ### Release 1.2.1 — stability/security hardening
 
@@ -106,6 +134,8 @@ A paid tier is offered only when its Stripe configuration passes server-side val
 - Feedback excludes account and health-entry fields from the feedback record.
 - Service-worker caching excludes `/api/` and sensitive sharing routes.
 - The update system does not clear browser-local Pamet journal data.
+- Profile switching preserves each profile’s journal separately; a newly created profile starts empty.
+- Appointment discussion guides organize user-recorded information and do not diagnose or recommend treatment.
 
 ### Local journal encryption status
 
@@ -173,20 +203,23 @@ The following still require real-provider or independent evidence:
 9. Final review before local working-journal encryption is enabled.
 10. Retirement of the remaining legacy bearer compatibility path.
 11. Removal of CSP `style-src 'unsafe-inline'` after remaining inline style usage is migrated.
+12. End-to-end production verification of appointment reminder delivery beyond stored reminder timing.
 
 ---
 
 ## Current State vs Future State
 
-| Area | Current state — 1.2.3 | Future state |
+| Area | Current state — 1.3.0 | Future state |
 | --- | --- | --- |
+| Profiles | Active-profile context, confirmed profile switching, isolated journals | Reviewed cross-device profile sync/recovery |
+| Appointment preparation | Local draft + server-persisted visits + generated discussion guide | End-to-end scheduled reminder delivery and native parity |
+| Sharing | Resend-backed email invitations, in-window delivery confirmation, expiring/revocable links | Additional reviewed care-coordination workflows |
 | Release updates | In-app newer-version detection, safe refresh prompt, PWA cache rotation | Native-app update coordination and richer release notes |
 | Release identity | Loaded-client version + server `/api/health`/`/api/ready` identity | Exact deployed Git SHA surfaced in ops UI |
 | Accounts | Email/password, sessions, reset/change, devices, logout-all | Complete legacy bearer retirement |
 | MFA | Authenticator setup with local QR | Independent deployed recovery review |
 | Local journal | Local-first browser storage | Reviewed encrypted-at-rest local journal migration |
 | Cross-device sync | Ultra opaque encrypted sync | Mature recovery UX and native parity |
-| Sharing | Read-only expiring/revocable links | Additional reviewed care-coordination workflows |
 | Billing | Server-authoritative Stripe architecture | Full controlled production acceptance evidence |
 | Notifications | In-app + Web Push | Cross-browser/device acceptance evidence |
 | Observability | Structured logs, metrics, readiness, Grafana | Mature alert thresholds/on-call practice |
@@ -201,8 +234,8 @@ The following still require real-provider or independent evidence:
 
 Pamet uses semantic versioning.
 
-- **Patch** (`1.2.2 → 1.2.3`): compatible fixes, security/reliability improvements, or small backward-compatible UX capabilities such as update handling.
-- **Minor** (`1.2.x → 1.3.0`): substantial backward-compatible capability.
+- **Patch** (`1.2.2 → 1.2.3`): compatible fixes, security/reliability improvements, or small backward-compatible UX capabilities.
+- **Minor** (`1.2.x → 1.3.0`): substantial backward-compatible capability, such as the complete profile/sharing/appointment workspaces in this release.
 - **Major** (`1.x → 2.0.0`): intentional breaking migration/API/data-contract change.
 
 The canonical release number lives in `package.json`. See `VERSIONING.md` for release rules.
@@ -246,6 +279,7 @@ Backend-dependent capabilities require the appropriate environment configuration
 
 ## Release History
 
+- **1.3.0** — profile-aware Settings, confirmed profile switching, in-window sharing delivery UX, and rebuilt Appointment Workspace/discussion guide.
 - **1.2.3** — safe new-version notification/refresh flow and PWA update recovery.
 - **1.2.2** — Wasmer deployment synchronization, server-authoritative release identity, cache/build hardening.
 - **1.2.1** — stability, version discipline, security/mobile/PWA hardening.

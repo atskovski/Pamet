@@ -2,6 +2,49 @@
 
 This file is the repository system of record for completed product and engineering changes. It is not rendered inside the Pamet application.
 
+## [1.3.0] — 2026-09-03
+
+### Profile-aware Settings
+
+- Added a persistent **Currently viewing** profile context card at the top of Settings.
+- Shows active profile name, relationship, and entry count without requiring users to reopen Manage Profiles.
+- Preserved the existing profile picker and separate per-profile local journal storage.
+- Added an in-window confirmation before a new profile is created and activated.
+- Confirmation explains that the current profile session will switch, the Pamet account remains signed in, existing profile data is preserved, and the new profile starts with zero entries.
+- Existing-profile switches now show the same clear session/data-preservation explanation before reload.
+- New profiles continue to receive their own empty entry store and must be tracked from scratch.
+
+### Advanced sharing
+
+- Reworked Advanced Sharing so progress, delivery errors, and success confirmation remain inside the active sharing modal.
+- Added email-delivery readiness detection before sending.
+- Added a visible sending state and a durable success state showing recipient, profile, permission, and expiration.
+- Added **Send another** without leaving the current workflow.
+- Continued using the authenticated `/api/sharing/invites` backend and Resend delivery path.
+- Confirmed the backend removes the stored invite if email delivery fails.
+- Documented `RESEND_API_KEY` + `EMAIL_FROM` and a verified sender/domain as the production email requirement.
+
+### Appointment workspace
+
+- Rebuilt Appointment Workspace so the UI renders before contacting the server.
+- Replaced the unexplained **Authentication required** dead end with clear local-planning and reconnect states.
+- Added local draft persistence that does not delete or overwrite health-history data.
+- Added visit type, clinician/practice, date/time, visit reason, concerns, questions, and expanded reminder timing choices.
+- Added a live Discussion Guide using the active profile's recent symptom changes, Pamet patterns, medications, and recent notes.
+- Added a practical pre-visit checklist.
+- Filtered displayed appointments to the currently active profile.
+- Continued using the Ultra-only MySQL appointment create/list/delete backend and stored reminder timing with each appointment.
+- Added regression checks for profile isolation, sharing delivery UX, appointment fallback behavior, and existing backend persistence routes.
+
+### Layout and release discipline
+
+- Realigned **Prepare with Ultra** headings, explanatory copy, and tool cards.
+- Added dedicated responsive styles for profile context, confirmations, sharing results, appointment planning, and the discussion guide.
+- Promoted the release from 1.2.x to **1.3.0** because this is a substantial backward-compatible capability expansion.
+- Refreshed the service-worker release cache to `pamet-shell-v130-0`.
+
+---
+
 ## [1.2.3] — 2026-09-03
 
 ### Safe application updates

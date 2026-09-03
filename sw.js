@@ -1,6 +1,6 @@
-/* Pamet v1.2.3 service worker: bundled static shell plus user-approved Web Push; API/share data is never cached. */
-const CACHE="pamet-shell-v123-0";
-const SHELL=["/","/index.html","/dist/pamet.min.css?v=123","/dist/pamet.min.js?v=123","/manifest.webmanifest","/assets/pamet-mark.svg?v=123","/assets/icon-192.png","/assets/icon-512.png","/assets/icon-maskable-512.png","/assets/login-sunrise.jpg","/assets/login-dusk.jpg","/assets/login-morning.jpg"];
+/* Pamet v1.3.0 service worker: bundled static shell plus user-approved Web Push; API/share data is never cached. */
+const CACHE="pamet-shell-v130-0";
+const SHELL=["/","/index.html","/dist/pamet.min.css?v=130","/dist/pamet.min.js?v=130","/manifest.webmanifest","/assets/pamet-mark.svg?v=130","/assets/icon-192.png","/assets/icon-512.png","/assets/icon-maskable-512.png","/assets/login-sunrise.jpg","/assets/login-dusk.jpg","/assets/login-morning.jpg"];
 const PATHS=new Set(SHELL.map(path=>new URL(path,self.location.origin).pathname));
 self.addEventListener("install",e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())));
 self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
