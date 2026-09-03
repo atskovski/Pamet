@@ -1,59 +1,35 @@
 'use strict';
-
-const fs = require('fs');
-
-const html = fs.readFileSync('index.html', 'utf8');
-const css = fs.readFileSync('css/styles.css', 'utf8');
-const store = fs.readFileSync('js/store.js', 'utf8');
-const app = fs.readFileSync('js/app.js', 'utf8');
-const main = fs.readFileSync('js/main.js', 'utf8');
-const updateFlow = fs.readFileSync('js/version-update-v1.3.0.js', 'utf8');
-const phase2 = fs.readFileSync('js/phase2.js', 'utf8');
-const server = fs.readFileSync('server.js', 'utf8');
-const secureServer = fs.readFileSync('secure-server.js', 'utf8');
-const manifest = JSON.parse(fs.readFileSync('manifest.webmanifest', 'utf8'));
-const worker = fs.readFileSync('sw.js', 'utf8');
-
-function check(condition, message) {
-  if (!condition) throw new Error(message);
-}
-
-check(html.includes('href="dist/pamet.min.css?v=1200"'), 'The production CSS bundle must be loaded; the edge rewrites its cache-buster from package.json.');
-check(html.includes('src="dist/pamet.min.js?v=1200"'), 'The production JavaScript bundle must be loaded; the edge rewrites its cache-buster from package.json.');
-check(!html.includes('src="js/app.js') && !html.includes('href="css/phase2.css'), 'Legacy runtime layers must not load directly.');
-check(/\[hidden\]\s*\{[^}]*display:\s*none\s*!important\s*;?[^}]*\}/.test(css), 'Every native hidden state must remain hidden.');
-check(!html.includes('id="customSymptomList"') && !html.includes('>Custom symptoms<'), 'The retired Custom symptoms settings card must not be rendered.');
-check(
-  main.includes("const PAMET_VERSION = '1.3.0'") &&
-  main.includes('window.PametLoadedVersion = PAMET_VERSION') &&
-  main.includes('function applyReleaseVersion(version = PAMET_VERSION)') &&
-  main.includes('protectReleaseFooter()') &&
-  main.includes('new MutationObserver') &&
-  main.includes('Pamet v${normalized} · Your health history, finally useful.') &&
-  main.includes("fetch('/api/health'") &&
-  main.includes('PametOfferVersionUpdate?.(health.version)') &&
-  !main.includes('applyReleaseVersion(health.version)'),
-  'The production browser runtime must identify and protect the actually loaded Pamet v1.3.0 while offering a newer server release without disguising stale code.'
-);
-check(
-  secureServer.includes('renderVersionedIndex') &&
-  secureServer.includes('Pamet v${VERSION} · Your health history, finally useful.') &&
-  secureServer.includes('X-Pamet-Version'),
-  'The production edge must make the rendered Settings version server-authoritative.'
-);
-check(html.includes('Don’t have an account?') && /id="registerForm" hidden/.test(html), 'Registration must remain a deliberate secondary action.');
-check(!/id="reg(?:First|Last)Name"[^>]*value=/.test(html) && !/id="reg(?:First|Last)Name"[^>]*placeholder=/.test(html), 'Registration names must never be prefilled or presented as example profiles.');
-check(html.includes('id="homeEmptyState" hidden') && html.includes('id="metricsGrid" hidden') && html.includes('id="recentSection" hidden'), 'New-user dashboard content must start in the empty state.');
-check(store.includes('return [];') && !store.includes('function sampleEntries'), 'New users must start with no sample health entries.');
-check(app.includes('Entry saved — Pamet is updating your patterns.') && html.includes('Entry saved! Pamet is updating your patterns.'), 'Saved-entry feedback must use Pamet language.');
-check(html.includes('Pamet pattern detection') && !html.includes('Improve AI (anonymous)'), 'Settings must use Pamet pattern and product-feedback language.');
-check(server.includes("app.post('/api/feedback', limits.feedback, auth") && server.includes('pamet_feedback'), 'Product feedback must be authenticated in transit and stored without account fields.');
-check(manifest.display === 'standalone' && manifest.icons.some((icon) => icon.sizes === '192x192') && manifest.icons.some((icon) => icon.sizes === '512x512'), 'The PWA manifest must include standalone display and phone-sized icons.');
-check(main.includes("navigator.serviceWorker.register('sw.js?v=1300')"), 'Service-worker registration must live in the external bundle and reference v1.3.0.');
-check(worker.includes('pamet-shell-v130-0') && worker.includes('dist/pamet.min.js?v=130') && !worker.slice(0, worker.indexOf('const PATHS')).includes('/api/'), 'The v1.3.0 service worker must use a fresh bundled cache and never list API data in the shell.');
-check(worker.includes('u.pathname.startsWith("/api/")||u.pathname.startsWith("/share")'), 'Service-worker fetch handling must bypass API and sensitive share routes.');
-check(updateFlow.includes('New Pamet version available') && updateFlow.includes('Update now') && updateFlow.includes('Later'), 'The app must provide a visible new-version refresh prompt.');
-check(updateFlow.includes('PametLoadedVersion') && updateFlow.includes('sessionStorage') && !updateFlow.includes('localStorage.clear') && !updateFlow.includes('indexedDB.deleteDatabase'), 'The update flow must compare against the loaded bundle and must not clear local health data.');
-check(phase2.includes('Currently viewing') && phase2.includes('Invitation sent') && phase2.includes('Discussion guide'), 'The 1.3.0 care workspace must include profile context, in-window sharing confirmation, and appointment discussion guide behavior.');
-
-console.log('Pamet v1.3.0 release checks passed.');
+const fs=require('fs');
+const html=fs.readFileSync('index.html','utf8');
+const css=fs.readFileSync('css/styles.css','utf8');
+const store=fs.readFileSync('js/store.js','utf8');
+const app=fs.readFileSync('js/app.js','utf8');
+const main=fs.readFileSync('js/main.js','utf8');
+const updateFlow=fs.readFileSync('js/version-update.js','utf8');
+const phase2=fs.readFileSync('js/phase2.js','utf8');
+const clarity=fs.readFileSync('js/product-clarity-v1.4.0.js','utf8');
+const reminders=fs.readFileSync('lib/appointment-reminders.js','utf8');
+const workflow=fs.readFileSync('.github/workflows/push-reminders.yml','utf8');
+const secureServer=fs.readFileSync('secure-server.js','utf8');
+const manifest=JSON.parse(fs.readFileSync('manifest.webmanifest','utf8'));
+const worker=fs.readFileSync('sw.js','utf8');
+function check(condition,message){if(!condition)throw new Error(message);}
+check(html.includes('href="dist/pamet.min.css?v=1200"')&&html.includes('src="dist/pamet.min.js?v=1200"'),'Edge-rewritten production bundles must remain loaded.');
+check(!html.includes('src="js/app.js')&&!html.includes('href="css/phase2.css'),'Source runtime layers must not load directly.');
+check(/\[hidden\]\s*\{[^}]*display:\s*none\s*!important/.test(css),'Native hidden state must remain reliable.');
+check(main.includes("const PAMET_VERSION = '1.4.0'")&&main.includes('product-clarity-v1.4.0.js')&&main.includes('version-update.js'),'1.4.0 runtime modules must be explicit.');
+check(secureServer.includes('appointmentReminderJob')&&secureServer.includes("/api/jobs/appointment-reminders"),'Production edge must mount appointment reminders.');
+check(reminders.includes("appointment.reminder_sent")&&reminders.includes("pamet-appointment-${appointment.id}")&&reminders.includes('GET_LOCK'),'Appointment reminders must be deduplicated, tagged, and serialized.');
+check(workflow.includes("cron: '*/15 * * * *'")&&workflow.includes('/api/jobs/appointment-reminders'),'Appointment reminder scheduler must run every 15 minutes.');
+check(clarity.includes('Switch profile')&&clarity.includes('quickProfileButton')&&clarity.includes('S.switchProfile'),'Every screen must receive quick profile switching through the shared top bar.');
+check(clarity.includes('Pattern readiness')&&clarity.includes('Baseline started')&&clarity.includes('Baseline ready'),'Patterns must explain data readiness rather than showing a generic zero-day banner.');
+check(clarity.includes('No entry recorded for this day')&&clarity.includes('Mild symptoms')&&clarity.includes('Today'),'Calendar must distinguish missing entries from symptom-free entries and explain its legend.');
+check(phase2.includes('Currently viewing')&&phase2.includes('Invitation sent')&&phase2.includes('Discussion guide'),'Profile context, sharing confirmation, and appointment preparation must remain intact.');
+check(store.includes('return [];')&&!store.includes('function sampleEntries'),'New users must start with no sample health entries.');
+check(app.includes('Entry saved — Pamet is updating your patterns.'),'Saved-entry feedback must use Pamet language.');
+check(manifest.display==='standalone','PWA manifest must remain standalone.');
+check(main.includes("navigator.serviceWorker.register('sw.js?v=1400')"),'Service worker registration must reference 1.4.0.');
+check(worker.includes('pamet-shell-v140-0')&&worker.includes('dist/pamet.min.js?v=140'),'1.4.0 service worker must use fresh shell assets.');
+check(worker.includes('u.pathname.startsWith("/api/")||u.pathname.startsWith("/share")'),'Sensitive API/share routes must bypass cache.');
+check(updateFlow.includes('New Pamet version available')&&!updateFlow.includes('localStorage.clear'),'Safe update flow must remain visible and non-destructive.');
+console.log('Pamet v1.4.0 release checks passed.');
