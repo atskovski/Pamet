@@ -1,5 +1,5 @@
-/* Pamet v1.2.2 production entrypoint. Keep dependency order explicit here. */
-const PAMET_VERSION = '1.2.2';
+/* Pamet v1.2.3 production entrypoint. Keep dependency order explicit here. */
+const PAMET_VERSION = '1.2.3';
 window.PametVersion = PAMET_VERSION;
 
 import "./auth.js";
@@ -34,6 +34,6 @@ fetch('/api/health', { credentials: 'same-origin', cache: 'no-store' })
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js?v=1220').catch(() => { /* core local-first use remains available without SW registration */ });
+    navigator.serviceWorker.register('sw.js?v=1230').catch(() => { /* core local-first use remains available without SW registration */ });
   });
 }
