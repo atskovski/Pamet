@@ -1,13 +1,14 @@
 'use strict';
 
 // Backwards-compatible deployment entry point. The reviewed Express application
-// remains in server.js; this edge wrapper adds account-keyed login throttling and
-// breached-password screening without changing the local-first data model.
+// remains in server.js; this edge wrapper adds account-keyed login throttling,
+// breached-password screening, legacy identity migration, and CSP enforcement.
 const crypto = require('crypto');
 const express = require('express');
 const inner = require('./server');
 const { distributedRateLimit } = require('./lib/rate-limit');
 const { breachedPassword } = require('./lib/security');
+const { legacyUpgrade, logoutAll } = require('./lib/edge-account');
 
 const app = express();
 const port = Number(process.env.PORT || 8080);
@@ -16,13 +17,47 @@ const json = express.json({ limit: '256kb', strict: true });
 const sha = (value) => crypto.createHash('sha256').update(String(value || '')).digest('hex');
 const normalizedEmail = (req) => String(req.body && req.body.email || '').trim().toLowerCase().slice(0, 254);
 
+function hardenedCsp(value) {
+  return String(value || '')
+    .replace("script-src 'self' 'unsafe-inline'", "script-src 'self'")
+    .replace('; style-src', "; script-src-attr 'none'; style-src");
+}
+
+// The inner application owns the canonical security header set. This wrapper
+// removes executable inline-script permission from any CSP it emits while
+// retaining inline styles until the remaining style attributes are migrated.
+app.use((req, res, next) => {
+  const setHeader = res.setHeader.bind(res);
+  res.setHeader = (name, value) => setHeader(name, String(name).toLowerCase() === 'content-security-policy' ? hardenedCsp(value) : value);
+  next();
+});
+
+// Observe remaining pre-session bearer compatibility traffic without logging
+// the credential, a reusable hash, email, user id, IP address, or request body.
+// Cron/metrics tokens are separate authentication schemes and are excluded.
+app.use('/api', (req, res, next) => {
+  const authorization = String(req.headers.authorization || '');
+  const bearer = authorization.startsWith('Bearer ') ? authorization.slice(7).trim() : '';
+  if (/^[a-f0-9]{64}$/i.test(bearer) && !req.path.startsWith('/jobs/') && req.path !== '/metrics') {
+    console.log(JSON.stringify({
+      service: 'pamet',
+      version: '1.2.0',
+      event: 'identity.legacy_bearer_observed',
+      method: req.method,
+      path: req.path,
+      at: new Date().toISOString()
+    }));
+  }
+  next();
+});
+
 function authSecurityHeaders(req, res, next) {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(self "https://js.stripe.com")');
   res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
-  res.setHeader('Content-Security-Policy', "default-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com https://*.js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://*.stripe.com; connect-src 'self' https://api.stripe.com https://*.stripe.com https://link.com https://*.link.com; frame-src https://js.stripe.com https://*.js.stripe.com https://hooks.stripe.com https://link.com https://*.link.com");
+  res.setHeader('Content-Security-Policy', "default-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' https://js.stripe.com https://*.js.stripe.com; script-src-attr 'none'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://*.stripe.com; connect-src 'self' https://api.stripe.com https://*.stripe.com https://link.com https://*.link.com; frame-src https://js.stripe.com https://*.js.stripe.com https://hooks.stripe.com https://link.com https://*.link.com");
   res.setHeader('Cache-Control', 'no-store');
   if (nodeEnv === 'production') res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   next();
@@ -51,15 +86,10 @@ const passwordSafetyLimit = distributedRateLimit({
 async function rejectBreachedPassword(req, res, next) {
   const password = String(req.body && (req.body.newPassword || req.body.password) || '');
   if (password.length < 12) return next();
-  // CI must be deterministic and must never depend on an external breach corpus.
-  // This escape hatch is intentionally restricted to NODE_ENV=test so it cannot
-  // silently disable production password screening through configuration drift.
   if (nodeEnv === 'test' && process.env.DISABLE_BREACHED_PASSWORD_CHECK === 'true') return next();
   try {
     if (await breachedPassword(password)) return res.status(400).json({ error: 'Choose a password that has not appeared in known data breaches.' });
   } catch (error) {
-    // Availability of an external breach corpus must not lock users out of Pamet.
-    // The server-side scrypt policy still applies if the lookup service is unavailable.
     console.warn('breached_password_check_failed', { message: error.message });
   }
   next();
@@ -69,6 +99,8 @@ app.use('/api/auth', authSecurityHeaders);
 app.post('/api/auth/login', parseAuthJson, accountLoginLimit);
 app.post('/api/auth/register', parseAuthJson, passwordSafetyLimit, rejectBreachedPassword);
 app.post('/api/auth/password', parseAuthJson, passwordSafetyLimit, rejectBreachedPassword);
+app.post('/api/auth/legacy-upgrade', parseAuthJson, passwordSafetyLimit, rejectBreachedPassword, legacyUpgrade);
+app.post('/api/auth/logout-all', parseAuthJson, logoutAll);
 app.use(inner);
 app.use((error, req, res, next) => {
   if (res.headersSent) return next(error);

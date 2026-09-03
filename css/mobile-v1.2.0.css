@@ -1,0 +1,18 @@
+/* Pamet v1.2.0 final viewport and dialog safeguards. */
+html,body{width:100%;max-width:100%;overflow-x:hidden}
+.app-shell{width:100%;min-width:0}
+.pamet-modal-backdrop.security-overlay,.pamet-modal-backdrop.recovery-overlay{position:fixed!important;inset:0!important;display:grid!important;place-items:center!important;width:100vw!important;height:100dvh!important;overflow:auto!important;padding:max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))!important}
+.security-overlay .pamet-modal,.recovery-overlay .pamet-modal{position:relative!important;inset:auto!important;transform:none!important;margin:auto!important;max-width:100%!important;max-height:calc(100dvh - max(24px,env(safe-area-inset-top)) - max(24px,env(safe-area-inset-bottom)))!important;overflow:auto!important}
+.security-overlay .pamet-modal{width:min(600px,100%)!important}.recovery-overlay .pamet-modal{width:min(500px,100%)!important}
+.security-qr{width:min(300px,80vw)!important;height:auto!important;aspect-ratio:1}
+.security-qr-svg{width:100%!important;height:auto!important;aspect-ratio:1}
+.account-switch-button{display:block;min-height:44px;margin:2px auto 0;padding:10px 12px;border:0;background:transparent;color:#0F5C64;font:inherit;font-size:13px;font-weight:700;text-decoration:underline;cursor:pointer}
+#feedbackStatus.feedback-success{position:fixed!important;z-index:9800!important;top:max(20px,env(safe-area-inset-top))!important;bottom:auto!important;left:50%!important;transform:translateX(-50%)!important;width:min(520px,calc(100vw - 32px))!important;margin:0!important;padding:15px 18px!important;text-align:center!important}
+button,.btn,.data-btn,.link-button,.tab,.icon-btn,.pamet-close{touch-action:manipulation}
+.pamet-close,.icon-btn{min-width:44px;min-height:44px}
+img,svg,canvas,video{max-width:100%}
+@media(max-width:720px){body{padding:0!important;align-items:stretch!important}.app-shell{width:100vw!important;max-width:none!important;height:100dvh!important;border-radius:0!important;box-shadow:none!important}.content-col{padding-left:clamp(14px,4.5vw,20px)!important;padding-right:clamp(14px,4.5vw,20px)!important}}
+@media(max-width:600px){.welcome{align-items:center!important}.welcome-inner{width:min(100%,440px)!important;margin:auto!important}.field-row{display:grid!important;grid-template-columns:1fr!important}.security-section-head,.security-summary{display:grid!important;grid-template-columns:1fr!important}.security-signout-all,.security-setting-row .btn{width:100%!important}.security-setting-row{align-items:stretch!important;flex-direction:column!important}.report-actions{display:grid!important;grid-template-columns:1fr!important}.report-actions .btn{width:100%!important}.pamet-form input,.pamet-form select,.text-input,.notes-input,.feedback-form input,.feedback-form select,.feedback-form textarea{font-size:16px!important}}
+@media(max-width:420px){.metrics-grid{grid-template-columns:1fr!important}.symptom-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}.legend{flex-wrap:wrap!important}.security-device{align-items:flex-start!important}.greeting{font-size:clamp(22px,7vw,26px)!important}.screen-title{font-size:clamp(21px,6.5vw,25px)!important}}
+@media(max-width:340px){.symptom-grid{grid-template-columns:1fr!important}.security-device{display:grid!important}.security-device .data-btn{width:100%!important}}
+@media(orientation:landscape) and (max-height:520px){.pamet-modal-backdrop.security-overlay,.pamet-modal-backdrop.recovery-overlay{place-items:start center!important}.security-overlay .pamet-modal,.recovery-overlay .pamet-modal{margin:auto!important;max-height:calc(100dvh - 20px)!important}}
