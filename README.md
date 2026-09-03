@@ -1,6 +1,6 @@
 # Pamet — Personal Health Journal
 
-**Version 1.6.0**  
+**Version 1.6.1**  
 **Your health history, finally useful.**
 
 Pamet is a privacy-first personal health journal for recording symptoms, medications, mood, activity, lifestyle factors, notes, and other user-provided health information over time, then organizing those observations for personal review and healthcare conversations.
@@ -30,17 +30,15 @@ Pamet is an actively developed web/PWA product deployed from GitHub `main` to Wa
 - Grafana Cloud OTLP logs/metrics, readiness checks, and operational alerts.
 - In-app privacy/safety/support guidance with troubleshooting steps and explicit medical-use boundaries.
 
-### Pamet 1.6.0
+### Pamet 1.6.1
 
-- Retains the 1.5.x Insights, Calendar, Visit Brief, sharing, Appointment Workspace, performance, accessibility, and safety improvements.
-- Removes `unsafe-inline` from the production style Content Security Policy and blocks inline style attributes with `style-src-attr 'none'`.
-- Uses a strict-CSP production build guard so generated browser code cannot silently reintroduce inline style attributes.
-- Reorganizes active browser JavaScript from release-numbered filenames into feature-owned modules such as `billing-sharing.js`, `care-planning.js`, `care-workspace.js`, `notifications.js`, `insights.js`, and `security.js`.
-- Reorganizes active CSS layers into feature-owned names such as `brand.css`, `care-planning.css`, `product-clarity.css`, `design-system.css`, and `care-ux.css`.
-- Removes unused historical browser module files from the active source tree while keeping release history in Git and this CHANGELOG.
-- Rotates the service-worker shell to the 1.6.0 asset revision while continuing to exclude `/api/` and sensitive sharing routes from caching.
-- Publishes backend contract identity `1.6.0` while retaining `1.5.1` as the minimum compatible native backend baseline.
-- Keeps iOS and Android native release baselines synchronized through the production-owned mobile contract rather than copying web implementation details into native clients.
+- Corrects the 1.6.0 PWA delivery issue that could leave an already-open browser on the previous cached CSS/JavaScript shell after visual changes were merged.
+- Rotates the worker registration to `sw.js?v=1610`, the shell cache to `pamet-shell-v161-1`, and static bundle URLs to the 1.6.1 asset token so browsers are forced onto the current release assets.
+- Promotes the unified dark-mode palette across Insights cards, Data Completeness, empty states, forms, chips, progress meters, links, and common elevated surfaces so dark mode no longer mixes near-black pages with pure-white cards.
+- Uses near-white primary text, higher-contrast secondary text, visible teal meter fills, and lower-weight inactive controls for clearer hierarchy in dark mode.
+- Updates Privacy, Safety & Support and Settings release surfaces to the current 1.6.1 runtime identity and adds release checks that prevent those surfaces from silently falling behind again.
+- Keeps the 1.6.0 strict CSP and feature-owned frontend architecture unchanged.
+- Publishes backend contract identity `1.6.1` while retaining `1.5.1` as the minimum compatible native backend baseline.
 - Keeps external go-live assurance gates visibly open until real evidence exists.
 
 ## Product Model
@@ -128,7 +126,7 @@ Journal entries remain local-first by default. Ultra encrypted sync stores opaqu
 - `Pamet-iOS` and `Pamet-Android` validate that contract and the live production health endpoint on scheduled/manual checks.
 - When the optional GitHub Actions secret `MOBILE_SYNC_TOKEN` is configured with minimal cross-repository permissions, production `main` changes can dispatch immediate native release checks.
 - Native clients do not copy web JS/CSS automatically; backend/entitlement changes synchronize by contract, while product/safety behavior is implemented natively and independently tested.
-- Pamet 1.6.0 keeps the minimum compatible backend at 1.5.1 because the mobile API contract remains compatible; native binary versions can advance on their own store-release cadence.
+- Pamet 1.6.1 keeps the minimum compatible backend at 1.5.1 because the mobile API contract remains compatible; native binary versions can advance on their own store-release cadence.
 - A mobile contract update is not release-ready until the relevant native tests, lint/static analysis, and release compilation/build pass.
 
 See `MOBILE_RELEASE_COORDINATION.md` for the synchronization model and platform release gates.
@@ -144,7 +142,7 @@ Pamet uses a warm clinical visual system with explicit semantic roles:
 - **Rose:** significant symptom/severity meaning
 - **Purple:** reserved for the separate private Pamet Admin/Superuser environment
 
-The current runtime centralizes common icons and defines metadata, helper, body, control, section-heading, and page-heading type roles.
+The current runtime centralizes common icons and defines metadata, helper, body, control, section-heading, and page-heading type roles. In dark mode, the same semantic roles are mapped onto a unified near-black/surface/elevated-surface system with accessible foreground contrast instead of inserting light cards into the dark shell.
 
 ## Accessibility Status
 
@@ -160,6 +158,8 @@ Every production merge should pass:
 - strict-CSP output checks
 - syntax/static release checks
 - version consistency
+- release-specific PWA worker/cache rotation
+- dark-mode surface/contrast checks
 - feature-module ownership checks
 - security/UI assertions
 - Insights/design-system assertions
