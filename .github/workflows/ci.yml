@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 jobs:
-  syntax:
+  quality:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,3 +17,41 @@ jobs:
       - run: npm run check
       - run: npm test
       - run: npm audit --omit=dev --audit-level=high
+
+  integration:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: pamet_test
+          MYSQL_USER: pamet
+          MYSQL_PASSWORD: pamet
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      PAMET_INTEGRATION_TESTS: 'true'
+      NODE_ENV: test
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_NAME: pamet_test
+      DB_USER: pamet
+      DB_PASSWORD: pamet
+      AUTO_MIGRATE: 'true'
+      DISABLE_RATE_LIMITS: 'true'
+      DISABLE_BREACHED_PASSWORD_CHECK: 'true'
+      IDENTITY_ENCRYPTION_KEY: '1111111111111111111111111111111111111111111111111111111111111111'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --ignore-scripts
+      - name: Run production lifecycle integration matrix
+        run: npm run test:integration
