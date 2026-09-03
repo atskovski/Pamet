@@ -6,15 +6,15 @@ const secureServer = fs.readFileSync('secure-server.js', 'utf8');
 const edgeAccount = fs.readFileSync('lib/edge-account.js', 'utf8');
 const app = fs.readFileSync('js/app.js', 'utf8');
 const main = fs.readFileSync('js/main.js', 'utf8');
-const billing = fs.readFileSync('js/v1.0.3.js', 'utf8');
+const billing = fs.readFileSync('js/billing-sharing.js', 'utf8');
 const auth = fs.readFileSync('js/auth.js', 'utf8');
-const securityUi = fs.readFileSync('js/security-v1.1.0.js', 'utf8');
-const qr = fs.readFileSync('js/qr-v1.2.0.js', 'utf8');
+const securityUi = fs.readFileSync('js/security.js', 'utf8');
+const qr = fs.readFileSync('js/qr-sharing.js', 'utf8');
 const share = fs.readFileSync('share.html', 'utf8');
 const schema = fs.readFileSync('db/schema.sql', 'utf8');
 const limiter = fs.readFileSync('lib/rate-limit.js', 'utf8');
-const notifications = fs.readFileSync('js/notifications-v1.1.0.js', 'utf8');
-const encryptedSync = fs.readFileSync('js/e2e-sync-v1.1.0.js', 'utf8');
+const notifications = fs.readFileSync('js/notifications.js', 'utf8');
+const encryptedSync = fs.readFileSync('js/encrypted-sync.js', 'utf8');
 const ci = fs.readFileSync('.github/workflows/ci.yml', 'utf8');
 const integrationTests = fs.readFileSync('tests/integration.test.js', 'utf8');
 const uiTests = fs.readFileSync('tests/ui-hardening.test.js', 'utf8');
@@ -27,10 +27,12 @@ check(!server.includes("express.static(path.join(__dirname),"), 'The repository 
 check(server.includes("app.use('/assets'") && server.includes("app.use('/dist'") && !server.includes("app.use('/js'") && !server.includes("app.use('/css'"), 'Production must expose only assets and built bundles, not source modules.');
 check(server.includes('immutable: false') && server.includes('maxAge: 0'), 'Unversioned application assets must revalidate after deployments.');
 check(fs.readFileSync('index.html', 'utf8').includes('dist/pamet.min.js?v=1200'), 'Executable assets must use the release bundle URL; the production edge supplies the current cache-buster.');
-check(main.includes("navigator.serviceWorker.register('sw.js?v=1511')"), 'PWA service-worker registration must execute from the CSP-compatible external production bundle for Pamet 1.5.1.');
+check(main.includes("navigator.serviceWorker.register('sw.js?v=1600')"), 'PWA service-worker registration must execute from the CSP-compatible external production bundle for Pamet 1.6.0.');
 check(server.includes('Content-Security-Policy') && server.includes('Strict-Transport-Security') && server.includes("app.disable('x-powered-by')"), 'Production security headers must remain enabled.');
-check(secureServer.includes("script-src-attr 'none'") && secureServer.includes('hardenedCsp') && secureServer.includes("replace(\"script-src 'self' 'unsafe-inline'\", \"script-src 'self'\")"), 'Production CSP must block inline script attributes and remove executable unsafe-inline permission.');
+check(server.includes("script-src-attr 'none'") && server.includes("style-src-attr 'none'") && !server.includes("script-src 'self' 'unsafe-inline'") && !server.includes("style-src 'self' 'unsafe-inline'"), 'Inner application CSP must block inline script/style attributes and unsafe-inline execution/presentation.');
+check(secureServer.includes("script-src-attr 'none'") && secureServer.includes("style-src-attr 'none'") && secureServer.includes('hardenedCsp'), 'Production edge CSP must preserve strict inline-attribute blocking.');
 check(secureServer.includes("const VERSION = require('./package.json').version") && secureServer.includes("app.get('/api/health'") && secureServer.includes('version: VERSION'), 'The production edge must report the canonical package release version.');
+check(server.includes("const VERSION = require('./package.json').version;"), 'The application server must use the same canonical package release version.');
 check(secureServer.includes('renderVersionedIndex') && secureServer.includes('X-Pamet-Version'), 'Production HTML and headers must expose the canonical release version.');
 check(server.includes('distributedRateLimit') && limiter.includes('REDIS_URL') && limiter.includes('pExpire') && server.includes('limits.billing'), 'Sensitive handlers must use shared Redis/Valkey rate limits.');
 check(server.includes('priceIsValid') && [699, 5999, 1299, 9999].every((amount) => server.includes(`amount: ${amount}`)), 'Stripe prices must be verified against the approved catalog.');
@@ -71,4 +73,4 @@ check(
   'Local encryption work must retain the explicit key/recovery threat-model gate before implementation.'
 );
 
-console.log('Pamet production hardening checks passed.');
+console.log('Pamet 1.6.0 production hardening checks passed.');
