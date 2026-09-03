@@ -6,6 +6,7 @@ const html = fs.readFileSync('index.html', 'utf8');
 const css = fs.readFileSync('css/styles.css', 'utf8');
 const store = fs.readFileSync('js/store.js', 'utf8');
 const app = fs.readFileSync('js/app.js', 'utf8');
+const main = fs.readFileSync('js/main.js', 'utf8');
 const server = fs.readFileSync('server.js', 'utf8');
 const manifest = JSON.parse(fs.readFileSync('manifest.webmanifest', 'utf8'));
 const worker = fs.readFileSync('sw.js', 'utf8');
@@ -26,8 +27,8 @@ check(
   'The retired Custom symptoms settings card must not be rendered.'
 );
 check(
-  html.includes('Pamet v1.2.0 · Your health history, finally useful.'),
-  'The visible footer must identify Pamet v1.2.0.'
+  main.includes("const PAMET_VERSION = '1.2.1'") && main.includes('Pamet v${PAMET_VERSION} · Your health history, finally useful.'),
+  'The production browser runtime must identify Pamet v1.2.1.'
 );
 check(
   html.includes('Don’t have an account?') && /id="registerForm" hidden/.test(html),
@@ -62,8 +63,16 @@ check(
   'The PWA manifest must include standalone display and phone-sized icons.'
 );
 check(
-  worker.includes('pamet-shell-v120-0') && worker.includes('dist/pamet.min.js?v=1200') && !worker.slice(0, worker.indexOf('const PATHS')).includes('/api/'),
-  'The v1.2.0 service worker must use a fresh bundled cache and never list API data in the shell.'
+  main.includes("navigator.serviceWorker.register('sw.js?v=1210')"),
+  'Service-worker registration must live in the external bundle so CSP does not disable PWA registration.'
+);
+check(
+  worker.includes('pamet-shell-v121-0') && worker.includes('dist/pamet.min.js?v=1200') && !worker.slice(0, worker.indexOf('const PATHS')).includes('/api/'),
+  'The v1.2.1 service worker must use a fresh bundled cache and never list API data in the shell.'
+);
+check(
+  worker.includes('u.pathname.startsWith("/api/")||u.pathname.startsWith("/share")'),
+  'Service-worker fetch handling must bypass API and sensitive share routes.'
 );
 
-console.log('Pamet v1.2.0 release checks passed.');
+console.log('Pamet v1.2.1 release checks passed.');
