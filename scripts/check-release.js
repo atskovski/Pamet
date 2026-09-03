@@ -25,12 +25,14 @@ check(!html.includes('id="customSymptomList"') && !html.includes('>Custom sympto
 check(
   main.includes("const PAMET_VERSION = '1.2.3'") &&
   main.includes('window.PametLoadedVersion = PAMET_VERSION') &&
-  main.includes('function applyReleaseVersion(version)') &&
+  main.includes('function applyReleaseVersion(version = PAMET_VERSION)') &&
+  main.includes('protectReleaseFooter()') &&
+  main.includes('new MutationObserver') &&
   main.includes('Pamet v${normalized} · Your health history, finally useful.') &&
   main.includes("fetch('/api/health'") &&
   main.includes('PametOfferVersionUpdate?.(health.version)') &&
   !main.includes('applyReleaseVersion(health.version)'),
-  'The production browser runtime must identify the actually loaded Pamet v1.2.3 and offer a newer server release without disguising stale code.'
+  'The production browser runtime must identify and protect the actually loaded Pamet v1.2.3 while offering a newer server release without disguising stale code.'
 );
 check(
   secureServer.includes('renderVersionedIndex') &&
