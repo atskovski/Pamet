@@ -16,10 +16,12 @@ const { legacyUpgrade, logoutAll } = require('./lib/edge-account');
 const { appointmentReminderJob } = require('./lib/appointment-reminders');
 const { createPlatformFoundation } = require('./lib/platform-foundation');
 const { createPlatformRouter } = require('./routes/platform');
+const { createOperationsJobsRouter } = require('./routes/operations-jobs');
 
 const app = express();
 const port = Number(process.env.PORT || 8080);
 const nodeEnv = process.env.NODE_ENV || 'development';
+const appBaseUrl = (process.env.APP_BASE_URL || `http://localhost:${port}`).replace(/\/$/, '');
 const platform = createPlatformFoundation({ version: VERSION, nodeEnv });
 const json = express.json({ limit: '256kb', strict: true });
 const sha = (value) => crypto.createHash('sha256').update(String(value || '')).digest('hex');
@@ -138,6 +140,8 @@ app.post('/api/auth/password', parseAuthJson, passwordSafetyLimit, rejectBreache
 app.post('/api/auth/legacy-upgrade', parseAuthJson, passwordSafetyLimit, rejectBreachedPassword, legacyUpgrade);
 app.post('/api/auth/logout-all', parseAuthJson, logoutAll);
 app.post('/api/jobs/appointment-reminders', json, appointmentReminderJob);
+/* These routes intentionally precede server.js so legacy unbounded job handlers cannot run. */
+app.use(createOperationsJobsRouter({ appBaseUrl }));
 app.use(inner);
 app.use((error, req, res, next) => {
   if (res.headersSent) return next(error);
