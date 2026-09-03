@@ -1,29 +1,29 @@
-/* Pamet v1.5.1 production entrypoint. Keep dependency order explicit here. */
-const PAMET_VERSION = '1.5.1';
+/* Pamet v1.6.0 production entrypoint. Keep dependency order explicit here. */
+const PAMET_VERSION = '1.6.0';
 window.PametVersion = PAMET_VERSION;
 window.PametLoadedVersion = PAMET_VERSION;
 
 /* Install the broad-observer performance guard before feature modules register observers. */
-import "./performance-v1.5.1.js";
+import "./performance.js";
 import "./auth.js";
 import "./store.js";
-import "./icons-v1.5.0.js";
+import "./icons.js";
 import "./app.js";
-import "./account-switch-v1.2.0.js";
-import "./v1.0.3.js";
-import "./feedback-v1.0.3.js";
-import "./phase2.js";
-import "./care-workspace-v1.3.0.js";
-import "./notifications-v1.1.0.js";
-import "./e2e-sync-v1.1.0.js";
-import "./qr-v1.2.0.js";
-import "./security-v1.1.0.js";
-import "./release-v1.1.0.js";
-import "./product-clarity-v1.4.0.js";
-import "./insights-v1.5.0.js";
-import "./experience-v1.5.0.js";
-import "./care-ux-v1.5.1.js";
-import "./legal-support-v1.5.1.js";
+import "./account-switch.js";
+import "./billing-sharing.js";
+import "./feedback.js";
+import "./care-planning.js";
+import "./care-workspace.js";
+import "./notifications.js";
+import "./encrypted-sync.js";
+import "./qr-sharing.js";
+import "./security.js";
+import "./login-experience.js";
+import "./product-clarity.js";
+import "./insights.js";
+import "./experience.js";
+import "./care-ux.js";
+import "./legal-support.js";
 import "./version-update.js";
 
 function releaseFooterText(version = PAMET_VERSION) {
@@ -70,6 +70,6 @@ window.addEventListener('load', () => {
 /* Register from the external bundle so production CSP can keep inline scripts disabled. */
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js?v=1511').catch(() => {});
+    navigator.serviceWorker.register('sw.js?v=1600').catch(() => {});
   });
 }
