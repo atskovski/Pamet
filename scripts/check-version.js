@@ -16,7 +16,8 @@ function check(condition, message) { if (!condition) throw new Error(message); }
 
 check(version === expected, `package.json must identify Pamet ${expected}.`);
 check(pkg.scripts.start === 'node secure-server.js', 'Production startup must launch the server immediately without rebuilding the deployment filesystem.');
-check(pkg.scripts.postinstall === 'npm run build', 'Production install must build the browser bundle before runtime startup.');
+check(!pkg.scripts.postinstall, 'Do not run the bundle build from postinstall; Wasmer installs dependencies before copying application source.');
+check(pkg.scripts.build && pkg.scripts.build.includes('esbuild js/main.js'), 'Production build command must bundle the current application source.');
 check(Boolean(pkg.dependencies && pkg.dependencies.esbuild), 'Production deployment build requires esbuild to be a production dependency.');
 check(secureServer.includes("require('./package.json').version"), 'The production edge must source its version from package.json.');
 check(secureServer.includes("app.get('/api/health'") && secureServer.includes('version: VERSION'), 'The production health endpoint must report the canonical release version.');
