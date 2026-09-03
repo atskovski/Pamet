@@ -1,0 +1,40 @@
+name: Refresh Pamet 1.2.3 Artifacts
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Regenerate lockfile without lifecycle scripts
+        run: npm install --ignore-scripts --package-lock-only
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts
+      - name: Rebuild production bundles
+        run: npm run build
+      - name: Commit generated release artifacts
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json dist/pamet.min.js dist/pamet.min.css
+          if git diff --cached --quiet; then
+            echo "Release artifacts already current."
+            exit 0
+          fi
+          git commit -m "Refresh Pamet 1.2.3 release artifacts"
+          git push origin HEAD:main
