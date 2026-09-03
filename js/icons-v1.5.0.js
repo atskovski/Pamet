@@ -28,12 +28,13 @@
     if (!body) return '';
     const label = String(options.label || '').trim();
     const classes = ['pamet-icon', options.className || ''].filter(Boolean).join(' ');
-    return `<svg class="${classes}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ${label ? `role="img" aria-label="${label.replace(/"/g, '&quot;')}"` : 'aria-hidden="true"'}>${body}</svg>`;
+    return `<svg class="${classes}" data-pamet-icon-name="${name}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ${label ? `role="img" aria-label="${label.replace(/"/g, '&quot;')}"` : 'aria-hidden="true"'}>${body}</svg>`;
   }
 
   function replaceIcon(target, name) {
     if (!target || !paths[name]) return;
     const existing = target.querySelector('svg');
+    if (existing?.dataset.pametIconName === name) return;
     const template = document.createElement('template');
     template.innerHTML = svg(name);
     if (existing) existing.replaceWith(template.content.firstElementChild);
@@ -57,5 +58,10 @@
   window.PametIcons = Object.freeze({ svg, replaceIcon, hydrate, names: Object.freeze(Object.keys(paths)) });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', hydrate, { once: true });
   else hydrate();
-  new MutationObserver(() => requestAnimationFrame(hydrate)).observe(document.documentElement, { childList: true, subtree: true });
+  let queued = false;
+  new MutationObserver(() => {
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(() => { queued = false; hydrate(); });
+  }).observe(document.documentElement, { childList: true, subtree: true });
 })();
