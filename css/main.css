@@ -1,7 +1,8 @@
-/* Pamet v1.2.0 production stylesheet entrypoint. */
+/* Pamet v1.2.2 production stylesheet entrypoint. */
 @import "./styles.css";
 @import "./brand-v1.0.3.css";
 @import "./release-v1.0.3.css";
 @import "./phase2.css";
 @import "./release-v1.1.0.css";
 @import "./mobile-v1.2.0.css";
+@import "./version-update-v1.2.2.css";
