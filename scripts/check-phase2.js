@@ -8,7 +8,7 @@ const app = fs.readFileSync('js/app.js', 'utf8');
 const planning = fs.readFileSync('js/care-planning.js', 'utf8');
 const careWorkspace = fs.readFileSync('js/care-workspace.js', 'utf8');
 const theme = fs.readFileSync('css/care-planning.css', 'utf8');
-const releaseTheme = fs.readFileSync('css/theme.css', 'utf8');
+const releaseTheme = fs.readFileSync('css/release-base.css', 'utf8');
 const server = fs.readFileSync('server.js', 'utf8');
 const schema = fs.readFileSync('db/schema.sql', 'utf8');
 
