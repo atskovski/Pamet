@@ -1,6 +1,6 @@
 # Pamet versioning policy
 
-Pamet uses semantic versioning (`MAJOR.MINOR.PATCH`). The current stable release line is `v1.6.4`.
+Pamet uses semantic versioning (`MAJOR.MINOR.PATCH`). The current stable release line is `v1.6.6`.
 
 ## When to increment
 
@@ -32,7 +32,7 @@ Every release must update or verify:
 
 The release CI derives the PWA asset token from the semantic version and fails when browser worker registration, shell cache, or CSS/JS shell URLs do not rotate with the current release.
 
-Git tags and release titles use the `v` prefix (`v1.6.4`). Package metadata and API version values do not.
+Git tags and release titles use the `v` prefix (`v1.6.6`). Package metadata and API version values do not.
 
 ## Release discipline
 

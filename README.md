@@ -1,6 +1,6 @@
 # Pamet — Personal Health Journal
 
-**Version 1.6.4**  
+**Version 1.6.6**  
 **Your health history, finally useful.**
 
 Pamet is a privacy-first personal health journal for recording symptoms, medications, mood, activity, lifestyle factors, notes, and other user-provided health information over time, then organizing those observations for personal review and healthcare conversations.
@@ -13,18 +13,18 @@ Pamet is not emergency monitoring, a diagnostic service, a clinical decision too
 
 Pamet is an actively developed web/PWA deployed from GitHub `main` to Wasmer. The production repository also owns the mobile API and entitlement contract used by the native iOS and Android clients.
 
-### Pamet 1.6.4
+### Pamet 1.6.6
 
-This production-hardening release focuses on consistency, scale, release assurance, and clearer Settings behavior:
+This release improves the daily logging experience and the quality of Pamet's observational history:
 
-- one canonical Free / Pro / Ultra plan catalog drives the in-app full feature matrix and the README matrix;
-- **Compare Pamet plans** includes a responsive green action that opens the complete plan comparison;
-- CI rejects drift between plan display metadata, mobile entitlements, and server-authoritative capability rules;
-- Notification health now visibly checks browser permission and active push-subscription state, explains what it checks, and provides state-specific repair guidance;
-- scheduled GitHub jobs retain strict OIDC signature/claim validation and can use an automatically refreshed bundled set of GitHub public signing keys when the production provider cannot reach GitHub JWKS directly;
-- scale-oriented MySQL indexes support scheduled digest, push, appointment, and audit access patterns;
-- database-capacity and production-bundle performance budgets are release gates;
-- go-live status separates shipped code, environment acceptance, and independent assurance instead of treating all green CI as external certification.
+- Free includes up to 3 custom symptoms, moods, and activities; Pro includes up to 10; Ultra is unlimited.
+- Pro and Ultra can add specific medication names, with Pro limited to 10 and Ultra unlimited.
+- Log a symptom now explains multi-select symptoms and symptom intensity in plain language.
+- Optional sleep quality, symptom-onset, and day-context fields add structured comparison points without turning the log into a long questionnaire.
+- Notes can be auto-summarized from the current log while remaining blank by default.
+- Pamet observations use unique-day aggregation, minimum sample sizes, effect thresholds, and explicitly observational/non-diagnostic language.
+- Home honors the Show Pamet observations setting and adds Bronze, Silver, Gold, Platinum, Diamond, and Beast logging milestones.
+- Home starter guidance now says WHAT PAMET WILL BUILD.
 
 Release history belongs in [`CHANGELOG.md`](CHANGELOG.md).
 

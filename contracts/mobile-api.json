@@ -1,6 +1,6 @@
 {
   "contractVersion": 2,
-  "backendVersion": "1.6.5",
+  "backendVersion": "1.6.6",
   "minimumBackendVersion": "1.5.1",
   "apiBaseURL": "https://pamet.wasmer.app",
   "healthPath": "/api/health",

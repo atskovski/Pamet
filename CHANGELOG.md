@@ -1,5 +1,20 @@
 # Pamet Change Log
 
+## [1.6.6] — 2026-09-04
+
+### Richer logging, observations, and milestones
+
+- Added plan-aware custom-field limits and upgrade guidance across symptoms, moods, activities, and medication names.
+- Clarified multi-select symptom logging and replaced ambiguous Overall severity wording with a plain-language symptom-intensity prompt.
+- Added optional structured context for sleep quality, symptom onset, and meaningful day factors.
+- Added Notes auto-summary while preserving a blank-by-default notes field and the existing freeform prompt.
+- Added a local descriptive analytics engine that aggregates by unique day, applies sample/effect safeguards, and keeps correlation language explicitly observational and non-diagnostic.
+- Made Home observations visibly honor the Settings toggle and added Bronze, Silver, Gold, Platinum, Diamond, and Beast logging milestones.
+- Updated Home starter guidance to WHAT PAMET WILL BUILD.
+- Added automated coverage for custom limits, milestones, entitlement gating, correlation language, and same-day aggregation.
+
+---
+
 ## [1.6.4] — 2026-09-04
 
 ### Production hardening, scale, and plan consistency
