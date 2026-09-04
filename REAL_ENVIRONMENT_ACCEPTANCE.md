@@ -3,7 +3,7 @@
 This document records evidence from the deployed Pamet environment. CI proves code-level behavior against disposable infrastructure; this record proves what the actual production provider is serving.
 
 Production target: `https://pamet.wasmer.app`
-Expected repository release: **1.6.1**
+Expected repository release: **1.6.2**
 
 ## Automated public checks
 
@@ -21,8 +21,8 @@ The live checker should verify:
 - root response `X-Pamet-Version` matches `package.json`;
 - server-rendered HTML contains the exact current Settings release identity;
 - JS/CSS URLs carry the current release cache-buster;
-- `/api/health` returns HTTP 200, `ok=true`, and version `1.6.1`;
-- `/api/ready` returns HTTP 200, `launchReady=true`, and version `1.6.1`;
+- `/api/health` returns HTTP 200, `ok=true`, and version `1.6.2`;
+- `/api/ready` returns HTTP 200, `launchReady=true`, and version `1.6.2`;
 - health/readiness response headers identify the same release;
 - required production dependencies report healthy;
 - public billing config is consistent with the intended catalog;
@@ -30,16 +30,23 @@ The live checker should verify:
 
 GitHub runs `.github/workflows/live-acceptance.yml` after pushes to `main`, on schedule, and on manual dispatch when the environment is reachable.
 
-## 1.6.1 deployment-specific checks
+## 1.6.2 deployment-specific checks
 
-This patch exists because source changes can be correct while an installed PWA remains on an older cached shell. After Wasmer promotes 1.6.1, confirm all of the following with a normal browser session that previously used Pamet:
+This release includes visible branding, navigation, history-comparison, PDF sharing, and responsive care-workspace changes. After Wasmer promotes 1.6.2, confirm all of the following with a normal browser session that previously used Pamet:
 
-- [ ] `/api/health` and `/api/ready` both report `1.6.1`.
-- [ ] Settings and Privacy, Safety & Support show `Pamet v1.6.1`.
-- [ ] The browser registers `sw.js?v=1610` with the current worker.
-- [ ] The active cache is `pamet-shell-v161-1`.
-- [ ] CSS/JS shell requests use the `v=161` release token.
+- [ ] `/api/health` and `/api/ready` both report `1.6.2`.
+- [ ] Settings and Privacy, Safety & Support show `Pamet v1.6.2`.
+- [ ] The browser registers `sw.js?v=1620` with the current worker.
+- [ ] The active cache is `pamet-shell-v162-1`.
+- [ ] CSS/JS shell requests use the `v=162` release token.
 - [ ] A normal refresh updates the installed PWA without clearing local journal data.
+- [ ] The refreshed Pamet mark appears on login, the top app bar, and installed PWA icon surfaces.
+- [ ] The top-right quick profile shortcut is available and opens the profile-switch flow.
+- [ ] Settings and care workflow labels use sentence case consistently.
+- [ ] Health history over time offers 30/90/180-day comparisons and clearly states that observations are based on user-entered information.
+- [ ] Health-history, caregiver, and primary-care summary flows can be printed/saved as PDF where applicable.
+- [ ] Primary care access opens one consolidated visit-brief flow rather than duplicate popups.
+- [ ] Appointment Workspace does not overlap, clip, or obscure fields/content at supported desktop and mobile widths.
 - [ ] Dark-mode Insights Data Completeness uses a dark surface rather than a white card.
 - [ ] Dark-mode empty Insights state uses a dark surface rather than a white card.
 - [ ] Primary headings are near-white and readable; secondary labels remain clearly legible.
