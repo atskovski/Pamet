@@ -20,6 +20,14 @@ async function openLog(page) {
   await expect(page.locator('#logBackdrop')).toHaveClass(/open/);
 }
 
+async function setRange(page, selector, value) {
+  await page.locator(selector).evaluate((element, nextValue) => {
+    element.value = String(nextValue);
+    element.dispatchEvent(new Event('input', { bubbles: true }));
+    element.dispatchEvent(new Event('change', { bubbles: true }));
+  }, value);
+}
+
 test('@production Log explains multi-select, plan limits, intensity, and optional context', async ({ page }, testInfo) => {
   await registerAccount(page, testInfo);
   await openLog(page);
@@ -68,7 +76,10 @@ test('@production Free custom limits stop at three and Pro/Ultra policies scale 
     S.setPlan('pro');
     const pro = { symptoms: S.customLimit('symptoms'), meds: S.customLimit('meds') };
     S.setPlan('ultra');
-    const ultra = { symptoms: S.customLimit('symptoms'), meds: S.customLimit('meds') };
+    const ultra = {
+      symptomsUnlimited: !Number.isFinite(S.customLimit('symptoms')),
+      medsUnlimited: !Number.isFinite(S.customLimit('meds'))
+    };
     S.setPlan('free');
     return { free, add, pro, ultra };
   });
@@ -76,8 +87,7 @@ test('@production Free custom limits stop at three and Pro/Ultra policies scale 
   expect(policy.free).toEqual({ symptoms: 3, moods: 3, activities: 3, meds: 0 });
   expect(policy.add).toEqual([true, true, true, false]);
   expect(policy.pro).toEqual({ symptoms: 10, meds: 10 });
-  expect(policy.ultra.symptoms).toBe(null); // JSON serializes Infinity as null.
-  expect(policy.ultra.meds).toBe(null);
+  expect(policy.ultra).toEqual({ symptomsUnlimited: true, medsUnlimited: true });
 
   await page.reload({ waitUntil: 'domcontentloaded' });
   await openLog(page);
@@ -95,7 +105,7 @@ test('@production Auto-summarize remains opt-in and persists richer context with
   await expect(page.locator('#notesInput')).toHaveAttribute('placeholder', /When did it start\? What were you doing\?/);
 
   await page.getByRole('button', { name: 'Headache', exact: true }).click();
-  await page.locator('#severityRange').fill('6');
+  await setRange(page, '#severityRange', 6);
   await page.locator('#moodFlow .chip').filter({ hasText: 'Good' }).first().click();
   await page.locator('#activityFlow .chip').filter({ hasText: /^Walk$/ }).click();
   await page.locator('#medFlow .chip').filter({ hasText: /^Ibuprofen$/ }).click();
@@ -106,10 +116,10 @@ test('@production Auto-summarize remains opt-in and persists richer context with
   await page.locator('[data-context-tag="Busy / demanding day"]').click();
 
   await page.locator('#autoSummarizeLog').click();
-  await expect(page.locator('#notesInput')).toContainText('Headache');
-  await expect(page.locator('#notesInput')).toContainText('6/10');
-  await expect(page.locator('#notesInput')).toContainText('sleep quality 8/10');
-  await expect(page.locator('#notesInput')).toContainText('Ibuprofen');
+  await expect(page.locator('#notesInput')).toHaveValue(/Headache/);
+  await expect(page.locator('#notesInput')).toHaveValue(/6\/10/);
+  await expect(page.locator('#notesInput')).toHaveValue(/sleep quality 8\/10/);
+  await expect(page.locator('#notesInput')).toHaveValue(/Ibuprofen/);
 
   await page.locator('#saveEntry').click();
   await expect.poll(async () => page.evaluate(() => window.PametStore.entries.length)).toBe(1);
