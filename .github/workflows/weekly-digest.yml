@@ -5,19 +5,27 @@ on:
     - cron: '0 15 * * 1'
   workflow_dispatch:
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
   send-weekly-digests:
     runs-on: ubuntu-latest
     steps:
       - name: Trigger Pamet weekly digest job
         env:
-          PAMET_APP_URL: ${{ secrets.PAMET_APP_URL }}
-          PAMET_CRON_SECRET: ${{ secrets.PAMET_CRON_SECRET }}
+          PAMET_APP_URL: https://pamet.wasmer.app
         run: |
-          test -n "$PAMET_APP_URL"
-          test -n "$PAMET_CRON_SECRET"
+          set -euo pipefail
+          OIDC_RESPONSE="$(curl --fail-with-body --silent --show-error \
+            -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=pamet-production-jobs")"
+          OIDC_TOKEN="$(printf '%s' "$OIDC_RESPONSE" | python3 -c 'import json,sys; print(json.load(sys.stdin)["value"])')"
+          test -n "$OIDC_TOKEN"
+          echo "::add-mask::$OIDC_TOKEN"
           curl --fail-with-body --silent --show-error \
             -X POST "$PAMET_APP_URL/api/jobs/weekly-digest" \
-            -H "Authorization: Bearer $PAMET_CRON_SECRET" \
+            -H "Authorization: Bearer $OIDC_TOKEN" \
             -H "Content-Type: application/json" \
             --data '{}'
