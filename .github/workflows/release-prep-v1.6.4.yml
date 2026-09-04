@@ -11,6 +11,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: pamet-v1.6.4-release-prep
+  cancel-in-progress: false
+
 jobs:
   prepare:
     runs-on: ubuntu-latest
