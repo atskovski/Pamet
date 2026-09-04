@@ -1,0 +1,77 @@
+name: Pamet v1.6.7 Release Prep
+
+on:
+  push:
+    branches:
+      - fix/pamet-v1.6.7-patterns-rewards-counters
+    paths:
+      - .github/workflows/v167-release-prep.yml
+
+permissions:
+  contents: write
+
+jobs:
+  promote-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: fix/pamet-v1.6.7-patterns-rewards-counters
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+      - name: Promote release identity to 1.6.7
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm version 1.6.7 --no-git-tag-version
+          node <<'NODE'
+          const fs = require('fs');
+          function edit(path, transform) {
+            const before = fs.readFileSync(path, 'utf8');
+            const after = transform(before);
+            if (after === before) console.log(`No textual change needed: ${path}`);
+            fs.writeFileSync(path, after);
+          }
+          edit('js/main.js', s => s.replaceAll('1.6.6', '1.6.7').replaceAll('sw.js?v=1660', 'sw.js?v=1670'));
+          edit('css/main.css', s => s.replaceAll('1.6.6', '1.6.7'));
+          edit('index.html', s => s.replaceAll('?v=166', '?v=167').replaceAll('Pamet v1.6.6', 'Pamet v1.6.7'));
+          edit('sw.js', s => s.replaceAll('Pamet v1.6.6', 'Pamet v1.6.7').replaceAll('pamet-shell-v166-', 'pamet-shell-v167-').replaceAll('?v=166', '?v=167'));
+
+          const mobile = JSON.parse(fs.readFileSync('contracts/mobile-api.json', 'utf8'));
+          mobile.backendVersion = '1.6.7';
+          fs.writeFileSync('contracts/mobile-api.json', `${JSON.stringify(mobile, null, 2)}\n`);
+
+          const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          if (!pkg.scripts.check.includes('node --check js/interaction-controller.js')) {
+            pkg.scripts.check = pkg.scripts.check.replace('node --check js/insights.js', 'node --check js/insights.js && node --check js/interaction-controller.js');
+          }
+          fs.writeFileSync('package.json', `${JSON.stringify(pkg, null, 2)}\n`);
+
+          edit('tests/e2e/plan-comparison.spec.js', s => s.replaceAll('Pamet v1.6.6', 'Pamet v1.6.7').replaceAll('Pamet v1.6.5', 'Pamet v1.6.6'));
+          edit('tests/e2e/log-intelligence.spec.js', s => s.replaceAll('v1.6.6', 'v1.6.7'));
+
+          edit('README.md', s => {
+            let out = s.replace('**Version 1.6.6**', '**Version 1.6.7**');
+            out = out.replace('### Pamet 1.6.6', '### Pamet 1.6.7');
+            return out;
+          });
+          edit('VERSIONING.md', s => s.replace('current stable release line is `v1.6.6`', 'current stable release line is `v1.6.7`'));
+          edit('CHANGELOG.md', s => {
+            if (s.includes('## [1.6.7]')) return s;
+            const marker = '# Pamet Change Log\n';
+            const section = `\n## [1.6.7] — 2026-09-04\n\n### Patterns interactions and UI alignment\n\n- Added functional 7 / 30 / 60 / 90-day Insights windows with 7 days as the default.\n- Added working supporting-evidence expansion and per-profile observation archive / restore behavior.\n- Added live plan-aware selection feedback while preserving Free (3), Pro (10), and Ultra (unlimited) custom-field quotas.\n- Centered and scaled logging reward badges and aligned Security & Devices helper copy.\n- Added Chromium, Firefox, and mobile regression coverage for the repaired interactions.\n`;
+            return s.replace(marker, marker + section);
+          });
+          NODE
+      - name: Commit promoted release and remove one-time workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/v167-release-prep.yml
+          git add package.json package-lock.json js/main.js css/main.css index.html sw.js contracts/mobile-api.json tests/e2e/plan-comparison.spec.js tests/e2e/log-intelligence.spec.js README.md VERSIONING.md CHANGELOG.md
+          git commit -m "Promote Pamet interaction hotfix to v1.6.7"
+          git push origin HEAD:fix/pamet-v1.6.7-patterns-rewards-counters
