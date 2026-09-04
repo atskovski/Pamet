@@ -73,7 +73,6 @@ window.addEventListener('load', () => {
   if ('requestIdleCallback' in window) window.requestIdleCallback(checkServerRelease, { timeout: 1500 });
   else setTimeout(checkServerRelease, 250);
 }, { once: true });
-}
 
 /* Release-specific worker URL + updateViaCache:none prevents old PWA shells from masking a new release. */
 if ('serviceWorker' in navigator) {
