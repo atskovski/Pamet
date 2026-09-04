@@ -177,7 +177,7 @@ async function openPlanMatrix(page) {
   const opener = page.getByRole('button', { name: /compare all plans|compare all plan features|see full.*feature|full feature comparison|compare pamet plans/i }).first();
   await expect(opener).toBeVisible();
   await opener.click();
-  const matrix = page.locator('[role="dialog"], dialog, .pamet-plan-matrix, .plan-matrix').filter({ hasText: /Free/i }).first();
+  const matrix = page.locator('[role="dialog"]:visible, dialog:visible, .pamet-plan-matrix:visible, .plan-matrix:visible').filter({ hasText: /Free/i }).first();
   await expect(matrix).toBeVisible();
   await expect(matrix).toContainText(/Pro/i);
   await expect(matrix).toContainText(/Ultra/i);
