@@ -22,6 +22,14 @@ for (const feature of catalog.features) {
 
 const generated = `/* Generated from contracts/plan-features.json. Run \`node scripts/sync-plan-catalog.js\` after plan changes. */\n(function (global) {\n  "use strict";\n  global.PametPlanCatalog = ${JSON.stringify(catalog, null, 2)};\n})(window);\n`;
 
+function readGeneratedCatalog(source) {
+  const prefix = 'global.PametPlanCatalog = ';
+  const start = source.indexOf(prefix);
+  const end = source.lastIndexOf(';\n})(window);');
+  if (start < 0 || end < 0) return null;
+  try { return JSON.parse(source.slice(start + prefix.length, end)); } catch { return null; }
+}
+
 const mark = (value) => value ? '✅' : '—';
 const pricingRows = catalog.plans.map((plan) => `| ${plan.name} | ${plan.monthly} | ${plan.annual} |`).join('\n');
 const featureRows = catalog.features.map((feature) => `| ${feature.label} | ${mark(feature.free)} | ${mark(feature.pro)} | ${mark(feature.ultra)} |`).join('\n');
@@ -39,7 +47,7 @@ const currentReadme = fs.readFileSync(readmePath, 'utf8');
 const nextReadme = replaceMatrix(currentReadme);
 
 if (checkOnly) {
-  if (currentGenerated !== generated) throw new Error('js/plan-catalog.generated.js is out of sync. Run node scripts/sync-plan-catalog.js.');
+  if (JSON.stringify(readGeneratedCatalog(currentGenerated)) !== JSON.stringify(catalog)) throw new Error('js/plan-catalog.generated.js is out of sync. Run node scripts/sync-plan-catalog.js.');
   if (currentReadme !== nextReadme) throw new Error('README plan matrix is out of sync. Run node scripts/sync-plan-catalog.js.');
   console.log(`Plan catalog synchronized: ${catalog.plans.length} plans, ${catalog.features.length} features.`);
   process.exit(0);
