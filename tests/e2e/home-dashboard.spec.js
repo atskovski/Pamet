@@ -62,8 +62,8 @@ async function addRecentHistory(page) {
 test('@production Home gives first-use CTA a real action and keeps it in bounds', async ({ page }, testInfo) => {
   await registerAccount(page, testInfo);
 
-  const plus = page.getByRole('button', { name: 'Log your first entry' }).filter({ has: page.locator('#homeEmptyPlus') }).first();
   await expect(page.locator('#homeEmptyPlus')).toBeVisible();
+  await expect(page.locator('#homeEmptyPlus')).toHaveAttribute('aria-label', 'Log your first entry');
   await expect(page.locator('#emptyLogEntry')).toBeVisible();
   await expect(page.locator('#streakCard')).toBeVisible();
   await expect(page.locator('#streakDays')).toHaveText('0');
@@ -76,8 +76,6 @@ test('@production Home gives first-use CTA a real action and keeps it in bounds'
   await expect(page.locator('#logBackdrop')).toHaveClass(/open/);
   await page.locator('#closeLog').click();
   await expect(page.locator('#logBackdrop')).not.toHaveClass(/open/);
-
-  expect(await plus.count()).toBeGreaterThanOrEqual(0);
 });
 
 test('@production Home shows a compact seven-day dashboard without legacy metric clutter', async ({ page }, testInfo) => {
