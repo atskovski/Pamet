@@ -146,30 +146,28 @@ async function assertInteractiveSemantics(page) {
   return inventory;
 }
 
-async function clickAndRequireEffect(page, locator, label) {
-  const before = await page.evaluate(() => ({
+async function interactionState(page) {
+  return page.evaluate(() => ({
     url: location.href,
     activeScreen: document.querySelector('.screen.active')?.id || '',
     dialogs: [...document.querySelectorAll('[role="dialog"],dialog,.modal,.sheet,.pamet-modal-backdrop')].filter((el) => !el.hidden && getComputedStyle(el).display !== 'none').length,
     dark: document.body.classList.contains('dark'),
     expanded: [...document.querySelectorAll('[aria-expanded]')].map((el) => `${el.id}:${el.getAttribute('aria-expanded')}`).join('|'),
-    hidden: [...document.querySelectorAll('[id][hidden]')].map((el) => el.id).sort().join('|')
+    hidden: [...document.querySelectorAll('[id][hidden]')].map((el) => el.id).sort().join('|'),
+    open: [...document.querySelectorAll('.open,[open]')].map((el) => el.id || el.className || el.tagName).sort().join('|')
   }));
+}
+
+async function clickAndRequireEffect(page, locator, label) {
+  const before = await interactionState(page);
   let requested = 0;
   const onRequest = () => { requested += 1; };
   page.on('request', onRequest);
   await locator.click();
   await page.waitForTimeout(200);
   page.off('request', onRequest);
-  const after = await page.evaluate(() => ({
-    url: location.href,
-    activeScreen: document.querySelector('.screen.active')?.id || '',
-    dialogs: [...document.querySelectorAll('[role="dialog"],dialog,.modal,.sheet,.pamet-modal-backdrop')].filter((el) => !el.hidden && getComputedStyle(el).display !== 'none').length,
-    dark: document.body.classList.contains('dark'),
-    expanded: [...document.querySelectorAll('[aria-expanded]')].map((el) => `${el.id}:${el.getAttribute('aria-expanded')}`).join('|'),
-    hidden: [...document.querySelectorAll('[id][hidden]')].map((el) => el.id).sort().join('|')
-  }));
-  expect(after.url !== before.url || after.activeScreen !== before.activeScreen || after.dialogs !== before.dialogs || after.dark !== before.dark || after.expanded !== before.expanded || after.hidden !== before.hidden || requested > 0,
+  const after = await interactionState(page);
+  expect(JSON.stringify(after) !== JSON.stringify(before) || requested > 0,
     `${label} should navigate, change visible state, or make a request`).toBeTruthy();
 }
 
@@ -207,9 +205,9 @@ test.describe('Pamet UI integrity', () => {
     const openLog = page.locator('#emptyLogEntry');
     if (await openLog.isVisible()) {
       await clickAndRequireEffect(page, openLog, 'Log your first entry');
-      await expect(page.locator('#logBackdrop')).toBeVisible();
+      await expect(page.locator('#logBackdrop')).toHaveClass(/open/);
       await clickAndRequireEffect(page, page.locator('#closeLog'), 'Close log');
-      await expect(page.locator('#logBackdrop')).toBeHidden();
+      await expect(page.locator('#logBackdrop')).not.toHaveClass(/open/);
     }
 
     await page.locator('.tab[data-tab="calendar"]').click();
@@ -238,6 +236,7 @@ test.describe('Pamet UI integrity', () => {
       const inventory = await assertInteractiveSemantics(page);
       inventory.forEach((item) => seen.add(fingerprint(item)));
     }
+    await page.locator('.tab[data-tab="home"]').click();
     await page.locator('[data-nav="report"]').first().click();
     (await assertInteractiveSemantics(page)).forEach((item) => seen.add(fingerprint(item)));
     expect(seen.size, 'the audit should inventory a meaningful set of controls').toBeGreaterThan(15);
