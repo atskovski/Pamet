@@ -35,9 +35,13 @@ function sameRecord(a,b){
 }
 check(/^\d+\.\d+\.\d+$/.test(expected),'package.json version must be semantic x.y.z.');
 const declaredHotfixBaseline=hotfixStatus.includes(`# Pamet ${expected}`)&&hotfixStatus.includes(`Base release: **Pamet ${previousPatch}**`)&&hotfixStatus.includes(`Assurance baseline: **Pamet ${previousPatch}**`);
+const lockVersion=String(lock.version||'');
+const lockVersionParts=lockVersion.split('.').map(Number);
+const declaredDependencyBaseline=hotfixStatus.includes(`Dependency baseline: **Pamet ${lockVersion}**`);
+const compatibleDependencyBaseline=declaredHotfixBaseline&&declaredDependencyBaseline&&lock.packages?.['']?.version===lockVersion&&lockVersionParts.length===3&&lockVersionParts[0]===versionParts[0]&&lockVersionParts[1]===versionParts[1]&&lockVersionParts[2]<=versionParts[2];
 check(lock.name===pkg.name&&lock.lockfileVersion===3,'package-lock.json identity and format must remain valid.');
 check(sameRecord(lock.packages?.['']?.dependencies,pkg.dependencies)&&sameRecord(lock.packages?.['']?.devDependencies,pkg.devDependencies),'package-lock.json dependency specifications must match package.json.');
-check((lock.version===expected&&lock.packages?.['']?.version===expected)||(declaredHotfixBaseline&&lock.version===previousPatch&&lock.packages?.['']?.version===previousPatch),'Patch-only hotfixes may inherit the immediately previous lockfile root version only when HOTFIX_STATUS.md explicitly declares that unchanged dependency baseline.');
+check((lock.version===expected&&lock.packages?.['']?.version===expected)||compatibleDependencyBaseline,'An unchanged dependency lock baseline is allowed only when HOTFIX_STATUS.md explicitly names that same-version lock baseline and the dependency specifications still match package.json.');
 check(pkg.scripts.start==='node secure-server.js','Production startup must launch the secure server.');
 check(!pkg.scripts.postinstall,'Do not build from postinstall.');
 check(pkg.scripts.build==='node scripts/build-production.js','Production build must run the strict-CSP production bundler.');
