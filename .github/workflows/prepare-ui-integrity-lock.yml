@@ -5,6 +5,8 @@ on:
     branches: [test/ui-integrity-gate]
     paths:
       - package.json
+      - scripts/check-ui-contract.js
+      - tests/e2e/ui-integrity.spec.js
       - .github/workflows/prepare-ui-integrity-lock.yml
 
 permissions:
@@ -23,18 +25,35 @@ jobs:
           node-version: 20
       - name: Refresh deterministic package lock
         run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
-      - name: Validate lock and remove one-time workflow
+      - name: Make Visit Brief explicitly reachable
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const file = 'index.html';
+          let html = fs.readFileSync(file, 'utf8');
+          if (!html.includes('data-nav="report"')) {
+            const start = html.indexOf('<section id="recentSection"');
+            if (start < 0) throw new Error('Recent entries section not found.');
+            const close = html.indexOf('</section>', start);
+            if (close < 0) throw new Error('Recent entries section close not found.');
+            const insertAt = close + '</section>'.length;
+            const block = `\n\n            <section class="home-visit-brief" aria-labelledby="homeVisitBriefTitle">\n              <div class="section-head">\n                <div>\n                  <h2 class="section-title" id="homeVisitBriefTitle">Prepare for a visit</h2>\n                  <p class="notification-note">Turn your recorded history into a concise Visit Brief for a healthcare conversation.</p>\n                </div>\n                <button class="link-btn" type="button" data-nav="report">Create visit brief →</button>\n              </div>\n            </section>`;
+            html = html.slice(0, insertAt) + block + html.slice(insertAt);
+            fs.writeFileSync(file, html);
+          }
+          NODE
+      - name: Validate lock and UI contract
         run: |
           npm ci --ignore-scripts --no-audit --no-fund
           node scripts/check-ui-contract.js
-          rm .github/workflows/prepare-ui-integrity-lock.yml
-      - name: Commit generated lock
+      - name: Remove one-time workflow and commit generated files
         run: |
+          rm .github/workflows/prepare-ui-integrity-lock.yml
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add package-lock.json .github/workflows/prepare-ui-integrity-lock.yml
+          git add package-lock.json index.html .github/workflows/prepare-ui-integrity-lock.yml
           if git diff --cached --quiet; then
             exit 0
           fi
-          git commit -m 'Lock Playwright UI integrity dependencies'
+          git commit -m 'Lock UI integrity dependencies and expose Visit Brief'
           git push origin HEAD:test/ui-integrity-gate
