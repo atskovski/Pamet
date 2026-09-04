@@ -37,7 +37,9 @@ for (const [capability, rule] of Object.entries(expectedServerRules)) {
   check(server.includes(rule), `Server-authoritative entitlement rule drifted for ${capability}.`);
 }
 
-check(comparison.includes('See full Free, Pro & Ultra feature matrix'), 'Compare Pamet plans modal must link to the full plan matrix.');
+check(comparison.includes('Compare all plans'), 'Settings must offer a clear full-plan comparison action.');
+check(comparison.includes('Upgrade your plan'), 'Free-plan Settings must expose a clear upgrade action.');
+check(comparison.includes('Compare all plan features'), 'Upgrade modal must link to the full canonical plan matrix.');
 check(comparison.includes('PametPlanCatalog'), 'Plan comparison UI must use the canonical generated catalog.');
 check(!JSON.stringify(catalog).includes('Scheduled caregiver updates'), 'Canonical plan contract must not advertise removed live caregiver surveillance.');
 check(!JSON.stringify(catalog).includes('FHIR-ready data export'), 'Canonical plan contract must not advertise unshipped FHIR export.');
