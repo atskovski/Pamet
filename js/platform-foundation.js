@@ -52,8 +52,15 @@
     };
     try {
       if (result.supported) {
-        const registration = await navigator.serviceWorker.ready;
-        result.subscribed = !!(await registration.pushManager.getSubscription());
+        // A health check must always return promptly. navigator.serviceWorker.ready can
+        // remain pending indefinitely when a browser supports service workers but Pamet
+        // does not yet have an active registration, which would leave the UI recheck
+        // control disabled forever. Inspect the current registration instead and let a
+        // later health check observe it once activation completes.
+        const registration = await navigator.serviceWorker.getRegistration();
+        if (registration?.pushManager) {
+          result.subscribed = !!(await registration.pushManager.getSubscription());
+        }
       }
     } catch { /* health remains best-effort */ }
     const remindersExpected = !!(S?.settings?.dailyReminder || S?.settings?.patternAlerts);
