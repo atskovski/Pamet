@@ -1,5 +1,5 @@
-/* Pamet v1.6.2 production entrypoint. Keep dependency order explicit here. */
-const PAMET_VERSION = '1.6.2';
+/* Pamet v1.6.3 production entrypoint. Keep dependency order explicit here. */
+const PAMET_VERSION = '1.6.3';
 window.PametVersion = PAMET_VERSION;
 window.PametLoadedVersion = PAMET_VERSION;
 
@@ -26,6 +26,7 @@ import "./insights.js";
 import "./experience.js";
 import "./care-ux.js";
 import "./ui-ux.js";
+import "./care-sharing-enhancements.js";
 import "./legal-support.js";
 import "./version-update.js";
 
@@ -73,7 +74,7 @@ window.addEventListener('load', () => {
 /* Release-specific worker URL + updateViaCache:none prevents old PWA shells from masking a new release. */
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js?v=1620', { updateViaCache: 'none' })
+    navigator.serviceWorker.register('sw.js?v=1630', { updateViaCache: 'none' })
       .then((registration) => registration.update().catch(() => {}))
       .catch(() => {});
   });

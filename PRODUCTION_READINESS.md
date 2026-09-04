@@ -1,10 +1,10 @@
-# Pamet v1.6.2 Production Readiness Review
+# Pamet v1.6.3 Production Readiness Review
 
-Updated for the 1.6.2 brand, care-workflow, history-comparison, responsive-UI, and release-delivery patch. This is an engineering readiness record, not a compliance certification.
+Updated for the 1.6.3 brand, care-workflow, history-comparison, responsive-UI, and release-delivery patch. This is an engineering readiness record, not a compliance certification.
 
 ## Release posture
 
-Pamet 1.6.2 is a patch release that keeps the 1.6.x strict-CSP and feature-owned frontend architecture while promoting the refreshed Pamet icon system, quick profile switching, more consistent sentence-case UI copy, deeper Health history over time comparisons, local PDF care-summary output, one consolidated Primary care visit-brief flow, and responsive Appointment Workspace fixes. The release also rotates PWA worker/cache identities so installed clients request the new visual and functional bundle.
+Pamet 1.6.3 is a patch release that keeps the 1.6.x strict-CSP and feature-owned frontend architecture while promoting the refreshed Pamet icon system, quick profile switching, more consistent sentence-case UI copy, deeper Health history over time comparisons, local PDF care-summary output, one consolidated Primary care visit-brief flow, and responsive Appointment Workspace fixes. The release also rotates PWA worker/cache identities so installed clients request the new visual and functional bundle.
 
 The repository has automated production/security checks, MySQL-backed lifecycle integration coverage, dependency auditing, and a disposable backup → isolated-restore drill. Stronger production-assurance claims still depend on the external and provider-specific evidence listed below.
 
@@ -63,4 +63,4 @@ These cannot honestly be marked complete by repository CI alone:
 
 ## Release decision
 
-Pamet 1.6.2 should be treated as release-ready only after exact-head CI is green and the deployed environment confirms the same 1.6.2 release identity and current visual/functional bundle. Independent/provider gates remain open until actual evidence exists.
+Pamet 1.6.3 should be treated as release-ready only after exact-head CI is green and the deployed environment confirms the same 1.6.3 release identity and current visual/functional bundle. Independent/provider gates remain open until actual evidence exists.
