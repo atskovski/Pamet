@@ -1,9 +1,12 @@
 'use strict';
 
 const express = require('express');
+const { createOAuthRouter } = require('./oauth-auth');
 
 function createPlatformRouter(platform) {
   const router = express.Router();
+
+  router.use(createOAuthRouter({ appBaseUrl: process.env.APP_BASE_URL || '' }));
 
   router.get('/api/platform/capabilities', (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
