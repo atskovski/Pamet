@@ -38,7 +38,7 @@ Runs without a browser and is part of the normal `npm run check` release chain. 
 
 Runs Playwright against the local production server wrapper with a disposable MySQL database. It creates test-only accounts and can safely exercise authentication, navigation, Settings, modal/sheet behavior, and logout without touching production data.
 
-The CI job runs both desktop and mobile Chromium projects. Failed runs retain screenshots, video, traces, and the Playwright HTML report for 14 days.
+The CI job runs both desktop and mobile Chromium projects. Failed runs retain screenshots, video, traces, and the Playwright HTML report for 14 days. Page navigation waits on `DOMContentLoaded` so third-party font or analytics resources cannot create a false UI failure after the application shell is ready.
 
 ### 3. Production browser smoke
 
