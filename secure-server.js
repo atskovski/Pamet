@@ -32,22 +32,22 @@ const versionedIndex = indexTemplate
   .replace(/Pamet v\d+\.\d+\.\d+ · Your health history, finally useful\./g, `Pamet v${VERSION} · Your health history, finally useful.`)
   .replace(/dist\/pamet\.min\.css\?v=\d+/g, `dist/pamet.min.css?v=${releaseAssetVersion}`)
   .replace(/dist\/pamet\.min\.js\?v=\d+/g, `dist/pamet.min.js?v=${releaseAssetVersion}`)
-  .replace('class="metric-icon" style="--icon-bg:var(--warm-light)"', 'class="metric-icon tone-warm"')
-  .replace('class="metric-icon" style="--icon-bg:var(--sage-light)"', 'class="metric-icon tone-sage"')
-  .replace('class="metric-badge" data-badge="+3 vs last" style="--badge:var(--warm-terracotta)"', 'class="metric-badge tone-terracotta" data-badge="+3 vs last"')
-  .replace('class="metric-badge" data-badge="Improving" style="--badge:var(--sage-green)"', 'class="metric-badge tone-sage" data-badge="Improving"')
-  .replace('class="metric-badge" data-badge="Watch" style="--badge:var(--rose-pink)"', 'class="metric-badge tone-rose" data-badge="Watch"')
-  .replace('class="metric-badge" data-badge="Pamet active" style="--badge:var(--sage-green)"', 'class="metric-badge tone-sage" data-badge="Pamet active"')
-  .replace('<i style="background:var(--warm-light)"></i>', '<i class="legend-swatch tone-warm"></i>')
-  .replace('<i style="background:var(--rose-light)"></i>', '<i class="legend-swatch tone-rose"></i>')
-  .replace('<i style="background:var(--sage-light)"></i>', '<i class="legend-swatch tone-sage"></i>')
+  .replace(/class="metric-icon" style="--icon-bg:var\(--warm-light\)"/g, 'class="metric-icon tone-warm"')
+  .replace(/class="metric-icon" style="--icon-bg:var\(--sage-light\)"/g, 'class="metric-icon tone-sage"')
+  .replace(/class="metric-badge" data-badge="\+3 vs last" style="--badge:var\(--warm-terracotta\)"/g, 'class="metric-badge tone-terracotta" data-badge="+3 vs last"')
+  .replace(/class="metric-badge" data-badge="Improving" style="--badge:var\(--sage-green\)"/g, 'class="metric-badge tone-sage" data-badge="Improving"')
+  .replace(/class="metric-badge" data-badge="Watch" style="--badge:var\(--rose-pink\)"/g, 'class="metric-badge tone-rose" data-badge="Watch"')
+  .replace(/class="metric-badge" data-badge="Pamet active" style="--badge:var\(--sage-green\)"/g, 'class="metric-badge tone-sage" data-badge="Pamet active"')
+  .replace(/<i style="background:var\(--warm-light\)"><\/i>/g, '<i class="legend-swatch tone-warm"></i>')
+  .replace(/<i style="background:var\(--rose-light\)"><\/i>/g, '<i class="legend-swatch tone-rose"></i>')
+  .replace(/<i style="background:var\(--sage-light\)"><\/i>/g, '<i class="legend-swatch tone-sage"></i>')
   .replace(/\s*<script>\s*\/\/ Register the service worker[\s\S]*?<\/script>/, '');
 
 function hardenedCsp(value) {
   let policy = String(value || '')
     .replace("script-src 'self' 'unsafe-inline'", "script-src 'self'")
-    .replace("style-src 'self' 'unsafe-inline'", "style-src 'self'")
-    .replace('; style-src', "; script-src-attr 'none'; style-src");
+    .replace("style-src 'self' 'unsafe-inline'", "style-src 'self'");
+  if (!policy.includes('script-src-attr')) policy = policy.replace('; style-src', "; script-src-attr 'none'; style-src");
   if (!policy.includes('style-src-attr')) policy = policy.replace('; font-src', "; style-src-attr 'none'; font-src");
   return policy;
 }
