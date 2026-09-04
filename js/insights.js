@@ -2,6 +2,7 @@
 (() => {
   'use strict';
   const S = window.PametStore;
+  const E = window.PametEntitlements;
   if (!S) return;
   const $ = (selector, root = document) => root.querySelector(selector);
   const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
@@ -18,6 +19,7 @@
   const within = (entries, days) => { const cutoff = new Date(); cutoff.setHours(23,59,59,999); cutoff.setDate(cutoff.getDate() - days + 1); return entries.filter((entry) => dateOnly(entry.date) >= cutoff); };
   const distinctDays = (entries) => new Set(entries.map((entry) => dayKey(entry.date))).size;
   const categoryLabel = { symptom: 'Symptoms', lifestyle: 'Lifestyle', medication: 'Medications', sleepstress: 'Sleep / Stress' };
+  const paidComparisons = () => E?.has?.('correlations') === true;
 
   function coverage(entries) {
     if (!entries.length) return { overall: 0, symptom: 0, sleep: 0, stress: 0, hydration: 0, activity: 0, medication: 0, notes: 0 };
@@ -78,6 +80,10 @@
         evidence: [`${count} logged day${count === 1 ? '' : 's'} included ${name}.`, `Average recorded severity on those entries: ${avg(matches.map((e) => e.severity)).toFixed(1)} / 10.`, 'This describes your recorded history and does not identify a cause.']
       }));
     }
+
+    /* Free Insights stops at the user's own symptom frequency/trend. Cross-factor
+     * comparisons and medication observations are a Pro/Ultra entitlement. */
+    if (!paidComparisons()) return observations;
 
     const symptomDays = entries.filter((entry) => (entry.symptoms || []).length > 0);
     const clearDays = entries.filter((entry) => (entry.symptoms || []).length === 0);
@@ -147,7 +153,7 @@
     const medicationCounts = new Map();
     entries.forEach((entry) => (entry.medications || []).filter((med) => med && med !== 'None').forEach((med) => medicationCounts.set(med, (medicationCounts.get(med)||0)+1)));
     const topMedication = [...medicationCounts.entries()].sort((a,b) => b[1]-a[1])[0];
-    if (topMedication && topMedication[1] >= 2) {
+    if (E?.has?.('medicationTiming') === true && topMedication && topMedication[1] >= 2) {
       const matches = entries.filter((entry) => (entry.medications || []).includes(topMedication[0]));
       const symptomNames = new Map();
       matches.forEach((entry) => (entry.symptoms || []).forEach((symptom) => symptomNames.set(symptom, (symptomNames.get(symptom)||0)+1)));
@@ -167,9 +173,9 @@
     const days = distinctDays(entries); const c = coverage(entries);
     let label = 'Start your baseline'; let note = 'Log your first day to begin building an observational baseline.';
     if (days > 0 && days < 3) { label = 'Baseline started'; note = `${days} logged day${days === 1 ? '' : 's'} is enough to begin, but not enough for repeat comparisons.`; }
-    else if (days < 7) { label = 'Early comparison stage'; note = `${days} logged days can support simple comparisons. Keep including ordinary days, not only symptom days.`; }
-    else if (!observations.length) { label = 'Baseline ready'; note = 'Pamet has enough days for comparisons, but no observation currently meets the display threshold.'; }
-    else { label = `${observations.length} supported observation${observations.length === 1 ? '' : 's'}`; note = 'These observations summarize what was recorded together. They do not establish medical cause.'; }
+    else if (days < 7) { label = 'Early comparison stage'; note = `${days} logged days can support simple summaries. Keep including ordinary days, not only symptom days.`; }
+    else if (!observations.length) { label = 'Baseline ready'; note = 'Pamet has enough days for a history summary, but no observation currently meets the display threshold.'; }
+    else { label = `${observations.length} supported observation${observations.length === 1 ? '' : 's'}`; note = paidComparisons() ? 'These observations summarize what was recorded together. They do not establish medical cause.' : 'Free Insights summarizes your recorded symptom frequency and direction without cross-factor comparisons.'; }
     return { days, c, label, note };
   }
 
@@ -180,15 +186,20 @@
     const entries = within([...S.entries], state.days);
     const allObservations = buildObservations(entries);
     const archived = archiveSet();
+    if (!paidComparisons() && state.category !== 'all' && state.category !== 'symptom') state.category = 'all';
     const visible = allObservations.filter((item) => state.showArchived ? archived.has(item.id) : !archived.has(item.id)).filter((item) => state.category === 'all' || item.category === state.category);
     const readiness = dataReadiness(entries, allObservations);
     const completenessItems = [['Symptoms',readiness.c.symptom],['Sleep',readiness.c.sleep],['Stress',readiness.c.stress],['Hydration',readiness.c.hydration],['Activity',readiness.c.activity],['Medications',readiness.c.medication],['Notes',readiness.c.notes]];
+    const categories = paidComparisons() ? [['all','All'],['symptom','Symptoms'],['lifestyle','Lifestyle'],['medication','Medications'],['sleepstress','Sleep / Stress']] : [['all','All'],['symptom','Symptoms']];
+    const helper = paidComparisons()
+      ? 'Pamet summarizes repeat relationships in what you record. It does not diagnose conditions or determine what caused a symptom.'
+      : 'Free Insights summarizes symptom frequency and trend. Recorded-factor comparisons, What Changed, and medication observations unlock with Pro.';
 
     col.innerHTML = `
-      <div class="insights-page-head"><div><span class="pamet-eyebrow">Observational history</span><h2 class="screen-title">Insights</h2><p class="pamet-helper">Pamet summarizes repeat relationships in what you record. It does not diagnose conditions or determine what caused a symptom.</p></div><div class="insights-window" role="group" aria-label="Observation window">${[7,30,90].map((days) => `<button type="button" data-insights-days="${days}" class="chip-btn${state.days===days?' active':''}" aria-pressed="${state.days===days}">${days} days</button>`).join('')}</div></div>
+      <div class="insights-page-head"><div><span class="pamet-eyebrow">Observational history</span><h2 class="screen-title">Insights</h2><p class="pamet-helper">${esc(helper)}</p></div><div class="insights-window" role="group" aria-label="Observation window">${[7,30,90].map((days) => `<button type="button" data-insights-days="${days}" class="chip-btn${state.days===days?' active':''}" aria-pressed="${state.days===days}">${days} days</button>`).join('')}</div></div>
       <section class="insights-readiness" aria-labelledby="readinessTitle"><div class="readiness-copy"><span class="pamet-eyebrow">Pattern readiness</span><h3 id="readinessTitle">${esc(readiness.label)}</h3><p>${esc(readiness.note)}</p></div><div class="readiness-score"><strong>${readiness.days}</strong><span>logged days</span></div></section>
-      <section class="completeness-card" aria-labelledby="completenessTitle"><div><span class="pamet-eyebrow">Data completeness</span><h3 id="completenessTitle">${readiness.c.overall}% complete</h3><p class="pamet-helper">More complete entries make comparisons easier to interpret. Missing fields are not treated as zero.</p></div><div class="completeness-grid">${completenessItems.map(([label,value]) => `<div class="completeness-item"><div><span>${esc(label)}</span><strong>${value}%</strong></div><div class="mini-meter" aria-hidden="true"><span style="width:${value}%"></span></div></div>`).join('')}</div></section>
-      <div class="insights-toolbar" aria-label="Insight filters"><div class="insights-categories">${[['all','All'],['symptom','Symptoms'],['lifestyle','Lifestyle'],['medication','Medications'],['sleepstress','Sleep / Stress']].map(([key,label]) => `<button type="button" class="chip-btn${state.category===key?' active':''}" data-insights-category="${key}" aria-pressed="${state.category===key}">${label}</button>`).join('')}</div><button type="button" class="link-btn archived-toggle" data-insights-archived>${state.showArchived ? 'Back to active observations' : `Archived (${archived.size})`}</button></div>
+      <section class="completeness-card" aria-labelledby="completenessTitle"><div><span class="pamet-eyebrow">Data completeness</span><h3 id="completenessTitle">${readiness.c.overall}% complete</h3><p class="pamet-helper">More complete entries make summaries easier to interpret. Missing fields are not treated as zero.</p></div><div class="completeness-grid">${completenessItems.map(([label,value]) => `<div class="completeness-item"><div><span>${esc(label)}</span><strong>${value}%</strong></div><div class="mini-meter" aria-hidden="true"><span style="width:${value}%"></span></div></div>`).join('')}</div></section>
+      <div class="insights-toolbar" aria-label="Insight filters"><div class="insights-categories">${categories.map(([key,label]) => `<button type="button" class="chip-btn${state.category===key?' active':''}" data-insights-category="${key}" aria-pressed="${state.category===key}">${label}</button>`).join('')}</div><button type="button" class="link-btn archived-toggle" data-insights-archived>${state.showArchived ? 'Back to active observations' : `Archived (${archived.size})`}</button></div>
       <div class="observation-list">${visible.length ? visible.map((item) => observationCard(item, archived.has(item.id))).join('') : emptyState(readiness, archived)}</div>`;
 
     col.querySelectorAll('[data-insights-days]').forEach((button) => button.addEventListener('click', () => { state.days = Number(button.dataset.insightsDays); render(); }));
@@ -213,12 +224,12 @@
   function emptyState(readiness, archived) {
     if (state.showArchived) return `<section class="insights-empty"><span data-pamet-icon="archive"></span><h3>No archived observations</h3><p>Archiving removes an observation from this workspace only. Your underlying journal entries remain unchanged.</p></section>`;
     const category = state.category === 'all' ? '' : ` for ${categoryLabel[state.category]}`;
-    return `<section class="insights-empty"><span data-pamet-icon="insights"></span><h3>No supported observations${category}</h3><p>${readiness.days < 3 ? 'Keep logging complete entries so Pamet has enough history to compare.' : 'Pamet is not forcing a conclusion from limited or inconsistent data. Keep tracking and this view will update as your history changes.'}</p>${archived.size ? '<button type="button" class="link-btn" data-insights-archived>Review archived observations</button>' : ''}</section>`;
+    return `<section class="insights-empty"><span data-pamet-icon="insights"></span><h3>No supported observations${category}</h3><p>${readiness.days < 3 ? 'Keep logging complete entries so Pamet has enough history to summarize.' : 'Pamet is not forcing a conclusion from limited or inconsistent data. Keep tracking and this view will update as your history changes.'}</p>${archived.size ? '<button type="button" class="link-btn" data-insights-archived>Review archived observations</button>' : ''}</section>`;
   }
 
   function scheduleRender() { requestAnimationFrame(() => { const screen = $('#screen-patterns'); if (screen?.classList.contains('active')) render(); }); }
   document.addEventListener('click', (event) => { if (event.target.closest('[data-tab="patterns"], [data-nav="patterns"]')) setTimeout(render, 0); });
-  window.addEventListener('pamet:login', scheduleRender); window.addEventListener('pamet:registered', scheduleRender);
+  window.addEventListener('pamet:login', scheduleRender); window.addEventListener('pamet:registered', scheduleRender); window.addEventListener('pamet:entitlements', scheduleRender);
   document.addEventListener('pamet:settings-rendered', scheduleRender);
   const observer = new MutationObserver((mutations) => { if (mutations.some((m) => m.target.closest?.('#screen-patterns') || [...m.addedNodes].some((n) => n.nodeType===1 && (n.matches?.('#screen-patterns *') || n.querySelector?.('#screen-patterns'))))) scheduleRender(); });
   observer.observe(document.body, { childList:true, subtree:true });
