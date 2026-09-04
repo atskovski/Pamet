@@ -1,4 +1,4 @@
-name: Trigger Pamet Admin Mirror
+name: Verify Pamet Admin Parity
 
 on:
   push:
@@ -8,16 +8,51 @@ permissions:
   contents: read
 
 jobs:
-  trigger-admin-sync:
+  verify-admin-parity:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
-      - name: Trigger private pamet-admin mirror when token is configured
+      - name: Checkout production main
+        uses: actions/checkout@v5
+
+      - name: Require pamet-admin sync credentials
         env:
           GH_TOKEN: ${{ secrets.PAMET_ADMIN_SYNC_TOKEN }}
         run: |
           if [ -z "$GH_TOKEN" ]; then
-            echo "::notice::PAMET_ADMIN_SYNC_TOKEN is not configured. pamet-admin will use its 15-minute scheduled pull-sync fallback."
-            exit 0
+            echo "::error::PAMET_ADMIN_SYNC_TOKEN is required. Every production main merge must sync and verify private pamet-admin."
+            exit 1
           fi
-          gh workflow run admin-sync.yml --repo atskovski/pamet-admin --ref main
+
+      - name: Trigger pamet-admin mirror for this production commit
+        env:
+          GH_TOKEN: ${{ secrets.PAMET_ADMIN_SYNC_TOKEN }}
+        run: |
+          gh workflow run admin-sync.yml \
+            --repo atskovski/pamet-admin \
+            --ref main \
+            -f expected_source_sha="${GITHUB_SHA}"
           echo "Triggered pamet-admin mirror for production commit ${GITHUB_SHA}."
+
+      - name: Wait for pamet-admin to mirror this exact production release
+        env:
+          GH_TOKEN: ${{ secrets.PAMET_ADMIN_SYNC_TOKEN }}
+        run: |
+          EXPECTED_VERSION="$(node -p "require('./package.json').version")"
+          echo "Expecting pamet-admin to reach Pamet ${EXPECTED_VERSION} @ ${GITHUB_SHA}."
+
+          for attempt in $(seq 1 60); do
+            ADMIN_SHA="$(gh api repos/atskovski/pamet-admin/contents/admin/UPSTREAM_SHA?ref=main --jq '.content' 2>/dev/null | tr -d '\n' | base64 --decode 2>/dev/null | tr -d '\r\n' || true)"
+            ADMIN_VERSION="$(gh api repos/atskovski/pamet-admin/contents/package.json?ref=main --jq '.content' 2>/dev/null | tr -d '\n' | base64 --decode 2>/dev/null | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{process.stdout.write(JSON.parse(s).version||'')}catch{}})" || true)"
+
+            if [ "$ADMIN_SHA" = "$GITHUB_SHA" ] && [ "$ADMIN_VERSION" = "$EXPECTED_VERSION" ]; then
+              echo "Pamet Admin parity verified: Pamet ${ADMIN_VERSION} @ ${ADMIN_SHA}."
+              exit 0
+            fi
+
+            echo "Attempt ${attempt}/60: admin=${ADMIN_VERSION:-unknown} @ ${ADMIN_SHA:-unknown}; waiting for ${EXPECTED_VERSION} @ ${GITHUB_SHA}."
+            sleep 20
+          done
+
+          echo "::error::pamet-admin did not mirror production ${EXPECTED_VERSION} @ ${GITHUB_SHA} within 20 minutes."
+          exit 1
