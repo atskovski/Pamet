@@ -105,31 +105,49 @@ test('@production Free paid feature entry points show the correct plan lock inst
   await expect(tools).toBeVisible();
   const lock = page.locator('#pametEntitlementModalRoot .entitlement-lock-modal');
 
+  const expectLock = async (heading) => {
+    await expect(lock).toBeVisible();
+    await expect(lock.getByRole('heading', { name: heading, exact: true })).toBeVisible();
+    await expect(lock.getByRole('button', { name: 'See Pro & Ultra', exact: true })).toBeVisible();
+  };
+  const closeLock = async () => {
+    await lock.getByRole('button', { name: 'Close' }).click();
+    await expect(lock).not.toBeVisible();
+  };
+
+  await page.locator('#phase2ManageProfilesTop').click();
+  await expectLock('Multiple health profiles is included with Ultra');
+  await expect(page.locator('#phase2ModalRoot .pamet-modal')).not.toBeVisible();
+  await closeLock();
+
   const ultraCases = [
     ['profiles', 'Multiple health profiles is included with Ultra'],
-    ['prep', 'Appointment Workspace is included with Ultra'],
+    ['prep', 'Appointment workspace is included with Ultra'],
     ['longitudinal', 'Health history over time is included with Ultra'],
-    ['brief', 'Advanced Visit Brief is included with Ultra'],
+    ['brief', 'Advanced visit brief is included with Ultra'],
     ['sharing', 'Advanced sharing is included with Ultra']
   ];
 
   for (const [feature, heading] of ultraCases) {
     await tools.locator(`[data-phase2="${feature}"]`).click();
-    await expect(lock).toBeVisible();
-    await expect(lock.getByRole('heading', { name: heading, exact: true })).toBeVisible();
-    await expect(lock.getByRole('button', { name: 'See Pro & Ultra', exact: true })).toBeVisible();
+    await expectLock(heading);
     await expect(page.locator('#careUxModalRoot .care-appointment-modal')).not.toBeVisible();
     await expect(page.locator('#phase2ModalRoot .pamet-modal')).not.toBeVisible();
-    await lock.getByRole('button', { name: 'Close' }).click();
-    await expect(lock).not.toBeVisible();
+    await closeLock();
   }
 
   const caregiver = page.locator('[data-enhanced-care-share="caregiver"], [data-care-share="caregiver"]').first();
   await expect(caregiver).toBeVisible();
   await caregiver.click();
-  await expect(lock).toBeVisible();
-  await expect(lock.getByRole('heading', { name: 'Caregiver sharing is included with Pro and Ultra', exact: true })).toBeVisible();
-  await expect(lock.getByRole('button', { name: 'See Pro & Ultra', exact: true })).toBeVisible();
+  await expectLock('Caregiver sharing is included with Pro and Ultra');
+  await expect(page.locator('#careSharingEnhancedRoot .enhanced-share-modal')).not.toBeVisible();
+  await expect(page.locator('#careUxModalRoot .care-share-modal')).not.toBeVisible();
+  await closeLock();
+
+  const provider = page.locator('[data-enhanced-care-share="provider"], [data-care-share="provider"]').first();
+  await expect(provider).toBeVisible();
+  await provider.click();
+  await expectLock('Primary care sharing is included with Pro and Ultra');
   await expect(page.locator('#careSharingEnhancedRoot .enhanced-share-modal')).not.toBeVisible();
   await expect(page.locator('#careUxModalRoot .care-share-modal')).not.toBeVisible();
 });
