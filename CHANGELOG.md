@@ -1,5 +1,21 @@
 # Pamet Change Log
 
+## [1.6.2] — 2026-09-03
+
+### Brand, care workflows, and history comparisons
+
+- Promoted the refreshed Pamet green/teal/blue mark across in-app branding and PWA install assets, including 192 px, 512 px, and maskable icons.
+- Added the production quick profile-switch shortcut to the top app bar.
+- Normalized Settings and care workflow labels to sentence case for a more consistent UI writing system.
+- Expanded Health history over time with 30/90/180-day comparisons, normalized symptom-frequency comparisons, severity/sleep/stress/activity measures, data-strength guidance, and explicit user-entered-data context.
+- Added print/save-to-PDF output for health-history comparisons and local PDF sharing for caregiver and primary-care summaries when outbound email is unavailable.
+- Consolidated Primary care access around one advanced visit-brief flow instead of competing popups.
+- Improved Appointment Workspace responsive behavior to reduce overlapping, clipped, or cramped content.
+- Rotated the PWA worker registration to `sw.js?v=1620`, shell cache to `pamet-shell-v162-1`, and static shell asset URLs to the 1.6.2 token so clients request the new release assets.
+- Published backend/mobile contract identity 1.6.2 while retaining 1.5.1 as the minimum compatible native backend baseline.
+
+---
+
 ## [1.6.1] — 2026-09-03
 
 ### Dark-mode delivery and release consistency
