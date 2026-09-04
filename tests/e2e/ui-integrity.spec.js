@@ -154,7 +154,8 @@ async function interactionState(page) {
     dark: document.body.classList.contains('dark'),
     expanded: [...document.querySelectorAll('[aria-expanded]')].map((el) => `${el.id}:${el.getAttribute('aria-expanded')}`).join('|'),
     hidden: [...document.querySelectorAll('[id][hidden]')].map((el) => el.id).sort().join('|'),
-    open: [...document.querySelectorAll('.open,[open]')].map((el) => el.id || el.className || el.tagName).sort().join('|')
+    open: [...document.querySelectorAll('.open,[open]')].map((el) => el.id || el.className || el.tagName).sort().join('|'),
+    calendarMonth: document.querySelector('#calMonth')?.textContent || ''
   }));
 }
 
