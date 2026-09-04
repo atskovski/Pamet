@@ -1,0 +1,32 @@
+/* Generated from contracts/plan-features.json. Run `node scripts/sync-plan-catalog.js` after plan changes. */
+(function (global) {
+  "use strict";
+  global.PametPlanCatalog = {
+    schemaVersion: 1,
+    plans: [
+      { key: "free", name: "Free", positioning: "Track", summary: "Build a useful health history", monthly: "$0", annual: "$0" },
+      { key: "pro", name: "Pro", positioning: "Understand", summary: "Make history easier to interpret", monthly: "$6.99", annual: "$59.99" },
+      { key: "ultra", name: "Ultra", positioning: "Prepare", summary: "Prepare for more complex care conversations", monthly: "$12.99", annual: "$99.99" }
+    ],
+    features: [
+      { id: "logging", label: "Symptom, medication, mood, activity, lifestyle, and notes logging", free: true, pro: true, ultra: true },
+      { id: "calendar", label: "Calendar and journal-history review", free: true, pro: true, ultra: true },
+      { id: "insights", label: "7/30/90-day observational Insights views", free: true, pro: true, ultra: true },
+      { id: "visitBrief", label: "Standard Visit Brief", free: true, pro: true, ultra: true },
+      { id: "themeAccessibility", label: "Dark mode and accessibility-focused UI", free: true, pro: true, ultra: true },
+      { id: "accountSecurity", label: "Account security, password reset/change, session/device management, and authenticator MFA", free: true, pro: true, ultra: true },
+      { id: "push", label: "Consent-based Web Push reminders", free: true, pro: true, ultra: true },
+      { id: "weeklyDigest", label: "Weekly digest infrastructure when email is configured", free: true, pro: true, ultra: true },
+      { id: "noAds", label: "No advertising", free: true, pro: true, ultra: true },
+      { id: "unlimitedHistory", label: "Unlimited history entitlement", free: false, pro: true, ultra: true, serverCapability: "unlimitedHistory" },
+      { id: "correlations", label: "Observational correlations / recorded-factor comparisons", free: false, pro: true, ultra: true, serverCapability: "correlations" },
+      { id: "whatChanged", label: "What Changed / deeper trend interpretation", free: false, pro: true, ultra: true },
+      { id: "medicationTiming", label: "Medication-timing observations", free: false, pro: true, ultra: true },
+      { id: "sharing", label: "Read-only, expiring, revocable caregiver/provider sharing", free: false, pro: true, ultra: true, serverCapability: "sharing" },
+      { id: "appointmentWorkspace", label: "Appointment Workspace", free: false, pro: false, ultra: true, serverCapability: "appointmentWorkspace" },
+      { id: "multipleProfiles", label: "Multiple health profiles", free: false, pro: false, ultra: true, serverCapability: "multipleProfiles" },
+      { id: "advancedVisitBrief", label: "Advanced Visit Brief", free: false, pro: false, ultra: true, serverCapability: "advancedVisitBrief" },
+      { id: "encryptedSync", label: "Encrypted multi-device journal sync", free: false, pro: false, ultra: true, serverCapability: "encryptedSync" }
+    ]
+  };
+})(window);
