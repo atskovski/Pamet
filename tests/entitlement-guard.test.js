@@ -12,6 +12,7 @@ const matrices = {
   pro: { correlations:true, unlimitedHistory:true, sharing:true, appointmentWorkspace:false, multipleProfiles:false, advancedVisitBrief:false, encryptedSync:false },
   ultra: { correlations:true, unlimitedHistory:true, sharing:true, appointmentWorkspace:true, multipleProfiles:true, advancedVisitBrief:true, encryptedSync:true }
 };
+const plain = (value) => JSON.parse(JSON.stringify(value));
 
 function harness({ plan = 'free', capabilities = matrices[plan], authed = true, status = 200 } = {}) {
   const listeners = new Map();
@@ -87,8 +88,8 @@ test('Free fails closed even when local plan storage claims Ultra', async () => 
   assert.equal(store._settings.plan, 'free');
   assert.equal(store.isPro(), false);
   assert.equal(store.isUltra(), false);
-  assert.deepEqual(store.patterns(), []);
-  assert.deepEqual(store.profiles.map((profile) => profile.id), ['primary']);
+  assert.deepEqual(plain(store.patterns()), []);
+  assert.deepEqual(plain(store.profiles.map((profile) => profile.id)), ['primary']);
   assert.equal(store.switchProfile('family'), false);
 
   store._settings.plan = 'ultra';
@@ -109,7 +110,7 @@ test('Pro receives Pro capabilities but cannot use Ultra profile features', asyn
   assert.equal(store.isPro(), true);
   assert.equal(store.isUltra(), false);
   assert.equal(store.patterns().length, 1);
-  assert.deepEqual(store.profiles.map((profile) => profile.id), ['primary']);
+  assert.deepEqual(plain(store.profiles.map((profile) => profile.id)), ['primary']);
   assert.equal(store.switchProfile('family'), false);
 });
 
@@ -125,7 +126,7 @@ test('Ultra receives the cumulative paid capabilities including Ultra-only featu
   assert.equal(entitlements.capabilities.advancedVisitBrief, true);
   assert.equal(entitlements.capabilities.encryptedSync, true);
   assert.equal(store.isUltra(), true);
-  assert.deepEqual(store.profiles.map((profile) => profile.id), ['primary','family']);
+  assert.deepEqual(plain(store.profiles.map((profile) => profile.id)), ['primary','family']);
   assert.equal(store.switchProfile('family'), true);
 });
 
@@ -137,7 +138,7 @@ test('contradictory server capability payload fails closed instead of granting a
   assert.equal(entitlements.plan, 'free');
   assert.equal(entitlements.verified, false);
   assert.equal(store.isPro(), false);
-  assert.deepEqual(store.patterns(), []);
+  assert.deepEqual(plain(store.patterns()), []);
 });
 
 test('entitlement endpoint failure fails closed to Free', async () => {
@@ -147,5 +148,5 @@ test('entitlement endpoint failure fails closed to Free', async () => {
   assert.equal(entitlements.plan, 'free');
   assert.equal(entitlements.verified, false);
   assert.equal(store.isUltra(), false);
-  assert.deepEqual(store.profiles.map((profile) => profile.id), ['primary']);
+  assert.deepEqual(plain(store.profiles.map((profile) => profile.id)), ['primary']);
 });
