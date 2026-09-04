@@ -42,7 +42,7 @@ async function registerDisposableAccount(page, testInfo) {
   const unique = `${Date.now()}-${Math.random().toString(16).slice(2)}-${testInfo.project.name.replace(/\W+/g, '-')}`;
   const email = `ui-integrity-${unique}@example.com`;
   const password = `Pamet-UI-${unique}-Password!`;
-  await page.goto('/');
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
   await expect(page.locator('#loginForm')).toBeVisible();
   await page.locator('#showRegister').click();
   await expect(page.locator('#registerForm')).toBeVisible();
@@ -187,7 +187,7 @@ async function openPlanMatrix(page) {
 test.describe('Pamet UI integrity', () => {
   test('auth entry points are reversible and never dead-end', async ({ page }) => {
     const problems = installRuntimeGuards(page);
-    await page.goto('/');
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
     await expect(page.locator('#loginForm')).toBeVisible();
     await clickAndRequireEffect(page, page.locator('#showRegister'), 'Create account link');
     await expect(page.locator('#registerForm')).toBeVisible();
@@ -255,7 +255,7 @@ test.describe('Pamet UI integrity', () => {
 
   test('@production public shell and synthetic-session primary navigation smoke', async ({ page }) => {
     const problems = installRuntimeGuards(page);
-    await page.goto('/');
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
     await expect(page.locator('#loginForm')).toBeVisible();
     await page.locator('#showRegister').click();
     await expect(page.locator('#registerForm')).toBeVisible();
@@ -266,7 +266,7 @@ test.describe('Pamet UI integrity', () => {
     await page.context().clearCookies();
     await page.evaluate(() => { localStorage.clear(); sessionStorage.clear(); });
     await installSyntheticSession(page, 'ultra');
-    await page.goto('/');
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
     await expect(page.locator('#welcome')).toHaveClass(/hidden/);
     await assertPrimaryNavigation(page);
     await assertVisitBriefNavigation(page);
