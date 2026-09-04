@@ -71,10 +71,32 @@ async function stripeWebhookProbe() {
   if (rootHtml.includes(expectedFooter)) pass(`server-rendered Settings footer contains ${expectedVersion}`);
   else fail(`server-rendered Settings footer does not contain ${expectedFooter}`);
 
-  if (rootHtml.includes(`dist/pamet.min.js?v=${assetVersion}`) && rootHtml.includes(`dist/pamet.min.css?v=${assetVersion}`)) {
+  if (rootHtml.includes(`dist/pamet.min.js?v=${assetVersion}`) && rootHtml.includes(`dist/pamet.min.css?v=${assetVersion}`) && rootHtml.includes(`assets/pamet-mark.svg?v=${assetVersion}`)) {
     pass(`application shell references ${expectedVersion} release assets`);
   } else {
     fail(`application shell does not reference expected release asset version ${assetVersion}`);
+  }
+  if (!rootHtml.includes('?v=1200')) pass('historical v=1200 shell token is absent');
+  else fail('historical v=1200 shell token is still present in production HTML');
+  if (!/fonts\.googleapis\.com\/css2\?family=Georgia/i.test(rootHtml)) pass('redundant Georgia Google Fonts request is absent');
+  else fail('production HTML still requests Georgia from Google Fonts');
+  if (!rootHtml.includes('navigator.serviceWorker.register')) pass('production HTML has no duplicate inline service-worker registration');
+  else fail('production HTML still contains a duplicate inline service-worker registration');
+
+  const workerResponse = await fetch(`${base}/sw.js?acceptance=${nonce}`, {
+    headers: { Accept: 'text/javascript', 'Cache-Control': 'no-cache' },
+    cache: 'no-store',
+    redirect: 'follow',
+    signal: AbortSignal.timeout(15000)
+  });
+  const workerText = await workerResponse.text();
+  if (workerResponse.ok) pass('service worker is reachable without HTTP cache reuse');
+  else fail(`service worker returned HTTP ${workerResponse.status}`);
+  const workerCachePattern = new RegExp(`pamet-shell-v${assetVersion}-[1-9][0-9]*`);
+  if (workerCachePattern.test(workerText) && workerText.includes(`/dist/pamet.min.js?v=${assetVersion}`) && workerText.includes(`/dist/pamet.min.css?v=${assetVersion}`)) {
+    pass(`service worker cache and shell assets match ${expectedVersion}`);
+  } else {
+    fail(`service worker does not match expected release asset version ${assetVersion}`);
   }
 
   const healthResult = await json('/api/health');
