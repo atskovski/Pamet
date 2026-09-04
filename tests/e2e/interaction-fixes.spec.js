@@ -74,8 +74,9 @@ test('@production Patterns windows, evidence, and archive actions are functional
 
   await card.locator('[data-observation-archive]').click();
   await expect(page.locator('#screen-patterns .insights-action-status')).toContainText('Observation archived');
-  await expect(page.locator('#screen-patterns [data-insights-archived]')).toContainText('Archived (1)');
-  await page.locator('#screen-patterns [data-insights-archived]').click();
+  const archivedToggle = page.locator('#screen-patterns .archived-toggle');
+  await expect(archivedToggle).toContainText('Archived (1)');
+  await archivedToggle.click();
   await expect(page.locator('#screen-patterns .observation-card').first()).toBeVisible();
   await expect(page.locator('#screen-patterns .observation-card').first().locator('[data-observation-archive]')).toContainText('Restore');
 });
