@@ -1,5 +1,18 @@
 # Pamet Change Log
 
+## [1.6.3] — 2026-09-03
+
+### Care sharing and appointment workspace
+- Added explicit caregiver and primary-care "What will be included" previews before sharing.
+- Kept caregiver output deliberately limited while making Primary care the richest clinician-oriented Visit Brief.
+- Added local print/save-to-PDF fallback buttons to both sharing flows, including when email delivery is unavailable or a send fails.
+- Fixed recent-notes checkbox alignment and sharing-dialog responsive spacing.
+- Reworked Appointment Workspace sizing and the date/time confirmation row to prevent overlap and clipped confirmation text.
+- Rotated service-worker and static-shell release tokens for reliable delivery of the UI patch.
+- Published backend/mobile contract identity 1.6.3 while retaining 1.5.1 as the minimum compatible native backend baseline.
+
+---
+
 ## [1.6.2] — 2026-09-03
 
 ### Brand, care workflows, and history comparisons
