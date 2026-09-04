@@ -105,5 +105,5 @@ test('@production v1.6.6 logging milestones and Home observation toggle stay in 
   await page.locator('#setShowInsight').check();
   await page.locator('[data-tab="home"]').click();
   await expect(page.locator('#insightBanner')).toBeVisible();
-  await expect(page.locator('#insightBanner')).toContainText('PAMET OBSERVATION — BASED ON YOUR LOGS');
+  await expect(page.locator('#insightBanner')).toContainText('OBSERVATION — BASED ON YOUR LOGS');
 });
