@@ -32,7 +32,7 @@ import "./security.js";
 import "./login-experience.js";
 import "./product-clarity.js";
 import "./insights.js";
-import "./interaction-fixes.js";
+import "./interaction-controller.js";
 import "./experience.js";
 import "./care-ux.js";
 import "./ui-ux.js";
