@@ -33,6 +33,47 @@ import "./care-sharing-enhancements.js";
 import "./legal-support.js";
 import "./version-update.js";
 
+/*
+ * The v1.5 Insights workspace replaces the legacy Patterns markup when it renders.
+ * app.js still owns the tab state and performs one legacy render synchronously when
+ * the Patterns tab is selected. If Insights has already replaced that markup (for
+ * example after fresh-account lifecycle events), restore the four legacy targets
+ * only for that synchronous handoff. Insights then performs the visible render on
+ * the same navigation event and replaces this hidden compatibility bridge.
+ */
+function bridgeLegacyPatternRender() {
+  const screen = document.querySelector('#screen-patterns');
+  const host = screen?.querySelector('.content-col');
+  if (!host) return;
+
+  const required = [
+    ['span', 'patternDaysCount'],
+    ['span', 'patternSummary'],
+    ['div', 'patternsUpgrade'],
+    ['div', 'patternList']
+  ];
+  if (required.every(([, id]) => document.getElementById(id))) return;
+
+  let bridge = screen.querySelector('[data-legacy-pattern-bridge]');
+  if (!bridge) {
+    bridge = document.createElement('div');
+    bridge.hidden = true;
+    bridge.setAttribute('aria-hidden', 'true');
+    bridge.dataset.legacyPatternBridge = 'true';
+    host.appendChild(bridge);
+  }
+  required.forEach(([tag, id]) => {
+    if (document.getElementById(id)) return;
+    const element = document.createElement(tag);
+    element.id = id;
+    bridge.appendChild(element);
+  });
+}
+
+document.addEventListener('click', (event) => {
+  if (event.target.closest?.('[data-tab="patterns"], [data-nav="patterns"]')) bridgeLegacyPatternRender();
+}, true);
+
 function releaseFooterText(version = PAMET_VERSION) {
   const normalized = String(version || '').trim() || PAMET_VERSION;
   return `Pamet v${normalized} · Your health history, finally useful.`;
