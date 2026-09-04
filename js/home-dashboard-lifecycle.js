@@ -42,7 +42,7 @@
     if (recent) recent.hidden = !populated;
     if (starter) starter.hidden = populated;
     if (visitBrief) visitBrief.hidden = false;
-    if (starterKicker) starterKicker.textContent = 'WHAT HOME WILL BUILD';
+    if (starterKicker) starterKicker.textContent = 'WHAT PAMET WILL BUILD';
     if (starterGrid?.children.length > 2) starterGrid.children[2].remove();
 
     installStreakGuard();

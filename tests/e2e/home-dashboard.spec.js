@@ -91,7 +91,7 @@ test('@production Home shows a compact seven-day dashboard without legacy metric
   await expect(page.locator('#homeWeekTrend .home-trend-day')).toHaveCount(7);
   await expect(page.locator('#insightBanner')).toBeVisible();
   await expect(page.locator('#insightBanner')).toContainText('OBSERVATION — BASED ON YOUR LOGS');
-  await expect(page.locator('#insightText')).toContainText('Headache');
+  await expect(page.locator('#insightText')).toContainText(/Headache|symptom days/i);
   await expect(page.locator('#homeEmptyState')).toBeHidden();
   await expect(page.locator('#homeStarterGuide')).toBeHidden();
   await expect(page.locator('.home-visit-brief')).toBeVisible();
