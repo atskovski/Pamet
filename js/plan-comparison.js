@@ -44,13 +44,26 @@
     else dialog.setAttribute("open", "");
   }
 
+  function observePlanContainer(container) {
+    settingsObserver?.observe(container, { childList: true, subtree: true, characterData: true });
+  }
+
   function render(container, activePlan = currentPlan()) {
     if (!container) return;
     const normalized = plan(activePlan).key;
     settingsGuard = true;
-    container.innerHTML = `${catalog.plans.map((item) => cardMarkup(item, normalized)).join("")}<div class="plan-full-compare"><button type="button" class="btn btn-primary" data-open-plan-matrix>See full feature comparison</button></div>`;
-    container.querySelector("[data-open-plan-matrix]")?.addEventListener("click", () => open(normalized));
-    settingsGuard = false;
+    // MutationObserver callbacks run after the current stack. A boolean guard alone
+    // therefore cannot distinguish Pamet's own render from a later external render;
+    // disconnect while writing so our own innerHTML cannot recursively starve the
+    // browser event loop before DOMContentLoaded.
+    settingsObserver?.disconnect();
+    try {
+      container.innerHTML = `${catalog.plans.map((item) => cardMarkup(item, normalized)).join("")}<div class="plan-full-compare"><button type="button" class="btn btn-primary" data-open-plan-matrix>See full feature comparison</button></div>`;
+      container.querySelector("[data-open-plan-matrix]")?.addEventListener("click", () => open(normalized));
+    } finally {
+      settingsGuard = false;
+      if (settingsObserver) observePlanContainer(container);
+    }
   }
 
   function refreshSettings() {
@@ -74,7 +87,7 @@
       if (settingsGuard) return;
       queueMicrotask(refreshSettings);
     });
-    settingsObserver.observe(container, { childList: true, subtree: true, characterData: true });
+    observePlanContainer(container);
     refreshSettings();
   }
 
@@ -95,10 +108,11 @@
       const summary = card.querySelector("p");
       const price = card.querySelector(".price");
       const list = card.querySelector("ul");
-      if (heading) heading.textContent = `${item.name} · ${item.positioning}`;
-      if (summary) summary.textContent = item.summary;
-      if (price) price.textContent = `${item.monthly}/mo · ${item.annual}/yr`;
-      if (list) list.innerHTML = differentiatedFeatures(key).map((feature) => `<li>${esc(feature.label)}</li>`).join("");
+      if (heading && heading.textContent !== `${item.name} · ${item.positioning}`) heading.textContent = `${item.name} · ${item.positioning}`;
+      if (summary && summary.textContent !== item.summary) summary.textContent = item.summary;
+      if (price && price.textContent !== `${item.monthly}/mo · ${item.annual}/yr`) price.textContent = `${item.monthly}/mo · ${item.annual}/yr`;
+      const features = differentiatedFeatures(key).map((feature) => `<li>${esc(feature.label)}</li>`).join("");
+      if (list && list.innerHTML !== features) list.innerHTML = features;
     });
     if (!modal.querySelector("[data-open-full-plan-matrix]")) {
       const button = document.createElement("button");
