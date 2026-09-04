@@ -23,11 +23,22 @@ async function width(locator) {
   return box.width;
 }
 
-test('@production Settings plan actions and upgrade chooser stay aligned', async ({ page }, testInfo) => {
+test('@production Settings plan actions, legal version, and upgrade chooser stay aligned', async ({ page }, testInfo) => {
   await installSyntheticFreeSession(page);
   await page.goto('/', { waitUntil: 'domcontentloaded' });
   await expect(page.locator('#welcome')).toHaveClass(/hidden/);
   await page.locator('.tab[data-tab="settings"]').click();
+
+  const legalFooter = page.locator('.pamet-legal-footer .footer-line');
+  await expect(legalFooter).toContainText('Pamet v1.6.5');
+  await expect(legalFooter).not.toContainText('Pamet v1.6.4');
+  await page.getByRole('button', { name: 'Privacy, safety & HIPAA information' }).click();
+  const safetyDialog = page.locator('#pametSafetyDialog');
+  await expect(safetyDialog).toBeVisible();
+  await expect(safetyDialog.locator('.pamet-support-foot')).toContainText('Pamet v1.6.5');
+  await expect(safetyDialog.locator('.pamet-support-foot')).not.toContainText('Pamet v1.6.4');
+  await safetyDialog.getByRole('button', { name: 'Close' }).click();
+  await expect(safetyDialog).not.toBeVisible();
 
   const compare = page.getByRole('button', { name: 'Compare all plans', exact: true });
   const upgrade = page.getByRole('button', { name: 'Upgrade your plan', exact: true });
