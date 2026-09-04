@@ -33,12 +33,18 @@ function sameRecord(a,b){
   const keys=[...new Set([...Object.keys(left),...Object.keys(right)])].sort();
   return keys.every((key)=>left[key]===right[key]);
 }
+function compatibleBaseline(version){
+  const parts=String(version||'').split('.').map(Number);
+  return parts.length===3&&parts.every(Number.isFinite)&&parts[0]===versionParts[0]&&parts[1]===versionParts[1]&&parts[2]<=versionParts[2];
+}
 check(/^\d+\.\d+\.\d+$/.test(expected),'package.json version must be semantic x.y.z.');
-const declaredHotfixBaseline=hotfixStatus.includes(`# Pamet ${expected}`)&&hotfixStatus.includes(`Base release: **Pamet ${previousPatch}**`)&&hotfixStatus.includes(`Assurance baseline: **Pamet ${previousPatch}**`);
+const declaredBasePatch=hotfixStatus.includes(`# Pamet ${expected}`)&&hotfixStatus.includes(`Base release: **Pamet ${previousPatch}**`);
+const assuranceMatch=hotfixStatus.match(/Assurance baseline: \*\*Pamet (\d+\.\d+\.\d+)\*\*/);
+const assuranceBaseline=assuranceMatch?.[1]||'';
+const declaredAssuranceBaseline=declaredBasePatch&&compatibleBaseline(assuranceBaseline);
 const lockVersion=String(lock.version||'');
-const lockVersionParts=lockVersion.split('.').map(Number);
 const declaredDependencyBaseline=hotfixStatus.includes(`Dependency baseline: **Pamet ${lockVersion}**`);
-const compatibleDependencyBaseline=declaredHotfixBaseline&&declaredDependencyBaseline&&lock.packages?.['']?.version===lockVersion&&lockVersionParts.length===3&&lockVersionParts[0]===versionParts[0]&&lockVersionParts[1]===versionParts[1]&&lockVersionParts[2]<=versionParts[2];
+const compatibleDependencyBaseline=declaredBasePatch&&declaredDependencyBaseline&&compatibleBaseline(lockVersion)&&lock.packages?.['']?.version===lockVersion;
 check(lock.name===pkg.name&&lock.lockfileVersion===3,'package-lock.json identity and format must remain valid.');
 check(sameRecord(lock.packages?.['']?.dependencies,pkg.dependencies)&&sameRecord(lock.packages?.['']?.devDependencies,pkg.devDependencies),'package-lock.json dependency specifications must match package.json.');
 check((lock.version===expected&&lock.packages?.['']?.version===expected)||compatibleDependencyBaseline,'An unchanged dependency lock baseline is allowed only when HOTFIX_STATUS.md explicitly names that same-version lock baseline and the dependency specifications still match package.json.');
@@ -55,7 +61,7 @@ check(!server.includes("script-src 'self' 'unsafe-inline'")&&!server.includes("s
 check(secureServer.includes("style-src 'self' https://fonts.googleapis.com; style-src-attr 'none'"),'Production CSP must use external/self styles and block inline style attributes.');
 check(server.includes("script-src-attr 'none'")&&server.includes("style-src-attr 'none'"),'Inner application CSP must block inline script/style attributes.');
 const staticShellCurrent=indexHtml.includes(`dist/pamet.min.css?v=${assetVersion}`)&&indexHtml.includes(`dist/pamet.min.js?v=${assetVersion}`)&&indexHtml.includes(`assets/pamet-mark.svg?v=${assetVersion}`);
-const inheritedStaticShell=declaredHotfixBaseline&&indexHtml.includes(`dist/pamet.min.css?v=${previousAssetVersion}`)&&indexHtml.includes(`dist/pamet.min.js?v=${previousAssetVersion}`)&&indexHtml.includes(`assets/pamet-mark.svg?v=${previousAssetVersion}`);
+const inheritedStaticShell=declaredBasePatch&&indexHtml.includes(`dist/pamet.min.css?v=${previousAssetVersion}`)&&indexHtml.includes(`dist/pamet.min.js?v=${previousAssetVersion}`)&&indexHtml.includes(`assets/pamet-mark.svg?v=${previousAssetVersion}`);
 check(staticShellCurrent||inheritedStaticShell,`HTML shell must use release asset token ${assetVersion}, or the explicitly inherited ${previousAssetVersion} static-shell baseline.`);
 if(inheritedStaticShell){
   check(secureServer.includes('.replace(/dist\\/pamet\\.min\\.css\\?v=\\d+/g, `dist/pamet.min.css?v=${releaseAssetVersion}`)')&&secureServer.includes('.replace(/dist\\/pamet\\.min\\.js\\?v=\\d+/g, `dist/pamet.min.js?v=${releaseAssetVersion}`)'),'Inherited static HTML must be normalized by the production edge to the active release JavaScript/CSS token.');
@@ -88,14 +94,14 @@ check(worker.includes('SKIP_WAITING')&&!worker.includes('caches.match(r,{ignoreS
 check(bundle.includes('/api/health')&&bundle.includes(expected),'Generated bundle must contain current release identity.');
 check(!/\bstyle\s*=\s*["']/.test(bundle),'Generated production JavaScript must not emit inline style attributes.');
 const docsCurrent=readme.includes(`Version ${expected}`)&&readme.includes(`### Pamet ${expected}`)&&changelog.includes(`## [${expected}]`)&&versioning.includes(`current stable release line is \`v${expected}\``);
-check(docsCurrent||declaredHotfixBaseline,'Current release documentation must identify the release, or HOTFIX_STATUS.md must explicitly declare the immediately previous patch as the unchanged assurance/documentation baseline.');
+check(docsCurrent||declaredBasePatch,'Current release documentation must identify the release, or HOTFIX_STATUS.md must explicitly declare the immediately previous patch as the base release.');
 const currentState=readme.split('## Current State')[1]?.split('\n## ')[0]||'';
 const staleReleaseHeading=currentState.match(/^### Pamet (\d+\.\d+\.\d+)$/m);
-check(!staleReleaseHeading||staleReleaseHeading[1]===expected||declaredHotfixBaseline,`README Current State heading must match ${expected} unless the hotfix baseline is explicitly declared.`);
-check(threatModel.includes(`v${expected}`)||(declaredHotfixBaseline&&threatModel.includes(`v${previousPatch}`)),'THREAT_MODEL must identify the current release or the explicitly inherited hotfix assurance baseline.');
-check((goLive.includes(`Pamet ${expected}`)||declaredHotfixBaseline)&&goLive.includes('CI automation')&&goLive.includes('Independent penetration test'),'Go-live dashboard must retain CI and independent-assurance gates.');
-check(productionReadiness.includes(`Pamet v${expected} Production Readiness Review`)||(declaredHotfixBaseline&&productionReadiness.includes(`Pamet v${previousPatch} Production Readiness Review`)),'PRODUCTION_READINESS must identify the current release or explicitly inherited hotfix baseline.');
-check(realAcceptance.includes(`Expected repository release: **${expected}**`)||(declaredHotfixBaseline&&realAcceptance.includes(`Expected repository release: **${previousPatch}**`)),'REAL_ENVIRONMENT_ACCEPTANCE must identify the current release or explicitly inherited hotfix baseline.');
+check(!staleReleaseHeading||staleReleaseHeading[1]===expected||declaredBasePatch,`README Current State heading must match ${expected} unless the base patch is explicitly declared.`);
+check(threatModel.includes(`v${expected}`)||(declaredAssuranceBaseline&&threatModel.includes(`v${assuranceBaseline}`)),'THREAT_MODEL must identify the current release or the explicitly declared assurance baseline.');
+check((goLive.includes(`Pamet ${expected}`)||(declaredAssuranceBaseline&&goLive.includes(`Pamet ${assuranceBaseline}`)))&&goLive.includes('CI automation')&&goLive.includes('Independent penetration test'),'Go-live dashboard must identify the current/assurance baseline and retain CI and independent-assurance gates.');
+check(productionReadiness.includes(`Pamet v${expected} Production Readiness Review`)||(declaredAssuranceBaseline&&productionReadiness.includes(`Pamet v${assuranceBaseline} Production Readiness Review`)),'PRODUCTION_READINESS must identify the current release or explicitly declared assurance baseline.');
+check(realAcceptance.includes(`Expected repository release: **${expected}**`)||(declaredAssuranceBaseline&&realAcceptance.includes(`Expected repository release: **${assuranceBaseline}**`)),'REAL_ENVIRONMENT_ACCEPTANCE must identify the current release or explicitly declared assurance baseline.');
 check(mobileContract.backendVersion===expected,'Mobile API contract backendVersion must match package.json version.');
 check(mobileContract.minimumBackendVersion==='1.5.1','Current release must preserve the compatible native minimum backend baseline.');
 check(Number(mobileContract.contractVersion)>=2,'Mobile API contract must use supported contractVersion.');
