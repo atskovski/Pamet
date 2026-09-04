@@ -1,0 +1,40 @@
+name: Prepare UI integrity dependency lock
+
+on:
+  push:
+    branches: [test/ui-integrity-gate]
+    paths:
+      - package.json
+      - .github/workflows/prepare-ui-integrity-lock.yml
+
+permissions:
+  contents: write
+
+jobs:
+  lock:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: test/ui-integrity-gate
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+      - name: Refresh deterministic package lock
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Validate lock and remove one-time workflow
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          node scripts/check-ui-contract.js
+          rm .github/workflows/prepare-ui-integrity-lock.yml
+      - name: Commit generated lock
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add package-lock.json .github/workflows/prepare-ui-integrity-lock.yml
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m 'Lock Playwright UI integrity dependencies'
+          git push origin HEAD:test/ui-integrity-gate
