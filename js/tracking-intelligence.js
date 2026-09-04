@@ -5,6 +5,7 @@
   const S = window.PametStore;
   const Analytics = window.PametAnalytics;
   if (!S) return;
+
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
   const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
@@ -46,7 +47,6 @@
   const mirror = { symptoms: new Set(), mood: '', activity: '', meds: new Set() };
   let contextState = { sleepQuality: null, caffeineServings: null, mealsSkipped: null, tags: new Set() };
   let flowObserver = null;
-  let rewardObserver = null;
   let analyticsCardTimer = null;
 
   function currentPlan() {
@@ -80,7 +80,12 @@
     S.MEDS = [...MEDICATION_OPTIONS];
     S.allMeds = () => [...MEDICATION_OPTIONS, ...(S.settings.customMeds || [])];
     S.customLimit = (category) => customLimit(category);
-    S.customPolicy = (category) => ({ plan: currentPlan(), limit: customLimit(category), used: customCount(category), remaining: Math.max(0, customLimit(category) - customCount(category)) });
+    S.customPolicy = (category) => ({
+      plan: currentPlan(),
+      limit: customLimit(category),
+      used: customCount(category),
+      remaining: Number.isFinite(customLimit(category)) ? Math.max(0, customLimit(category) - customCount(category)) : Infinity
+    });
     S.addCustomField = (category, rawName) => {
       const key = CUSTOM_KEYS[category];
       if (!key) return false;
@@ -89,9 +94,7 @@
       const list = S.settings[key] || [];
       const normalized = name.toLocaleLowerCase();
       const duplicate = [...canonicalItems(category), ...list].some((item) => String(item).toLocaleLowerCase() === normalized);
-      if (duplicate) return false;
-      const limit = customLimit(category);
-      if (list.length >= limit) return false;
+      if (duplicate || list.length >= customLimit(category)) return false;
       list.push(name);
       S.settings[key] = list;
       S.persistSettings();
@@ -115,9 +118,10 @@
     S.nextTier = () => nextTierFor(S.totalDaysLogged());
   }
 
-  function helper(text, className = 'field-helper') {
+  function helper(text, key) {
     const node = document.createElement('p');
-    node.className = className;
+    node.className = 'field-helper';
+    if (key) node.dataset.logHelper = key;
     node.textContent = text;
     return node;
   }
@@ -127,19 +131,15 @@
     const symptomKicker = symptomCard?.querySelector('.section-kicker');
     if (symptomKicker) symptomKicker.textContent = 'What are you feeling?';
     if (symptomCard && !symptomCard.querySelector('[data-log-helper="symptoms"]')) {
-      const note = helper('Select all that apply. You can also choose “No symptoms today.”');
-      note.dataset.logHelper = 'symptoms';
-      symptomCard.querySelector('.kicker-row')?.insertAdjacentElement('afterend', note);
+      symptomCard.querySelector('.kicker-row')?.insertAdjacentElement('afterend', helper('Select all that apply. You can also choose “No symptoms today.”', 'symptoms'));
     }
 
-    const severity = $('#severityRange')?.closest('.section-card');
-    const severityKicker = severity?.querySelector('.section-kicker');
+    const severityCard = $('#severityRange')?.closest('.section-card');
+    const severityKicker = severityCard?.querySelector('.section-kicker');
     if (severityKicker) severityKicker.textContent = 'How intense are your symptoms right now?';
-    if (severity && !severity.querySelector('[data-log-helper="severity"]')) {
-      const note = helper('Rate the overall intensity of the symptoms you selected. 0 means none; 10 means as severe as you can imagine.');
-      note.dataset.logHelper = 'severity';
-      severityKicker?.insertAdjacentElement('afterend', note);
-      const scale = severity.querySelector('.range-scale');
+    if (severityCard && !severityCard.querySelector('[data-log-helper="severity"]')) {
+      severityKicker?.insertAdjacentElement('afterend', helper('Rate the overall intensity of the symptoms you selected. 0 means none; 10 means as severe as you can imagine.', 'severity'));
+      const scale = severityCard.querySelector('.range-scale');
       if (scale?.children?.length >= 2) {
         scale.children[0].textContent = '0 — None';
         scale.children[1].textContent = '10 — Very severe';
@@ -150,30 +150,22 @@
     const contextKicker = contextCard?.querySelector('.section-kicker');
     if (contextKicker) contextKicker.textContent = 'Context that may help Pamet compare days';
     if (contextCard && !contextCard.querySelector('[data-log-helper="context"]')) {
-      const note = helper('Optional context helps Pamet compare your recorded days. It is used for observations, not to claim a medical cause.');
-      note.dataset.logHelper = 'context';
-      contextKicker?.insertAdjacentElement('afterend', note);
+      contextKicker?.insertAdjacentElement('afterend', helper('Optional context helps Pamet compare your recorded days. It supports observations, not claims about medical cause.', 'context'));
     }
 
     const moodCard = $('#addMoodPlus')?.closest('.section-card');
     if (moodCard && !moodCard.querySelector('[data-log-helper="moods"]')) {
-      const note = helper('Choose the closest match for this check-in.');
-      note.dataset.logHelper = 'moods';
-      moodCard.querySelector('.kicker-row')?.insertAdjacentElement('afterend', note);
+      moodCard.querySelector('.kicker-row')?.insertAdjacentElement('afterend', helper('Choose the closest match for this check-in.', 'moods'));
     }
 
     const activityCard = $('#addActivityPlus')?.closest('.section-card');
     if (activityCard && !activityCard.querySelector('[data-log-helper="activities"]')) {
-      const note = helper('Choose the activity that best represents today.');
-      note.dataset.logHelper = 'activities';
-      activityCard.querySelector('.kicker-row')?.insertAdjacentElement('afterend', note);
+      activityCard.querySelector('.kicker-row')?.insertAdjacentElement('afterend', helper('Choose the activity that best represents today.', 'activities'));
     }
 
     const medCard = $('#addMedPlus')?.closest('.section-card');
     if (medCard && !medCard.querySelector('[data-log-helper="meds"]')) {
-      const note = helper('Select all that apply. Pro and Ultra can save specific medication names as custom options.');
-      note.dataset.logHelper = 'meds';
-      medCard.querySelector('.kicker-row')?.insertAdjacentElement('afterend', note);
+      medCard.querySelector('.kicker-row')?.insertAdjacentElement('afterend', helper('Select all that apply. Pro and Ultra can save specific medication names as custom options.', 'meds'));
     }
   }
 
@@ -244,11 +236,14 @@
     dialog.querySelector('[data-custom-plan-compare]')?.addEventListener('click', () => { dialog.close(); window.PametPlanComparison?.open?.(plan); });
     dialog.querySelector('[data-custom-plan-close]')?.addEventListener('click', () => dialog.close());
     if (typeof dialog.showModal === 'function') dialog.showModal(); else dialog.setAttribute('open', '');
+
     return new Promise((resolve) => {
       const continueButton = dialog.querySelector('[data-custom-plan-continue]');
       if (!continueButton) { resolve(false); return; }
-      continueButton.addEventListener('click', () => { dialog.close(); resolve(true); }, { once: true });
-      dialog.addEventListener('close', () => resolve(false), { once: true });
+      let resolved = false;
+      const finish = (value) => { if (resolved) return; resolved = true; resolve(value); };
+      continueButton.addEventListener('click', () => { dialog.close(); finish(true); }, { once: true });
+      dialog.addEventListener('close', () => finish(false), { once: true });
     });
   }
 
@@ -265,12 +260,16 @@
     const limit = customLimit(category);
     const used = customCount(category);
     if (used >= limit) {
-      event.preventDefault(); event.stopPropagation(); event.stopImmediatePropagation();
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
       await showPlanDialog(category, true);
       return;
     }
     if (!shouldExplain(category)) return;
-    event.preventDefault(); event.stopPropagation(); event.stopImmediatePropagation();
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
     const proceed = await showPlanDialog(category, false);
     if (proceed) {
       target.dataset.planBypass = '1';
@@ -327,14 +326,24 @@
     tags.className = 'optional-context-group';
     tags.dataset.contextTags = '1';
     tags.innerHTML = '<p class="optional-context-label">Anything different about today?</p><div class="optional-context-options context-tags">' + [
-      'Travel / routine change', 'Long screen time', 'Heat / outdoors', 'Sick / recovering', 'Busy / demanding day', 'Rest / recovery day'
+      'Travel / routine change',
+      'Long screen time',
+      'Heat / outdoors',
+      'Sick / recovering',
+      'Busy / demanding day',
+      'Rest / recovery day'
     ].map((label) => `<button type="button" class="context-choice" data-context-tag="${esc(label)}">${esc(label)}</button>`).join('') + '</div>';
     tags.addEventListener('click', (event) => {
       const button = event.target.closest('[data-context-tag]');
       if (!button) return;
       const label = button.dataset.contextTag;
-      if (contextState.tags.has(label)) { contextState.tags.delete(label); button.classList.remove('selected'); }
-      else { contextState.tags.add(label); button.classList.add('selected'); }
+      if (contextState.tags.has(label)) {
+        contextState.tags.delete(label);
+        button.classList.remove('selected');
+      } else {
+        contextState.tags.add(label);
+        button.classList.add('selected');
+      }
     });
     details.appendChild(tags);
     card.appendChild(details);
@@ -357,11 +366,7 @@
     button.textContent = 'Auto-summarize';
     button.setAttribute('aria-label', 'Auto-summarize this check-in into the Notes field');
     row.appendChild(button);
-    if (!card.querySelector('[data-log-helper="notes"]')) {
-      const note = helper('Notes stay blank until you type or choose Auto-summarize. You can edit the generated wording before saving.');
-      note.dataset.logHelper = 'notes';
-      row.insertAdjacentElement('afterend', note);
-    }
+    row.insertAdjacentElement('afterend', helper('Notes stay blank until you type or choose Auto-summarize. You can edit the generated wording before saving.', 'notes'));
     button.addEventListener('click', buildNoteSummary);
   }
 
@@ -388,10 +393,14 @@
     else sentences.push(`I have not selected symptoms yet; the current symptom-intensity setting is ${severity}/10.`);
 
     const context = [];
-    const sleep = sliderValue('sleepHours'); if (sleep !== null) context.push(`${sleep} hours of sleep`);
-    const stress = sliderValue('stressLevel'); if (stress !== null) context.push(`stress ${stress}/10`);
-    const water = sliderValue('waterGlasses'); if (water !== null) context.push(`${water} glasses of water`);
-    const energy = sliderValue('energyLevel'); if (energy !== null) context.push(`energy ${energy}/10`);
+    const sleep = sliderValue('sleepHours');
+    const stress = sliderValue('stressLevel');
+    const water = sliderValue('waterGlasses');
+    const energy = sliderValue('energyLevel');
+    if (sleep !== null) context.push(`${sleep} hours of sleep`);
+    if (stress !== null) context.push(`stress ${stress}/10`);
+    if (water !== null) context.push(`${water} glasses of water`);
+    if (energy !== null) context.push(`energy ${energy}/10`);
     if (context.length) sentences.push(`Context recorded: ${context.join(', ')}.`);
 
     const extra = [];
@@ -420,8 +429,12 @@
   function resetExtraContext() {
     contextState = { sleepQuality: null, caffeineServings: null, mealsSkipped: null, tags: new Set() };
     $$('#pametExtraContext .context-choice.selected').forEach((button) => button.classList.remove('selected'));
-    const details = $('#pametExtraContext'); if (details) details.open = false;
-    mirror.symptoms.clear(); mirror.mood = ''; mirror.activity = ''; mirror.meds.clear();
+    const details = $('#pametExtraContext');
+    if (details) details.open = false;
+    mirror.symptoms.clear();
+    mirror.mood = '';
+    mirror.activity = '';
+    mirror.meds.clear();
   }
 
   function captureExtraContext(event) {
@@ -443,10 +456,13 @@
       const symptom = event.target?.closest?.('#symptomGrid .sym-btn');
       if (symptom) {
         const label = symptom.textContent.trim();
-        if (label === 'No symptoms today') { mirror.symptoms.clear(); mirror.symptoms.add(label); }
-        else {
+        if (label === 'No symptoms today') {
+          mirror.symptoms.clear();
+          mirror.symptoms.add(label);
+        } else {
           mirror.symptoms.delete('No symptoms today');
-          if (mirror.symptoms.has(label)) mirror.symptoms.delete(label); else mirror.symptoms.add(label);
+          if (mirror.symptoms.has(label)) mirror.symptoms.delete(label);
+          else mirror.symptoms.add(label);
         }
       }
       const mood = event.target?.closest?.('#moodFlow .chip');
@@ -457,7 +473,8 @@
       if (med) {
         const label = med.textContent.trim();
         if (label === 'None') mirror.meds.clear();
-        else if (med.classList.contains('selected')) mirror.meds.add(label); else mirror.meds.delete(label);
+        else if (med.classList.contains('selected')) mirror.meds.add(label);
+        else mirror.meds.delete(label);
       }
     });
 
@@ -500,18 +517,10 @@
     const current = tierFor(days);
     const next = nextTierFor(days);
     const status = current ? `${current.name} · ${days} day${days === 1 ? '' : 's'} logged` : 'Start with Bronze';
-    const progress = next ? `${Math.max(1, next.minDays - days)} day${Math.max(1, next.minDays - days) === 1 ? '' : 's'} to ${next.name}` : 'Top tier reached';
-    rewards.innerHTML = `<div class="home-rewards-copy"><strong>${esc(status)}</strong><span>${esc(current ? progress : 'Log your first day to earn Bronze.')}</span></div><div class="home-reward-levels" aria-label="Pamet logging rewards">${TIER_LEVELS.map((tier) => `<span class="home-reward-level tier-${tier.key}${days >= tier.minDays ? ' earned' : ''}" title="${esc(tier.name)} · ${tier.minDays}+ logged days"><span class="home-reward-icon">${rewardIcon(tier)}</span><span>${esc(tier.name)}</span></span>`).join('')}</div>`;
-  }
-
-  function reinforceRewardVisibility() {
-    const streak = $('#streakCard');
-    if (!streak || rewardObserver) return;
-    rewardObserver = new MutationObserver(() => {
-      if (S.settings.showStreak === false) return;
-      renderRewards();
-    });
-    rewardObserver.observe(streak, { childList: true, subtree: true });
+    const daysToNext = next ? Math.max(1, next.minDays - days) : 0;
+    const progress = next ? `${daysToNext} day${daysToNext === 1 ? '' : 's'} to ${next.name}` : 'Top tier reached';
+    const markup = `<div class="home-rewards-copy"><strong>${esc(status)}</strong><span>${esc(current ? progress : 'Log your first day to earn Bronze.')}</span></div><div class="home-reward-levels" aria-label="Pamet logging rewards">${TIER_LEVELS.map((tier) => `<span class="home-reward-level tier-${tier.key}${days >= tier.minDays ? ' earned' : ''}" title="${esc(tier.name)} · ${tier.minDays}+ logged days"><span class="home-reward-icon">${rewardIcon(tier)}</span><span>${esc(tier.name)}</span></span>`).join('')}</div>`;
+    if (rewards.innerHTML !== markup) rewards.innerHTML = markup;
   }
 
   function renderHomeObservation() {
@@ -527,7 +536,10 @@
     const kicker = $('.insight-kicker', banner);
     if (kicker) kicker.textContent = 'PAMET OBSERVATION — BASED ON YOUR LOGS';
     if (observation) text.textContent = observation.summary;
-    else text.textContent = `${result?.loggedDays || S.totalDaysLogged()} logged day${(result?.loggedDays || S.totalDaysLogged()) === 1 ? '' : 's'} recorded. Keep including ordinary days as well as symptom days so Pamet can compare changes more reliably.`;
+    else {
+      const days = result?.loggedDays || S.totalDaysLogged();
+      text.textContent = `${days} logged day${days === 1 ? '' : 's'} recorded. Keep including ordinary days as well as symptom days so Pamet can compare changes more reliably.`;
+    }
     banner.hidden = false;
   }
 
@@ -537,7 +549,6 @@
     ensureAutoSummary();
     refreshPlanCaps();
     renderRewards();
-    reinforceRewardVisibility();
     renderHomeObservation();
   }
 
@@ -555,7 +566,8 @@
         card.id = 'pametAnalysisQuality';
         card.className = 'analysis-quality-card';
         const title = host.querySelector('.screen-title');
-        if (title) title.insertAdjacentElement('afterend', card); else host.prepend(card);
+        if (title) title.insertAdjacentElement('afterend', card);
+        else host.prepend(card);
       }
       const tips = [];
       if (result.completeness.notes < 35) tips.push('Add notes when timing or circumstances matter.');
@@ -567,7 +579,11 @@
   }
 
   function installEvents() {
-    window.addEventListener('pamet:entry-saved', (event) => { captureExtraContext(event); setTimeout(() => { homeSync(); renderAnalyticsSummary(); }, 0); });
+    window.addEventListener('pamet:entry-saved', (event) => {
+      captureExtraContext(event);
+      setTimeout(() => { homeSync(); renderAnalyticsSummary(); }, 0);
+    });
+    window.addEventListener('pamet:home-synced', () => setTimeout(homeSync, 0));
     window.addEventListener('pamet:login', () => setTimeout(homeSync, 0));
     window.addEventListener('pamet:registered', () => setTimeout(homeSync, 0));
     window.addEventListener('pamet:profile-updated', () => setTimeout(() => { homeSync(); renderAnalyticsSummary(); }, 0));
