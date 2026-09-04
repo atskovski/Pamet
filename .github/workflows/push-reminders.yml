@@ -5,6 +5,10 @@ on:
     - cron: '*/15 * * * *'
   workflow_dispatch:
 
+permissions:
+  contents: read
+  id-token: write
+
 concurrency:
   group: pamet-reminder-delivery
   cancel-in-progress: false
@@ -15,18 +19,22 @@ jobs:
     steps:
       - name: Deliver appointment and daily reminders
         env:
-          PAMET_APP_URL: ${{ secrets.PAMET_APP_URL }}
-          PAMET_CRON_SECRET: ${{ secrets.PAMET_CRON_SECRET }}
+          PAMET_APP_URL: https://pamet.wasmer.app
         run: |
-          test -n "$PAMET_APP_URL"
-          test -n "$PAMET_CRON_SECRET"
+          set -euo pipefail
+          OIDC_RESPONSE="$(curl --fail-with-body --silent --show-error \
+            -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=pamet-production-jobs")"
+          OIDC_TOKEN="$(printf '%s' "$OIDC_RESPONSE" | python3 -c 'import json,sys; print(json.load(sys.stdin)["value"])')"
+          test -n "$OIDC_TOKEN"
+          echo "::add-mask::$OIDC_TOKEN"
           curl --fail-with-body --silent --show-error \
             -X POST "$PAMET_APP_URL/api/jobs/appointment-reminders" \
-            -H "Authorization: Bearer $PAMET_CRON_SECRET" \
+            -H "Authorization: Bearer $OIDC_TOKEN" \
             -H "Content-Type: application/json" \
             --data '{}'
           curl --fail-with-body --silent --show-error \
             -X POST "$PAMET_APP_URL/api/jobs/push-reminders" \
-            -H "Authorization: Bearer $PAMET_CRON_SECRET" \
+            -H "Authorization: Bearer $OIDC_TOKEN" \
             -H "Content-Type: application/json" \
             --data '{}'
