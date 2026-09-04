@@ -28,7 +28,7 @@ function check(condition,message){if(!condition)throw new Error(message);}
 check(html.includes('href="dist/pamet.min.css?v=1200"')&&html.includes('src="dist/pamet.min.js?v=1200"'),'Edge-rewritten production bundles must remain loaded.');
 check(!html.includes('src="js/app.js')&&!html.includes('href="css/care-planning.css'),'Source runtime layers must not load directly.');
 check(/\[hidden\]\s*\{[^}]*display:\s*none\s*!important/.test(css),'Native hidden state must remain reliable.');
-check(main.includes(`const PAMET_VERSION = '${expected}'`)&&main.includes('./performance.js')&&main.includes('./insights.js')&&main.includes('./experience.js')&&main.includes('./icons.js')&&main.includes('./version-update.js'),`${expected} feature-owned runtime modules must be explicit.`);
+check(main.includes(`const PAMET_VERSION = '${expected}'`)&&main.includes('./performance.js')&&main.includes('./insights.js')&&main.includes('./experience.js')&&main.includes('./icons.js')&&main.includes('./version-update.js')&&main.includes('./oauth-login.js'),`${expected} feature-owned runtime modules must be explicit.`);
 check(performance.includes('requestAnimationFrame')&&performance.includes('document.body')&&performance.includes('subtree'),'Broad mutation observers must be frame-coalesced.');
 check(contrast.includes('.btn-primary')&&contrast.includes('color: #fff !important')&&contrast.includes('body.dark'),'Primary green actions must retain white text in light and dark modes.');
 check(secureServer.includes('appointmentReminderJob')&&secureServer.includes("/api/jobs/appointment-reminders"),'Production edge must retain appointment reminders.');
@@ -44,7 +44,7 @@ check(store.includes('return [];')&&!store.includes('function sampleEntries'),'N
 check(app.includes('Entry saved — Pamet is updating your patterns.'),'Saved-entry feedback must use Pamet language.');
 check(manifest.display==='standalone','PWA manifest must remain standalone.');
 check(main.includes(`navigator.serviceWorker.register('sw.js?v=${assetVersion}0', { updateViaCache: 'none' })`),'Service worker must register from the external production bundle with release-specific cache bypassing.');
-check(worker.includes(`pamet-shell-v${assetVersion}-1`)&&worker.includes(`dist/pamet.min.js?v=${assetVersion}`)&&worker.includes(`dist/pamet.min.css?v=${assetVersion}`),'Service worker shell identity must rotate with the current release.');
+check(worker.includes(`pamet-shell-v${assetVersion}-2`)&&worker.includes(`dist/pamet.min.js?v=${assetVersion}`)&&worker.includes(`dist/pamet.min.css?v=${assetVersion}`),'Service worker shell identity must include the current release and auth-shell revision.');
 check(!worker.includes('caches.match(r,{ignoreSearch:true})'),'Versioned static assets must not ignore release query strings.');
 check(worker.includes('u.pathname.startsWith("/api/")||u.pathname.startsWith("/share")'),'Sensitive API/share routes must bypass cache.');
 check(mainCss.trim().endsWith('@import "./dark-mode.css";')&&darkMode.includes('.completeness-card')&&darkMode.includes('.insights-empty'),'Unified dark mode must be the final stylesheet layer and cover the Insights surfaces observed in production.');
