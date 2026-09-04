@@ -39,7 +39,6 @@
 
     switcher.hidden = false;
     switcher.removeAttribute("hidden");
-    switcher.style.display = "block";
     createLink.hidden = false;
     createLink.removeAttribute("hidden");
     createLink.setAttribute("aria-label", "Create a new Pamet account");
