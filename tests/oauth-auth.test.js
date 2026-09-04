@@ -9,15 +9,24 @@ const oauthClient = fs.readFileSync('js/oauth-login.js', 'utf8');
 const main = fs.readFileSync('js/main.js', 'utf8');
 const cssMain = fs.readFileSync('css/main.css', 'utf8');
 const migration = fs.readFileSync('db/migrations/2026-09-03-oauth-identities.sql', 'utf8');
+const schema = fs.readFileSync('db/schema.sql', 'utf8');
 
-test('OAuth uses signed state, nonce validation, JWKS verification, and server sessions', () => {
+test('OAuth uses signed state, browser binding, nonce validation, JWKS verification, and server sessions', () => {
   assert.match(oauthServer, /createHmac\('sha256'/);
   assert.match(oauthServer, /timingSafeEqual/);
+  assert.match(oauthServer, /OAUTH_STATE_COOKIE/);
+  assert.match(oauthServer, /requireBrowserState/);
+  assert.match(oauthServer, /SameSite=\$\{sameSite\}/);
   assert.match(oauthServer, /claims\.nonce !== nonce/);
   assert.match(oauthServer, /crypto\.verify\('RSA-SHA256'/);
   assert.match(oauthServer, /https:\/\/www\.googleapis\.com\/oauth2\/v3\/certs/);
   assert.match(oauthServer, /https:\/\/appleid\.apple\.com\/auth\/keys/);
   assert.match(oauthServer, /HttpOnly; SameSite=Lax/);
+});
+
+test('Google accepts its documented issuers and validates authorized-party claims for multiple audiences', () => {
+  assert.match(oauthServer, /\['https:\/\/accounts\.google\.com', 'accounts\.google\.com'\]/);
+  assert.match(oauthServer, /claims\.azp === audience/);
 });
 
 test('Google and Apple provider tokens are not persisted', () => {
@@ -26,6 +35,7 @@ test('Google and Apple provider tokens are not persisted', () => {
   assert.match(migration, /provider VARCHAR\(16\)/);
   assert.match(migration, /subject VARCHAR\(255\)/);
   assert.match(migration, /UNIQUE KEY uniq_user_provider/);
+  assert.match(schema, /CREATE TABLE IF NOT EXISTS pamet_external_identities/);
 });
 
 test('existing accounts only auto-link when provider email authority is strong', () => {
