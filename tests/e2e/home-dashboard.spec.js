@@ -55,8 +55,10 @@ async function addRecentHistory(page) {
       medications: [],
       notes: index === 0 ? 'Dashboard fixture' : ''
     }));
-    window.dispatchEvent(new CustomEvent('pamet:entry-saved', { detail: { synthetic: true } }));
   });
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await expect(page.locator('#welcome')).toHaveClass(/hidden/);
+  await expect(page.locator('#screen-home')).toHaveClass(/active/);
 }
 
 test('@production Home gives first-use CTA a real action and keeps it in bounds', async ({ page }, testInfo) => {
@@ -68,7 +70,8 @@ test('@production Home gives first-use CTA a real action and keeps it in bounds'
   await expect(page.locator('#streakCard')).toBeVisible();
   await expect(page.locator('#streakDays')).toHaveText('0');
   await expect(page.locator('#homeStarterGuide')).toBeVisible();
-  await expect(page.locator('.home-visit-brief')).toBeHidden();
+  await expect(page.locator('#homeStarterGuide .home-starter-item')).toHaveCount(2);
+  await expect(page.locator('.home-visit-brief')).toBeVisible();
   await expectWithinViewport(page, page.locator('#homeEmptyState'));
   await expectWithinViewport(page, page.locator('#emptyLogEntry'));
 
@@ -89,6 +92,7 @@ test('@production Home shows a compact seven-day dashboard without legacy metric
   await expect(page.locator('#insightBanner')).toBeVisible();
   await expect(page.locator('#insightBanner')).toContainText('PAMET OBSERVATION');
   await expect(page.locator('#insightText')).toContainText('Headache');
+  await expect(page.locator('#homeEmptyState')).toBeHidden();
   await expect(page.locator('#homeStarterGuide')).toBeHidden();
   await expect(page.locator('.home-visit-brief')).toBeVisible();
   await expect(page.locator('#metricsGrid')).toBeHidden();
