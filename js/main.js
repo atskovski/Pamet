@@ -19,6 +19,8 @@ import "./account-switch.js";
 import "./billing-sharing.js";
 /* Paid feature modules below must consume the server-verified, fail-closed plan boundary. */
 import "./entitlement-guard.js";
+import "./observation-engine.js";
+import "./log-experience.js";
 import "./feedback.js";
 import "./care-planning.js";
 import "./care-workspace.js";
