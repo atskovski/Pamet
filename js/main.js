@@ -6,6 +6,7 @@ window.PametLoadedVersion = PAMET_VERSION;
 /* Install the broad-observer performance guard before feature modules register observers. */
 import "./performance.js";
 import "./auth.js";
+import "./oauth-login.js";
 import "./store.js";
 import "./platform-foundation.js";
 import "./icons.js";
