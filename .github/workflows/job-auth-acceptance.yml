@@ -1,0 +1,49 @@
+name: Pamet scheduled job auth acceptance
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/job-auth-acceptance.yml'
+      - '.github/workflows/push-reminders.yml'
+      - '.github/workflows/weekly-digest.yml'
+      - '.github/workflows/stripe-reconcile.yml'
+      - 'lib/job-auth.js'
+      - 'lib/appointment-reminders.js'
+      - 'routes/operations-jobs.js'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  verify-production-job-auth:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for production and verify GitHub OIDC job authentication
+        env:
+          PAMET_APP_URL: https://pamet.wasmer.app
+        run: |
+          set -euo pipefail
+          OIDC_RESPONSE="$(curl --fail-with-body --silent --show-error \
+            -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=pamet-production-jobs")"
+          OIDC_TOKEN="$(printf '%s' "$OIDC_RESPONSE" | python3 -c 'import json,sys; print(json.load(sys.stdin)["value"])')"
+          test -n "$OIDC_TOKEN"
+          echo "::add-mask::$OIDC_TOKEN"
+          for attempt in 1 2 3 4 5 6; do
+            status="$(curl --silent --show-error --output /tmp/job-auth.json --write-out '%{http_code}' \
+              -X POST "$PAMET_APP_URL/api/jobs/auth-check" \
+              -H "Authorization: Bearer $OIDC_TOKEN" \
+              -H "Content-Type: application/json" \
+              --data '{}')"
+            if [ "$status" = "200" ]; then
+              cat /tmp/job-auth.json
+              exit 0
+            fi
+            echo "Job auth acceptance attempt ${attempt}/6 returned HTTP ${status}."
+            if [ "$attempt" -lt 6 ]; then sleep 30; fi
+          done
+          cat /tmp/job-auth.json || true
+          exit 1
