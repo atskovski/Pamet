@@ -2,12 +2,14 @@
 
 Date: 2026-09-04  
 Base release: **Pamet 1.6.5**  
-Assurance baseline: **Pamet 1.6.5**  
+Assurance baseline: **Pamet 1.6.4**  
 Dependency baseline: **Pamet 1.6.4**
 
 ## Scope
 
-Pamet 1.6.6 is a client-focused tracking, Home, and observational-insights patch. It keeps the 1.6.5 authentication, billing, server-side entitlement verification, encryption, and database architecture unchanged. The dependency graph is also unchanged from the lockfile baseline established in Pamet 1.6.4. This patch extends the browser journal schema with optional context fields and clearer plan-aware custom-field limits.
+Pamet 1.6.6 is a client-focused tracking, Home, and observational-insights patch built on the 1.6.5 application release. It keeps the authentication, billing, server-side entitlement verification, encryption, database architecture, and dependency graph unchanged. The repository's formal security/go-live/readiness records remain on the 1.6.4 assurance baseline; 1.6.5 was a client/Home patch and did not advance those independent/provider assurance records.
+
+This patch extends the browser journal schema with optional context fields, clearer plan-aware custom-field limits, richer observational analysis, and a compact logging-reward experience.
 
 ## Improvements
 
@@ -40,4 +42,4 @@ Pamet 1.6.6 is not considered live until all of the following are true:
 
 ## Assurance note
 
-Independent penetration, accessibility, legal/compliance, provider, capacity, and production-readiness records that explicitly identify Pamet 1.6.5 remain the external assurance baseline for unchanged server/security architecture. The unchanged `package-lock.json` dependency graph remains rooted at the explicitly declared Pamet 1.6.4 dependency baseline. The new client tracking and analytics behavior still requires the repository CI/browser gates in this release and is not presented as a clinical system or independent medical validation.
+The repository governance/security assurance baseline remains Pamet 1.6.4, including the current `THREAT_MODEL.md`, `GO_LIVE_STATUS.md`, `PRODUCTION_READINESS.md`, and `REAL_ENVIRONMENT_ACCEPTANCE.md` records. Those records explicitly distinguish automated repository evidence from still-open independent/provider assurance gates. The unchanged `package-lock.json` dependency graph is also rooted at Pamet 1.6.4. Pamet 1.6.6 does not broaden those assurance claims; its new client tracking and analytics behavior must pass the repository CI/browser gates and is not presented as clinical validation, diagnosis, or emergency monitoring.
