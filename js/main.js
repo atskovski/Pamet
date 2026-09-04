@@ -25,6 +25,7 @@ import "./product-clarity.js";
 import "./insights.js";
 import "./experience.js";
 import "./care-ux.js";
+import "./ui-ux-v162.js";
 import "./legal-support.js";
 import "./version-update.js";
 
