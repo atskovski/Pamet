@@ -10,6 +10,7 @@
   const currentPlan = () => plan(global.PametStore?.settings?.plan || global.PametStore?._settings?.plan || "free").key;
   let settingsGuard = false;
   let settingsObserver;
+  let modalRootObserver;
 
   function cardMarkup(item, activePlan) {
     const active = item.key === activePlan;
@@ -52,13 +53,9 @@
     if (!container) return;
     const normalized = plan(activePlan).key;
     settingsGuard = true;
-    // MutationObserver callbacks run after the current stack. A boolean guard alone
-    // therefore cannot distinguish Pamet's own render from a later external render;
-    // disconnect while writing so our own innerHTML cannot recursively starve the
-    // browser event loop before DOMContentLoaded.
     settingsObserver?.disconnect();
     try {
-      container.innerHTML = `${catalog.plans.map((item) => cardMarkup(item, normalized)).join("")}<div class="plan-full-compare"><button type="button" class="btn btn-primary" data-open-plan-matrix>See full feature comparison</button></div>`;
+      container.innerHTML = `${catalog.plans.map((item) => cardMarkup(item, normalized)).join("")}<div class="plan-full-compare"><button type="button" class="btn btn-ghost" data-open-plan-matrix>Compare all plans</button></div>`;
       container.querySelector("[data-open-plan-matrix]")?.addEventListener("click", () => open(normalized));
     } finally {
       settingsGuard = false;
@@ -77,7 +74,7 @@
       line.textContent = `${item.name} · ${item.positioning}`;
     }
     const upgrade = document.querySelector("#upgradeBtn");
-    if (upgrade) upgrade.textContent = activePlan === "free" ? "Compare Pamet plans" : "Manage your plan";
+    if (upgrade) upgrade.textContent = activePlan === "free" ? "Upgrade your plan" : "Manage your plan";
   }
 
   function observeSettings() {
@@ -99,6 +96,7 @@
     const root = document.querySelector("#pametModalRoot");
     const modal = root?.querySelector(".pamet-modal");
     if (!modal || modal.querySelector(".pamet-modal-title")?.textContent?.trim() !== "Compare Pamet plans") return;
+    modal.classList.add("plan-upgrade-modal");
     modal.querySelectorAll("[data-plan]").forEach((button) => {
       const key = button.dataset.plan;
       const item = plan(key);
@@ -119,7 +117,7 @@
       button.type = "button";
       button.className = "btn btn-primary btn-block plan-modal-full-button";
       button.dataset.openFullPlanMatrix = "1";
-      button.textContent = "See full Free, Pro & Ultra feature matrix";
+      button.textContent = "Compare all plan features";
       button.addEventListener("click", () => open(currentPlan()));
       const reassurance = modal.querySelector(".pamet-reassurance");
       if (reassurance) reassurance.before(button);
@@ -127,13 +125,26 @@
     }
   }
 
-  const modalObserver = new MutationObserver(() => augmentBillingModal());
-  if (document.body) modalObserver.observe(document.body, { childList: true, subtree: true });
-  else document.addEventListener("DOMContentLoaded", () => modalObserver.observe(document.body, { childList: true, subtree: true }), { once: true });
+  function connectModalObserver() {
+    const root = document.querySelector("#pametModalRoot");
+    if (!root || root.dataset.pametPlanObserver === "1") return;
+    root.dataset.pametPlanObserver = "1";
+    modalRootObserver = new MutationObserver(() => augmentBillingModal());
+    modalRootObserver.observe(root, { childList: true, subtree: true });
+    augmentBillingModal();
+  }
+
+  function installModalObserver() {
+    connectModalObserver();
+    const bodyObserver = new MutationObserver(() => connectModalObserver());
+    bodyObserver.observe(document.body, { childList: true });
+  }
 
   document.addEventListener("DOMContentLoaded", observeSettings, { once: true });
   document.addEventListener("pamet:settings-rendered", () => queueMicrotask(() => { observeSettings(); refreshSettings(); }));
   document.querySelectorAll(".tab[data-tab]").forEach((tab) => tab.addEventListener("click", () => requestAnimationFrame(refreshSettings)));
+  if (document.body) installModalObserver();
+  else document.addEventListener("DOMContentLoaded", installModalObserver, { once: true });
   queueMicrotask(observeSettings);
 
   global.PametPlanComparison = Object.freeze({ catalog, render, open, plan, refreshSettings });

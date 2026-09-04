@@ -1,8 +1,8 @@
-/* Pamet v1.6.4 in-app safety, privacy, and troubleshooting guidance. */
+/* Pamet v1.6.5 in-app safety, privacy, and troubleshooting guidance. */
 (() => {
   'use strict';
 
-  const VERSION = window.PametVersion || '1.6.4';
+  const releaseVersion = () => window.PametVersion || '1.6.5';
   const SAFETY = 'Pamet is not emergency monitoring, a diagnostic service, a clinical decision tool, or a replacement for professional medical care.';
 
   function closeDialog(dialog) {
@@ -85,7 +85,7 @@
 
         <div class="pamet-support-foot">
           <strong>${SAFETY}</strong>
-          <span>Pamet v${VERSION} · Your health history, finally useful.</span>
+          <span>Pamet v${releaseVersion()} · Your health history, finally useful.</span>
         </div>
       </div>`;
 
@@ -110,7 +110,7 @@
     footer.innerHTML = `
       <p>${SAFETY}</p>
       <button type="button" class="link-btn pamet-legal-link" data-open-safety>Privacy, safety &amp; HIPAA information</button>
-      <p class="footer-line">Pamet v${VERSION} · Your health history, finally useful.</p>`;
+      <p class="footer-line">Pamet v${releaseVersion()} · Your health history, finally useful.</p>`;
     col.appendChild(footer);
     footer.querySelector('[data-open-safety]')?.addEventListener('click', () => openDialog(buildDialog(), 'scope'));
   }
@@ -138,9 +138,10 @@
 
   document.addEventListener('pamet:settings-rendered', installSettingsFooter);
 
-  const observer = new MutationObserver(() => {
-    installSettingsFooter();
-    installTroubleshootingLinks();
-  });
-  observer.observe(document.body, { childList: true, subtree: true });
+  /* Login errors are created dynamically. Observe only the auth surface rather than the whole document. */
+  const welcome = document.querySelector('#welcome');
+  if (welcome) {
+    const authObserver = new MutationObserver(() => installTroubleshootingLinks());
+    authObserver.observe(welcome, { childList: true, subtree: true });
+  }
 })();
