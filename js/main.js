@@ -15,6 +15,8 @@ import "./icons.js";
 import "./app.js";
 import "./account-switch.js";
 import "./billing-sharing.js";
+/* Paid feature modules below must consume the server-verified, fail-closed plan boundary. */
+import "./entitlement-guard.js";
 import "./feedback.js";
 import "./care-planning.js";
 import "./care-workspace.js";
@@ -121,5 +123,5 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js?v=1650', { updateViaCache: 'none' })
       .then((registration) => registration.update().catch(() => {}))
       .catch(() => {});
-  });
+  }, { once: true });
 }
