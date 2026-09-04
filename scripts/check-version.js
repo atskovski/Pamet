@@ -6,6 +6,7 @@ const expected=pkg.version;
 const assetVersion=expected.replace(/\D/g,'');
 const versionParts=expected.split('.').map(Number);
 const previousPatch=`${versionParts[0]}.${versionParts[1]}.${Math.max(0,versionParts[2]-1)}`;
+const previousAssetVersion=previousPatch.replace(/\D/g,'');
 const secureServer=fs.readFileSync('secure-server.js','utf8');
 const server=fs.readFileSync('server.js','utf8');
 const indexHtml=fs.readFileSync('index.html','utf8');
@@ -49,20 +50,25 @@ check(!secureServer.includes("style-src 'self' 'unsafe-inline' https://fonts.goo
 check(!server.includes("script-src 'self' 'unsafe-inline'")&&!server.includes("style-src 'self' 'unsafe-inline'"),'Inner application CSP must not reintroduce unsafe-inline.');
 check(secureServer.includes("style-src 'self' https://fonts.googleapis.com; style-src-attr 'none'"),'Production CSP must use external/self styles and block inline style attributes.');
 check(server.includes("script-src-attr 'none'")&&server.includes("style-src-attr 'none'"),'Inner application CSP must block inline script/style attributes.');
-check(indexHtml.includes(`dist/pamet.min.css?v=${assetVersion}`)&&indexHtml.includes(`dist/pamet.min.js?v=${assetVersion}`),`HTML shell JavaScript/CSS must use release asset token ${assetVersion}.`);
-check(indexHtml.includes(`assets/pamet-mark.svg?v=${assetVersion}`),`HTML shell brand mark must use release asset token ${assetVersion}.`);
+const staticShellCurrent=indexHtml.includes(`dist/pamet.min.css?v=${assetVersion}`)&&indexHtml.includes(`dist/pamet.min.js?v=${assetVersion}`)&&indexHtml.includes(`assets/pamet-mark.svg?v=${assetVersion}`);
+const inheritedStaticShell=declaredHotfixBaseline&&indexHtml.includes(`dist/pamet.min.css?v=${previousAssetVersion}`)&&indexHtml.includes(`dist/pamet.min.js?v=${previousAssetVersion}`)&&indexHtml.includes(`assets/pamet-mark.svg?v=${previousAssetVersion}`);
+check(staticShellCurrent||inheritedStaticShell,`HTML shell must use release asset token ${assetVersion}, or the explicitly inherited ${previousAssetVersion} static-shell baseline.`);
+if(inheritedStaticShell){
+  check(secureServer.includes('.replace(/dist\\/pamet\\.min\\.css\\?v=\\d+/g, `dist/pamet.min.css?v=${releaseAssetVersion}`)')&&secureServer.includes('.replace(/dist\\/pamet\\.min\\.js\\?v=\\d+/g, `dist/pamet.min.js?v=${releaseAssetVersion}`)'),'Inherited static HTML must be normalized by the production edge to the active release JavaScript/CSS token.');
+}
 check(!/fonts\.googleapis\.com\/css2\?family=Georgia/i.test(indexHtml),'HTML shell must not request Georgia from Google Fonts.');
 check(!indexHtml.includes('navigator.serviceWorker.register'),'index.html must not duplicate service-worker registration; js/main.js owns registration and updates.');
 check(!indexHtml.includes('?v=1200'),'Historical hard-coded asset token v=1200 must not remain in index.html.');
 check(main.includes(`const PAMET_VERSION = '${expected}'`)&&main.includes('window.PametLoadedVersion = PAMET_VERSION'),'Browser runtime must expose loaded version.');
 check(main.includes(`navigator.serviceWorker.register('sw.js?v=${assetVersion}0', { updateViaCache: 'none' })`),`PWA registration must use release-specific worker token ${assetVersion}0 and bypass worker HTTP cache.`);
 check(main.includes('registration.update()'),'Browser startup must explicitly request a worker update check.');
-const requiredModules=['performance.js','oauth-login.js','plan-catalog.generated.js','plan-comparison.js','icons.js','account-switch.js','billing-sharing.js','feedback.js','care-planning.js','care-workspace.js','notifications.js','encrypted-sync.js','qr-sharing.js','security.js','login-experience.js','product-clarity.js','insights.js','experience.js','care-ux.js','legal-support.js','version-update.js'];
+const requiredModules=['performance.js','oauth-login.js','plan-catalog.generated.js','plan-comparison.js','analytics-engine.js','tracking-intelligence.js','icons.js','account-switch.js','billing-sharing.js','feedback.js','care-planning.js','care-workspace.js','notifications.js','encrypted-sync.js','qr-sharing.js','security.js','login-experience.js','product-clarity.js','insights.js','experience.js','care-ux.js','legal-support.js','version-update.js'];
 requiredModules.forEach((name)=>check(main.includes(`./${name}`),`Production entrypoint must load feature-owned module ${name}.`));
 check(!/\.\/(?:[^"']*-v\d|v\d|phase2\.js)/.test(main),'Production entrypoint must not import release-numbered browser modules.');
 check(!/@import\s+["'][^"']*(?:-v\d|phase2\.css)/.test(mainCss),'Production stylesheet entrypoint must not import release-numbered stylesheets.');
 check(mainCss.includes('@import "./oauth-login.css";'),'Production stylesheet must include the OAuth login layer.');
 check(mainCss.includes('@import "./plan-comparison.css";'),'Production stylesheet must include the plan comparison layer.');
+check(mainCss.includes('@import "./tracking-intelligence.css";'),'Production stylesheet must include the tracking-intelligence layer.');
 check(mainCss.includes('@import "./dark-mode.css";'),'Production stylesheet must include the unified dark-mode layer.');
 check(mainCss.trim().endsWith('@import "./dark-mode.css";'),'Unified dark mode must be the final production visual override layer.');
 check(darkMode.includes('--surface: #141A1E')&&darkMode.includes('--text-primary: #F2F5F4')&&darkMode.includes('.completeness-card')&&darkMode.includes('.insights-empty'),'Dark mode must retain unified dark surfaces and accessible text hierarchy.');
