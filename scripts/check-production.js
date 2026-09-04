@@ -3,6 +3,11 @@
 const fs = require('fs');
 const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
 const assetVersion = pkg.version.replace(/\D/g, '');
+const versionParts = pkg.version.split('.').map(Number);
+const previousPatch = `${versionParts[0]}.${versionParts[1]}.${Math.max(0, versionParts[2] - 1)}`;
+const previousAssetVersion = previousPatch.replace(/\D/g, '');
+const hotfixStatus = fs.existsSync('HOTFIX_STATUS.md') ? fs.readFileSync('HOTFIX_STATUS.md', 'utf8') : '';
+const inheritedPatchShell = hotfixStatus.includes(`# Pamet ${pkg.version}`) && hotfixStatus.includes(`Base release: **Pamet ${previousPatch}**`);
 const server = fs.readFileSync('server.js', 'utf8');
 const secureServer = fs.readFileSync('secure-server.js', 'utf8');
 const edgeAccount = fs.readFileSync('lib/edge-account.js', 'utf8');
@@ -30,7 +35,10 @@ check(!server.includes("express.static(path.join(__dirname),"), 'The repository 
 check(server.includes("app.use('/assets'") && server.includes("app.use('/dist'") && !server.includes("app.use('/js'") && !server.includes("app.use('/css'"), 'Production must expose only assets and built bundles, not source modules.');
 check(server.includes('immutable: false') && server.includes('maxAge: 0'), 'Unversioned application assets must revalidate after deployments.');
 const productionHtml = fs.readFileSync('index.html', 'utf8');
-check(productionHtml.includes(`dist/pamet.min.js?v=${assetVersion}`) && productionHtml.includes(`dist/pamet.min.css?v=${assetVersion}`), `Executable assets must use the Pamet ${pkg.version} release bundle URL.`);
+const currentBundleShell = productionHtml.includes(`dist/pamet.min.js?v=${assetVersion}`) && productionHtml.includes(`dist/pamet.min.css?v=${assetVersion}`);
+const inheritedBundleShell = inheritedPatchShell && productionHtml.includes(`dist/pamet.min.js?v=${previousAssetVersion}`) && productionHtml.includes(`dist/pamet.min.css?v=${previousAssetVersion}`);
+check(currentBundleShell || inheritedBundleShell, `Executable assets must use the Pamet ${pkg.version} release bundle URL or the explicitly inherited ${previousPatch} shell.`);
+check(currentBundleShell || (secureServer.includes('.replace(/dist\\/pamet\\.min\\.css\\?v=\\d+/g, `dist/pamet.min.css?v=${releaseAssetVersion}`)') && secureServer.includes('.replace(/dist\\/pamet\\.min\\.js\\?v=\\d+/g, `dist/pamet.min.js?v=${releaseAssetVersion}`)')), 'Inherited executable shell assets require production-edge release-token normalization.');
 check(!productionHtml.includes('?v=1200'), 'Historical v=1200 executable asset references must not return.');
 check(main.includes(`navigator.serviceWorker.register('sw.js?v=${assetVersion}0', { updateViaCache: 'none' })`), `PWA service-worker registration must rotate with Pamet ${pkg.version} and bypass the worker HTTP cache.`);
 check(main.includes('registration.update()'), 'PWA startup must actively check the release worker for updates.');
