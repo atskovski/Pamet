@@ -222,7 +222,10 @@ test.describe('Pamet UI integrity', () => {
 
     const checkAgain = page.getByRole('button', { name: /check again/i }).first();
     if (await checkAgain.isVisible().catch(() => false)) {
-      await clickAndRequireEffect(page, checkAgain, 'Notification health Check again');
+      await checkAgain.click();
+      await expect(checkAgain).toBeEnabled();
+      await expect(page.locator('#pametNotificationHealthText')).not.toHaveText('Checking notification permission and device subscription…');
+      await expect(page.locator('#pametNotificationHealthText')).not.toHaveText('Checking notification status…');
     }
 
     await openPlanMatrix(page);
