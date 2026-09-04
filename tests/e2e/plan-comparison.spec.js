@@ -1,0 +1,85 @@
+'use strict';
+
+const { test, expect } = require('@playwright/test');
+
+async function installSyntheticFreeSession(page) {
+  await page.addInitScript(() => {
+    const user = {
+      id: 'plan-layout-synthetic',
+      firstName: 'Plan',
+      lastName: 'Layout',
+      email: 'plan-layout@pamet.test',
+      plan: 'free',
+      createdAt: new Date().toISOString()
+    };
+    localStorage.setItem('pamet_user_v1', JSON.stringify(user));
+    localStorage.setItem('pamet_session_v2', JSON.stringify({ token: 'plan-layout-session', at: Date.now() }));
+  });
+}
+
+async function width(locator) {
+  const box = await locator.boundingBox();
+  expect(box).not.toBeNull();
+  return box.width;
+}
+
+test('@production Settings plan actions and upgrade chooser stay aligned', async ({ page }, testInfo) => {
+  await installSyntheticFreeSession(page);
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
+  await expect(page.locator('#welcome')).toHaveClass(/hidden/);
+  await page.locator('.tab[data-tab="settings"]').click();
+
+  const compare = page.getByRole('button', { name: 'Compare all plans', exact: true });
+  const upgrade = page.getByRole('button', { name: 'Upgrade your plan', exact: true });
+  await expect(compare).toBeVisible();
+  await expect(upgrade).toBeVisible();
+
+  const planCards = page.locator('#planCompare .plan-card');
+  await expect(planCards).toHaveCount(3);
+  const settingsCard = upgrade.locator('xpath=ancestor::*[contains(@class,"settings-card")][1]');
+  const cardBox = await settingsCard.boundingBox();
+  expect(cardBox).not.toBeNull();
+  const compareBox = await compare.boundingBox();
+  const upgradeBox = await upgrade.boundingBox();
+  expect(compareBox).not.toBeNull();
+  expect(upgradeBox).not.toBeNull();
+  expect(Math.abs(compareBox.width - upgradeBox.width)).toBeLessThanOrEqual(3);
+  expect(compareBox.x).toBeGreaterThanOrEqual(cardBox.x);
+  expect(compareBox.x + compareBox.width).toBeLessThanOrEqual(cardBox.x + cardBox.width + 1);
+
+  await upgrade.click();
+  const modal = page.locator('.plan-upgrade-modal');
+  await expect(modal).toBeVisible();
+  await expect(modal.getByRole('heading', { name: 'Compare Pamet plans' })).toBeVisible();
+  await expect(modal.getByRole('button', { name: 'Annual · Best value' })).toBeVisible();
+  await expect(modal.getByRole('button', { name: 'Monthly' })).toBeVisible();
+  await expect(modal.getByRole('button', { name: 'Choose Pro' })).toBeVisible();
+  await expect(modal.getByRole('button', { name: 'Choose Ultra' })).toBeVisible();
+  await expect(modal.getByRole('button', { name: 'Compare all plan features' })).toBeVisible();
+
+  const viewport = page.viewportSize();
+  const modalBox = await modal.boundingBox();
+  expect(viewport).not.toBeNull();
+  expect(modalBox).not.toBeNull();
+  expect(modalBox.x).toBeGreaterThanOrEqual(0);
+  expect(modalBox.y).toBeGreaterThanOrEqual(0);
+  expect(modalBox.x + modalBox.width).toBeLessThanOrEqual(viewport.width + 1);
+  expect(modalBox.y + modalBox.height).toBeLessThanOrEqual(viewport.height + 1);
+
+  const pro = modal.locator('.pamet-compare-card').filter({ hasText: 'Pro · Understand' });
+  const ultra = modal.locator('.pamet-compare-card').filter({ hasText: 'Ultra · Prepare' });
+  const proBox = await pro.boundingBox();
+  const ultraBox = await ultra.boundingBox();
+  expect(proBox).not.toBeNull();
+  expect(ultraBox).not.toBeNull();
+
+  if (testInfo.project.name.includes('mobile')) {
+    expect(ultraBox.y).toBeGreaterThan(proBox.y);
+  } else {
+    expect(Math.abs(proBox.y - ultraBox.y)).toBeLessThanOrEqual(3);
+    expect(Math.abs(proBox.width - ultraBox.width)).toBeLessThanOrEqual(4);
+  }
+
+  expect(await width(modal.getByRole('button', { name: 'Choose Pro' }))).toBeGreaterThan(180);
+  expect(await width(modal.getByRole('button', { name: 'Choose Ultra' }))).toBeGreaterThan(180);
+});
