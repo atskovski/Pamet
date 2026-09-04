@@ -1,6 +1,6 @@
 # Pamet — Personal Health Journal
 
-**Version 1.6.1**  
+**Version 1.6.2**  
 **Your health history, finally useful.**
 
 Pamet is a privacy-first personal health journal for recording symptoms, medications, mood, activity, lifestyle factors, notes, and other user-provided health information over time, then organizing those observations for personal review and healthcare conversations.
@@ -29,6 +29,18 @@ Pamet is an actively developed web/PWA product deployed from GitHub `main` to Wa
 - Consent-based Web Push reminders and weekly digest infrastructure.
 - Grafana Cloud OTLP logs/metrics, readiness checks, and operational alerts.
 - In-app privacy/safety/support guidance with troubleshooting steps and explicit medical-use boundaries.
+
+### Pamet 1.6.2
+
+- Promotes the refreshed Pamet green/teal/blue app mark across in-app branding and PWA install assets, including 192 px, 512 px, and maskable icons.
+- Adds the production quick profile-switch shortcut to the top app bar and keeps the active profile context visible across the experience.
+- Normalizes Settings and care workflow labels to sentence case for a more consistent UI writing system.
+- Expands **Health history over time** with 30/90/180-day comparisons, normalized symptom-frequency comparisons, severity/sleep/stress/activity measures, data-strength guidance, and user-entered-data context.
+- Adds print/save-to-PDF output for health-history comparisons and local PDF sharing for caregiver and primary-care summaries when outbound email is not configured.
+- Consolidates Primary care access around one advanced visit-brief flow rather than competing popups.
+- Improves Appointment Workspace responsive behavior to reduce overlapping, clipped, or cramped content on desktop and mobile.
+- Rotates the worker registration to `sw.js?v=1620`, the shell cache to `pamet-shell-v162-1`, and static shell asset URLs to the 1.6.2 token so installed PWAs request the new release assets.
+- Publishes backend contract identity `1.6.2` while retaining `1.5.1` as the minimum compatible native backend baseline.
 
 ### Pamet 1.6.1
 
@@ -126,7 +138,7 @@ Journal entries remain local-first by default. Ultra encrypted sync stores opaqu
 - `Pamet-iOS` and `Pamet-Android` validate that contract and the live production health endpoint on scheduled/manual checks.
 - When the optional GitHub Actions secret `MOBILE_SYNC_TOKEN` is configured with minimal cross-repository permissions, production `main` changes can dispatch immediate native release checks.
 - Native clients do not copy web JS/CSS automatically; backend/entitlement changes synchronize by contract, while product/safety behavior is implemented natively and independently tested.
-- Pamet 1.6.1 keeps the minimum compatible backend at 1.5.1 because the mobile API contract remains compatible; native binary versions can advance on their own store-release cadence.
+- Pamet 1.6.2 keeps the minimum compatible backend at 1.5.1 because the mobile API contract remains compatible; native binary versions can advance on their own store-release cadence.
 - A mobile contract update is not release-ready until the relevant native tests, lint/static analysis, and release compilation/build pass.
 
 See `MOBILE_RELEASE_COORDINATION.md` for the synchronization model and platform release gates.

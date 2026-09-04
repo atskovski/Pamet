@@ -1,10 +1,10 @@
-# Pamet v1.6.1 Production Readiness Review
+# Pamet v1.6.2 Production Readiness Review
 
-Updated for the 1.6.1 visual-delivery and cache-consistency patch. This is an engineering readiness record, not a compliance certification.
+Updated for the 1.6.2 brand, care-workflow, history-comparison, responsive-UI, and release-delivery patch. This is an engineering readiness record, not a compliance certification.
 
 ## Release posture
 
-Pamet 1.6.1 is a patch release that keeps the 1.6.0 strict-CSP and feature-owned frontend architecture, while correcting PWA cache behavior that could leave browsers on a previous visual bundle after a deployment. It also makes the unified dark-mode layer the final visual override and synchronizes user-facing release identity across Settings and Privacy, Safety & Support.
+Pamet 1.6.2 is a patch release that keeps the 1.6.x strict-CSP and feature-owned frontend architecture while promoting the refreshed Pamet icon system, quick profile switching, more consistent sentence-case UI copy, deeper Health history over time comparisons, local PDF care-summary output, one consolidated Primary care visit-brief flow, and responsive Appointment Workspace fixes. The release also rotates PWA worker/cache identities so installed clients request the new visual and functional bundle.
 
 The repository has automated production/security checks, MySQL-backed lifecycle integration coverage, dependency auditing, and a disposable backup → isolated-restore drill. Stronger production-assurance claims still depend on the external and provider-specific evidence listed below.
 
@@ -15,6 +15,10 @@ The repository has automated production/security checks, MySQL-backed lifecycle 
 | Runtime | One reviewed Express application behind a thin hardened production edge; explicit health and database-readiness handlers |
 | Release identity | `package.json` is canonical; server, browser runtime, Settings footer, Privacy/Safety support, mobile contract, and PWA release controls are checked for version consistency |
 | PWA release delivery | Worker URL, worker HTTP-cache behavior, shell cache name, and JS/CSS asset query tokens rotate with each release; versioned assets are not matched with `ignoreSearch` |
+| Brand / app icon | Refreshed green/teal/blue Pamet mark is used by in-app branding and PWA install assets, including 192 px, 512 px, and maskable icon variants |
+| Health history comparisons | 30/90/180-day comparisons normalize symptom frequency by logged days and summarize severity, sleep, stress, activity, data strength, and user-entered-data limitations |
+| Care summary portability | Health-history, caregiver, and primary-care outputs can be printed/saved as PDF locally; email sharing remains available when configured |
+| Appointment Workspace | Responsive constraints are applied to reduce overlapping, clipped, and cramped content across desktop/mobile viewport sizes |
 | Dark mode | Unified near-black/surface/elevated-surface system; dark mode is the final stylesheet override layer; Insights completeness/empty states, controls, forms, and common cards use readable dark surfaces and text |
 | Public files | Only the application shell, share page, manifest, service worker, and approved asset/bundle directories are served |
 | HTTP security | Strict CSP without script/style `unsafe-inline`, `script-src-attr 'none'`, `style-src-attr 'none'`, HSTS in production, frame denial, MIME-sniffing prevention, referrer/permissions policies, request IDs, and no-store API/share responses |
@@ -59,4 +63,4 @@ These cannot honestly be marked complete by repository CI alone:
 
 ## Release decision
 
-Pamet 1.6.1 should be treated as release-ready only after exact-head CI is green and the deployed environment confirms the same 1.6.1 release identity and visual bundle. Independent/provider gates remain open until actual evidence exists.
+Pamet 1.6.2 should be treated as release-ready only after exact-head CI is green and the deployed environment confirms the same 1.6.2 release identity and current visual/functional bundle. Independent/provider gates remain open until actual evidence exists.

@@ -1,8 +1,8 @@
-/* Pamet v1.6.1 in-app safety, privacy, and troubleshooting guidance. */
+/* Pamet v1.6.2 in-app safety, privacy, and troubleshooting guidance. */
 (() => {
   'use strict';
 
-  const VERSION = window.PametVersion || '1.6.1';
+  const VERSION = window.PametVersion || '1.6.2';
   const SAFETY = 'Pamet is not emergency monitoring, a diagnostic service, a clinical decision tool, or a replacement for professional medical care.';
 
   function closeDialog(dialog) {
