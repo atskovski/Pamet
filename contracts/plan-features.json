@@ -28,8 +28,6 @@
   ],
   "features": [
     { "id": "logging", "label": "Symptom, medication, mood, activity, lifestyle, and notes logging", "free": true, "pro": true, "ultra": true },
-    { "id": "customTracking", "label": "Custom symptoms, moods, and activities (Free: 3 each · Pro: 10 each · Ultra: unlimited)", "free": true, "pro": true, "ultra": true },
-    { "id": "customMedications", "label": "Save specific custom medication names (Pro: 10 · Ultra: unlimited)", "free": false, "pro": true, "ultra": true },
     { "id": "calendar", "label": "Calendar and journal-history review", "free": true, "pro": true, "ultra": true },
     { "id": "insights", "label": "7/30/90-day observational Insights views", "free": true, "pro": true, "ultra": true },
     { "id": "visitBrief", "label": "Standard Visit Brief", "free": true, "pro": true, "ultra": true },
