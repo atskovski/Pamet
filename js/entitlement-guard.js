@@ -126,7 +126,10 @@
     refreshPromise = (async () => {
       if (!A.isAuthed?.()) return apply(null, false);
       try {
-        const response = await nativeFetch('/api/entitlements', { credentials:'same-origin', cache:'no-store', headers:{ Accept:'application/json' } });
+        const credential = A.getBackendCredential?.();
+        const headers = { Accept:'application/json' };
+        if (credential?.deviceKey) headers.Authorization = `Bearer ${credential.deviceKey}`;
+        const response = await nativeFetch('/api/entitlements', { credentials:'same-origin', cache:'no-store', headers });
         if (!response.ok) return apply(null, false);
         return apply(await response.json(), true);
       } catch {
