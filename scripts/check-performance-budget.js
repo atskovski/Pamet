@@ -10,6 +10,12 @@ const budgets = {
 const combinedRawBudget = 450 * 1024;
 const combinedGzipBudget = 125 * 1024;
 
+const experienceSource = fs.readFileSync('js/experience.js', 'utf8');
+const broadExperienceObserver = /new\s+MutationObserver[\s\S]{0,500}\.observe\(document\.(?:body|documentElement)\s*,\s*\{[^}]*childList\s*:\s*true[^}]*subtree\s*:\s*true[^}]*\}\s*\)/m;
+if (broadExperienceObserver.test(experienceSource)) {
+  throw new Error('js/experience.js must use explicit lifecycle/navigation refreshes instead of a page-wide MutationObserver.');
+}
+
 let combinedRaw = 0;
 let combinedGzip = 0;
 const report = [];

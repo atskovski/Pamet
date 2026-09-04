@@ -29,7 +29,9 @@ function check(condition, message) { if (!condition) throw new Error(message); }
 check(!server.includes("express.static(path.join(__dirname),"), 'The repository root must never be public.');
 check(server.includes("app.use('/assets'") && server.includes("app.use('/dist'") && !server.includes("app.use('/js'") && !server.includes("app.use('/css'"), 'Production must expose only assets and built bundles, not source modules.');
 check(server.includes('immutable: false') && server.includes('maxAge: 0'), 'Unversioned application assets must revalidate after deployments.');
-check(fs.readFileSync('index.html', 'utf8').includes('dist/pamet.min.js?v=1200'), 'Executable assets must use the release bundle URL; the production edge supplies the current cache-buster.');
+const productionHtml = fs.readFileSync('index.html', 'utf8');
+check(productionHtml.includes(`dist/pamet.min.js?v=${assetVersion}`) && productionHtml.includes(`dist/pamet.min.css?v=${assetVersion}`), `Executable assets must use the Pamet ${pkg.version} release bundle URL.`);
+check(!productionHtml.includes('?v=1200'), 'Historical v=1200 executable asset references must not return.');
 check(main.includes(`navigator.serviceWorker.register('sw.js?v=${assetVersion}0', { updateViaCache: 'none' })`), `PWA service-worker registration must rotate with Pamet ${pkg.version} and bypass the worker HTTP cache.`);
 check(main.includes('registration.update()'), 'PWA startup must actively check the release worker for updates.');
 check(server.includes('Content-Security-Policy') && server.includes('Strict-Transport-Security') && server.includes("app.disable('x-powered-by')"), 'Production security headers must remain enabled.');

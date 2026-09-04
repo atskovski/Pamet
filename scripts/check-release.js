@@ -26,11 +26,15 @@ const secureServer=fs.readFileSync('secure-server.js','utf8');
 const manifest=JSON.parse(fs.readFileSync('manifest.webmanifest','utf8'));
 const worker=fs.readFileSync('sw.js','utf8');
 function check(condition,message){if(!condition)throw new Error(message);}
-check(html.includes('href="dist/pamet.min.css?v=1200"')&&html.includes('src="dist/pamet.min.js?v=1200"'),'Edge-rewritten production bundles must remain loaded.');
+check(html.includes(`href="dist/pamet.min.css?v=${assetVersion}"`)&&html.includes(`src="dist/pamet.min.js?v=${assetVersion}"`),'Production HTML must load the current release-tokened bundles.');
+check(html.includes(`href="assets/pamet-mark.svg?v=${assetVersion}"`),'Production HTML must load the current release-tokened brand mark.');
+check(!html.includes('?v=1200')&&!html.includes('navigator.serviceWorker.register'),'Historical shell token and duplicate inline worker registration must not return.');
+check(!/fonts\.googleapis\.com\/css2\?family=Georgia/i.test(html),'Production HTML must not request Georgia from Google Fonts.');
 check(!html.includes('src="js/app.js')&&!html.includes('href="css/care-planning.css'),'Source runtime layers must not load directly.');
 check(/\[hidden\]\s*\{[^}]*display:\s*none\s*!important/.test(css),'Native hidden state must remain reliable.');
 check(main.includes(`const PAMET_VERSION = '${expected}'`)&&main.includes('./performance.js')&&main.includes('./insights.js')&&main.includes('./experience.js')&&main.includes('./icons.js')&&main.includes('./version-update.js')&&main.includes('./oauth-login.js')&&main.includes('./plan-catalog.generated.js')&&main.includes('./plan-comparison.js'),`${expected} feature-owned runtime modules must be explicit.`);
-check(performance.includes('requestAnimationFrame')&&performance.includes('document.body')&&performance.includes('subtree'),'Broad mutation observers must be frame-coalesced.');
+check(performance.includes('requestAnimationFrame')&&performance.includes('document.body')&&performance.includes('subtree'),'Remaining broad mutation observers must be frame-coalesced by the performance guard.');
+check(!/new\s+MutationObserver[\s\S]{0,500}\.observe\(document\.(?:body|documentElement)\s*,\s*\{[^}]*childList\s*:\s*true[^}]*subtree\s*:\s*true[^}]*\}\s*\)/m.test(experience),'Experience refresh must use explicit lifecycle/navigation events instead of observing the whole page.');
 check(contrast.includes('.btn-primary')&&contrast.includes('color: #fff !important')&&contrast.includes('body.dark'),'Primary green actions must retain white text in light and dark modes.');
 check(secureServer.includes('appointmentReminderJob')&&secureServer.includes("/api/jobs/appointment-reminders"),'Production edge must retain appointment reminders.');
 check(reminders.includes("appointment.reminder_sent")&&reminders.includes("pamet-appointment-${appointment.id}")&&reminders.includes('GET_LOCK'),'Appointment reminders must remain deduplicated, tagged, and serialized.');
