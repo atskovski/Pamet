@@ -1,0 +1,52 @@
+name: Refresh GitHub OIDC JWKS
+
+on:
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+      - name: Fetch and validate GitHub Actions signing keys
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp)"
+          curl --fail-with-body --silent --show-error --retry 3 --retry-delay 2 \
+            -H 'Accept: application/json' \
+            https://token.actions.githubusercontent.com/.well-known/jwks > "$tmp"
+          node - "$tmp" <<'NODE'
+          const fs = require('fs');
+          const file = process.argv[2];
+          const body = JSON.parse(fs.readFileSync(file, 'utf8'));
+          const keys = Array.isArray(body.keys) ? body.keys.filter((key) => key && key.kty === 'RSA' && key.alg === 'RS256' && key.kid && key.n && key.e) : [];
+          if (!keys.length) throw new Error('GitHub OIDC JWKS contained no usable RS256 keys.');
+          const output = {
+            source: 'https://token.actions.githubusercontent.com/.well-known/jwks',
+            refreshedAt: new Date().toISOString(),
+            keys: keys.map(({ kty, alg, use = 'sig', kid, n, e }) => ({ kty, alg, use, kid, n, e }))
+          };
+          fs.mkdirSync('config', { recursive: true });
+          fs.writeFileSync('config/github-actions-oidc-jwks.json', JSON.stringify(output, null, 2) + '\n');
+          NODE
+      - name: Commit changed signing keys
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- config/github-actions-oidc-jwks.json; then
+            echo 'GitHub OIDC signing keys are unchanged.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add config/github-actions-oidc-jwks.json
+          git commit -m '[oidc-jwks] Refresh GitHub Actions signing keys'
+          git push origin HEAD:main
