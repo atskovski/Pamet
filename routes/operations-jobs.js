@@ -5,7 +5,7 @@ const mysql = require('mysql2/promise');
 const Stripe = require('stripe');
 const push = require('../lib/push');
 const { distributedRateLimit } = require('../lib/rate-limit');
-const { createJobAuthorizer } = require('../lib/job-auth');
+const { createJobAuthorizer, githubOidcJwksReady } = require('../lib/job-auth');
 const { runPushReminders, runWeeklyDigest, runStripeReconcile } = require('../lib/operations-jobs');
 
 let pool;
@@ -80,6 +80,11 @@ function createOperationsJobsRouter({ appBaseUrl, operationalLog = console.log }
   const log = (event) => {
     try { operationalLog(JSON.stringify({ service: 'pamet', at: new Date().toISOString(), ...event })); } catch { /* telemetry must not break jobs */ }
   };
+
+  router.get('/api/jobs/oidc-ready', async (req, res) => {
+    const ok = await githubOidcJwksReady();
+    res.status(ok ? 200 : 503).json({ ok });
+  });
 
   router.post('/api/jobs/auth-check', cronLimit, authCheck, (req, res) => {
     res.json({ authorized: true, source: req.jobAuth && req.jobAuth.source || 'unknown' });
