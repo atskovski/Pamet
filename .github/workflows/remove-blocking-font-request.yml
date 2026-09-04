@@ -1,0 +1,40 @@
+name: Remove blocking root font request
+
+on:
+  push:
+    branches: [test/ui-integrity-gate]
+    paths:
+      - .github/workflows/remove-blocking-font-request.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: test/ui-integrity-gate
+      - name: Remove unnecessary remote Georgia stylesheet
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const path = 'index.html';
+          let source = fs.readFileSync(path, 'utf8');
+          source = source
+            .replace(/\s*<link rel="preconnect" href="https:\/\/fonts\.googleapis\.com" \/>/, '')
+            .replace(/\s*<link rel="preconnect" href="https:\/\/fonts\.gstatic\.com" crossorigin \/>/, '')
+            .replace(/\s*<link href="https:\/\/fonts\.googleapis\.com\/css2\?family=Georgia&display=swap" rel="stylesheet" \/>/, '');
+          fs.writeFileSync(path, source);
+          NODE
+          grep -q 'fonts.googleapis.com/css2?family=Georgia' index.html && exit 1 || true
+          rm .github/workflows/remove-blocking-font-request.yml
+      - name: Commit root navigation fix
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html .github/workflows/remove-blocking-font-request.yml
+          git commit -m 'Remove blocking remote font from app shell'
+          git push origin HEAD:test/ui-integrity-gate
