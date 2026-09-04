@@ -1,5 +1,20 @@
 # Pamet Change Log
 
+## [1.6.4] — 2026-09-04
+
+### Production hardening, scale, and plan consistency
+
+- Added a canonical Free / Pro / Ultra plan catalog and responsive full-feature comparison in Settings.
+- Added CI drift checks tying displayed plan features to mobile and server-authoritative entitlements.
+- Reworked Notification health so Check again visibly refreshes browser permission and active push-subscription state with state-specific repair guidance.
+- Hardened GitHub Actions scheduled-job OIDC verification for providers with restricted GitHub JWKS egress by retaining strict JWT validation and automatically refreshing a bundled set of GitHub public signing keys.
+- Added scale-oriented MySQL indexes plus an idempotent production migration, database connection-budget guidance, and a blocking scale/capacity release gate.
+- Added raw and gzip production bundle performance budgets.
+- Streamlined README/go-live documentation around current product, architecture, safety boundaries, release gates, scaling, and external assurance.
+- Rotated the PWA worker/cache/static release identity to 1.6.4 and advanced the mobile backend contract while retaining 1.5.1 as the compatible native minimum.
+
+---
+
 ## [1.6.3] — 2026-09-03
 
 ### Care sharing and appointment workspace
