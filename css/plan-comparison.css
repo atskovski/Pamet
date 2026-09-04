@@ -4,6 +4,7 @@
   grid-template-columns:repeat(3,minmax(0,1fr));
   gap:14px;
   align-items:stretch;
+  padding:0;
 }
 .plan-card {
   display:flex;
