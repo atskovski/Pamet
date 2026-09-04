@@ -240,9 +240,9 @@
    * instead of entering the paid workflow. The event handler is capture-phase so
    * later feature modules cannot open their modals first. */
   document.addEventListener('click', (event) => {
-    const target = event.target?.closest?.('[data-care-share],[data-enhanced-care-share],[data-phase2],[data-pamet-entitlement],#quickProfileButton');
+    const target = event.target?.closest?.('[data-care-share],[data-enhanced-care-share],[data-phase2],[data-pamet-entitlement],#quickProfileButton,#phase2ManageProfilesTop');
     if (!target) return;
-    if (target.id === 'quickProfileButton') return void requireCapability('multipleProfiles', event, 'Multiple health profiles');
+    if (target.id === 'quickProfileButton' || target.id === 'phase2ManageProfilesTop') return void requireCapability('multipleProfiles', event, 'Multiple health profiles');
     if (target.dataset.pametEntitlement) return void requireCapability(target.dataset.pametEntitlement, event, target.dataset.pametEntitlementLabel || undefined);
     if (target.matches('[data-care-share],[data-enhanced-care-share]')) return void requireAccess(shareRequirement(target), event);
     const phaseRequirement = PHASE2_REQUIREMENTS[target.dataset.phase2];
