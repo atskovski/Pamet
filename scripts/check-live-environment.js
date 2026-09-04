@@ -3,6 +3,7 @@
 const expectedVersion = require('../package.json').version;
 const base = String(process.env.PAMET_BASE_URL || 'https://pamet.wasmer.app').replace(/\/$/, '');
 const assetVersion = expectedVersion.replace(/\D/g, '') || 'current';
+const requireOAuth = /^(?:1|true|yes)$/i.test(String(process.env.PAMET_REQUIRE_OAUTH || ''));
 
 function fail(message) {
   console.error(`FAIL: ${message}`);
@@ -27,9 +28,27 @@ async function json(path, expectedStatus = 200) {
   return { response, body };
 }
 
+async function oauthRedirect(provider, expectedHost) {
+  const response = await fetch(`${base}/api/auth/oauth/${provider}/start`, {
+    headers: { Accept: 'text/html', 'Cache-Control': 'no-cache' },
+    cache: 'no-store',
+    redirect: 'manual',
+    signal: AbortSignal.timeout(15000)
+  });
+  const location = response.headers.get('location') || '';
+  let host = '';
+  try { host = new URL(location).host; } catch {}
+  if (response.status === 302 && host === expectedHost) {
+    pass(`${provider} OAuth start redirects to ${expectedHost}`);
+  } else {
+    fail(`${provider} OAuth start returned HTTP ${response.status} with redirect host ${host || 'missing'}; expected 302 to ${expectedHost}`);
+  }
+}
+
 (async () => {
   console.log(`Pamet real-environment acceptance: ${base}`);
   console.log(`Expected release from repository: ${expectedVersion}`);
+  console.log(`OAuth production requirement: ${requireOAuth ? 'Google + Apple required' : 'provider endpoint only'}`);
 
   const nonce = Date.now();
   const root = await fetch(`${base}/?acceptance=${nonce}`, {
@@ -87,6 +106,13 @@ async function json(path, expectedStatus = 200) {
     pass(`OAuth provider endpoint is healthy (Google ${oauth.google ? 'configured' : 'not configured'}, Apple ${oauth.apple ? 'configured' : 'not configured'})`);
   } else {
     fail('OAuth provider endpoint did not return boolean Google/Apple readiness flags');
+  }
+
+  if (requireOAuth) {
+    if (oauth.google === true) pass('Google OAuth is configured in production'); else fail('Google OAuth is not configured in production');
+    if (oauth.apple === true) pass('Apple OAuth is configured in production'); else fail('Apple OAuth is not configured in production');
+    if (oauth.google === true) await oauthRedirect('google', 'accounts.google.com');
+    if (oauth.apple === true) await oauthRedirect('apple', 'appleid.apple.com');
   }
 
   for (const path of ['/api/entitlements', '/api/security/devices', '/api/sharing/invites']) {

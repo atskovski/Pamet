@@ -75,7 +75,7 @@
 
   window.PametPlatform = Object.freeze({
     get capabilities() { return state.capabilities; },
-    get notificationHealth() { return state.notificationHealth; },
+    get notificationHealthState() { return state.notificationHealth; },
     loadCapabilities,
     notificationHealth,
     exportPayload,

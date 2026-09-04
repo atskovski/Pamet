@@ -2,21 +2,22 @@
 
 ## Current CSP state
 
-The hardened production wrapper removes executable inline-script permission from the inner application's CSP and adds `script-src-attr 'none'`. This blocks inline event-handler execution such as `onclick=` and keeps production JavaScript in the bundled same-origin asset plus explicitly required Stripe origins.
+Pamet's production edge now enforces a strict Content Security Policy for both scripts and styles. The hardened wrapper removes `unsafe-inline`, adds `script-src-attr 'none'` and `style-src-attr 'none'`, and limits active JavaScript to the same-origin production bundle plus the explicitly required Stripe origins.
 
-The application still permits inline **style** execution because existing screens use style attributes and runtime `element.style` updates for presentation state. Removing style `unsafe-inline` before those uses are migrated would break visible state, chart/color accents, and layout behavior. Therefore issue #8 is **partially complete**, not closed.
+The production build also rejects active browser modules that reintroduce inline `style=` attributes or presentation-only CSSOM mutations. Static presentation that previously depended on inline styles is normalized to named classes before the server renders the application shell.
 
-### Exit plan for style CSP
+The remaining CSP work is verification, not policy migration: keep the live HTTP smoke check and UI hardening tests green so a future change cannot silently reopen inline execution.
 
-1. Inventory `style=` attributes in `index.html`, `share.html`, and generated UI templates.
-2. Replace static style attributes with named CSS classes.
-3. Replace presentation-only `element.style.*` mutations with state classes/data attributes where practical.
-4. For unavoidable dynamic values, use a reviewed CSS-variable strategy with a narrowly scoped policy rather than reopening executable script permissions.
-5. Run the full mobile/dialog regression suite and production lifecycle matrix.
-6. Remove `unsafe-inline` from `style-src` only after the deployed UI is verified under the stricter policy.
-7. Add a CI assertion that no production CSP directive contains `unsafe-inline`.
+### Ongoing CSP acceptance
 
-No marketing/security claim should say Pamet has a fully nonce/hash-only CSP until this final style migration is completed.
+1. Keep static presentation in named CSS classes.
+2. Keep runtime presentation state in classes, data attributes, or semantic elements such as `progress`.
+3. Reject production browser bundles that contain active inline-style attributes or direct presentation CSSOM mutation.
+4. Require `script-src-attr 'none'` and `style-src-attr 'none'` in the deployed CSP.
+5. Require the deployed CSP to contain no `unsafe-inline` token.
+6. Run the mobile/dialog regression suite and production lifecycle matrix after UI changes that affect modals, charts, or dynamic state.
+
+Pamet may describe the production CSP as strict only while these automated and deployed checks continue to pass.
 
 ## Legacy device authentication state
 
@@ -32,7 +33,7 @@ Pamet's normal identity model is password-backed, revocable HttpOnly server sess
 
 This removes the previous dead-end message telling the user to recover the account just to sign back in.
 
-## Retirement criteria
+## Legacy bearer retirement criteria
 
 Before deleting legacy bearer fallback from protected routes:
 
@@ -45,4 +46,4 @@ Before deleting legacy bearer fallback from protected routes:
 7. Prove login, password reset, session revocation, device revocation, sharing, billing, and sync in CI after removal.
 8. Monitor authentication failure and recovery-request rates after deployment.
 
-Issue #8 should remain open until both the style CSP migration and legacy bearer retirement are complete and verified in production telemetry.
+The CSP hardening portion is complete and automated. Legacy bearer retirement remains a separate production-migration task until the telemetry criteria above are satisfied.

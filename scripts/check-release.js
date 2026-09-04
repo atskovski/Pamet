@@ -25,7 +25,8 @@ const secureServer=fs.readFileSync('secure-server.js','utf8');
 const manifest=JSON.parse(fs.readFileSync('manifest.webmanifest','utf8'));
 const worker=fs.readFileSync('sw.js','utf8');
 function check(condition,message){if(!condition)throw new Error(message);}
-check(html.includes('href="dist/pamet.min.css?v=1200"')&&html.includes('src="dist/pamet.min.js?v=1200"'),'Edge-rewritten production bundles must remain loaded.');
+check(html.includes(`href="dist/pamet.min.css?v=${assetVersion}"`)&&html.includes(`src="dist/pamet.min.js?v=${assetVersion}"`),'Package-versioned production bundles must remain loaded.');
+check(html.includes(`data-pamet-brand-release="${expected}"`)&&html.includes(`data-pamet-release="${expected}"`),'Source release markers must match package.json.');
 check(!html.includes('src="js/app.js')&&!html.includes('href="css/care-planning.css'),'Source runtime layers must not load directly.');
 check(/\[hidden\]\s*\{[^}]*display:\s*none\s*!important/.test(css),'Native hidden state must remain reliable.');
 check(main.includes(`const PAMET_VERSION = '${expected}'`)&&main.includes('./performance.js')&&main.includes('./insights.js')&&main.includes('./experience.js')&&main.includes('./icons.js')&&main.includes('./version-update.js')&&main.includes('./oauth-login.js'),`${expected} feature-owned runtime modules must be explicit.`);
