@@ -54,13 +54,15 @@ const unnamedButtons = buttonTags.filter((match) => {
 check(unnamedButtons.length === 0, `every static button has an accessible name${unnamedButtons.length ? ` (${unnamedButtons.length} unnamed)` : ''}`);
 
 const navButtons = [...index.matchAll(/<button\b[^>]*(?:data-tab|data-nav)="([^"]+)"[^>]*>/g)].map((m) => m[1]);
-check(navButtons.length > 0, 'primary navigation controls are present');
+check(navButtons.length > 0, 'primary or secondary navigation controls are present');
 
-const primaryTabs = ['home', 'calendar', 'patterns', 'report', 'settings'];
+const primaryTabs = ['home', 'calendar', 'patterns', 'settings'];
 for (const tab of primaryTabs) {
   check(dataTabs.has(tab), `primary tab "${tab}" exists`);
   check(screenIds.has(tab), `primary screen "${tab}" exists`);
 }
+check(screenIds.has('report'), 'Visit Brief screen exists');
+check(dataNav.has('report') || dataTabs.has('report'), 'Visit Brief is reachable through navigation');
 
 const interactiveIds = [...index.matchAll(/<(?:button|a|input|select|textarea)\b[^>]*\bid="([^"]+)"/g)].map((m) => m[1]);
 for (const id of interactiveIds) {
