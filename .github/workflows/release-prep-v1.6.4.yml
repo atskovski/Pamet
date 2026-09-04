@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - release/production-hardening-v1.6.4
-    paths:
-      - '.github/workflows/release-prep-v1.6.4.yml'
   workflow_dispatch:
 
 permissions:
