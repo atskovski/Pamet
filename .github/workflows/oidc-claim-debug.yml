@@ -12,13 +12,15 @@ jobs:
   inspect:
     runs-on: ubuntu-latest
     steps:
-      - name: Print non-sensitive GitHub OIDC claims
+      - uses: actions/checkout@v5
+      - name: Print non-sensitive GitHub OIDC claims and verifier stage
         run: |
           set -euo pipefail
           OIDC_RESPONSE="$(curl --fail-with-body --silent --show-error \
             -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
             "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=pamet-production-jobs")"
           OIDC_TOKEN="$(printf '%s' "$OIDC_RESPONSE" | python3 -c 'import json,sys; print(json.load(sys.stdin)["value"])')"
+          echo "::add-mask::$OIDC_TOKEN"
           export OIDC_TOKEN
           python3 - <<'PY'
           import os, json, base64
@@ -29,3 +31,15 @@ jobs:
           keys=['iss','aud','repository','ref','event_name','workflow_ref','job_workflow_ref','sub','run_id']
           print(json.dumps({k:claims.get(k) for k in keys}, indent=2, sort_keys=True))
           PY
+          node - <<'NODE'
+          const { verifyGitHubActionsToken } = require('./lib/job-auth');
+          verifyGitHubActionsToken(process.env.OIDC_TOKEN, {
+            allowedWorkflows: ['oidc-claim-debug.yml'],
+            allowedEvents: ['push']
+          }).then((result) => {
+            console.log(`verifier result: ok=${result.ok} reason=${result.reason || 'none'}`);
+          }).catch((error) => {
+            console.error(`verifier crashed: ${error.message}`);
+            process.exit(1);
+          });
+          NODE
