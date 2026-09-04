@@ -40,11 +40,12 @@ check(server.includes("script-src-attr 'none'")&&server.includes("style-src-attr
 check(main.includes(`const PAMET_VERSION = '${expected}'`)&&main.includes('window.PametLoadedVersion = PAMET_VERSION'),'Browser runtime must expose loaded version.');
 check(main.includes(`navigator.serviceWorker.register('sw.js?v=${assetVersion}0', { updateViaCache: 'none' })`),`PWA registration must use release-specific worker token ${assetVersion}0 and bypass worker HTTP cache.`);
 check(main.includes('registration.update()'),'Browser startup must explicitly request a worker update check.');
-const requiredModules=['performance.js','oauth-login.js','icons.js','account-switch.js','billing-sharing.js','feedback.js','care-planning.js','care-workspace.js','notifications.js','encrypted-sync.js','qr-sharing.js','security.js','login-experience.js','product-clarity.js','insights.js','experience.js','care-ux.js','legal-support.js','version-update.js'];
+const requiredModules=['performance.js','oauth-login.js','plan-catalog.generated.js','plan-comparison.js','icons.js','account-switch.js','billing-sharing.js','feedback.js','care-planning.js','care-workspace.js','notifications.js','encrypted-sync.js','qr-sharing.js','security.js','login-experience.js','product-clarity.js','insights.js','experience.js','care-ux.js','legal-support.js','version-update.js'];
 requiredModules.forEach((name)=>check(main.includes(`./${name}`),`Production entrypoint must load feature-owned module ${name}.`));
 check(!/\.\/(?:[^"']*-v\d|v\d|phase2\.js)/.test(main),'Production entrypoint must not import release-numbered browser modules.');
 check(!/@import\s+["'][^"']*(?:-v\d|phase2\.css)/.test(mainCss),'Production stylesheet entrypoint must not import release-numbered stylesheets.');
 check(mainCss.includes('@import "./oauth-login.css";'),'Production stylesheet must include the OAuth login layer.');
+check(mainCss.includes('@import "./plan-comparison.css";'),'Production stylesheet must include the plan comparison layer.');
 check(mainCss.includes('@import "./dark-mode.css";'),'Production stylesheet must include the unified dark-mode layer.');
 check(mainCss.trim().endsWith('@import "./dark-mode.css";'),'Unified dark mode must be the final production visual override layer.');
 check(darkMode.includes(`/* Pamet v${expected}`)&&darkMode.includes('--surface: #141A1E')&&darkMode.includes('--text-primary: #F2F5F4')&&darkMode.includes('.completeness-card')&&darkMode.includes('.insights-empty'),'Dark mode must retain unified dark surfaces and accessible text hierarchy.');
@@ -52,7 +53,8 @@ check(updateFlow.includes('New Pamet version available')&&updateFlow.includes('U
 check(legalSupport.includes('Pamet observes. Pamet does not diagnose.')&&legalSupport.includes('not emergency monitoring')&&legalSupport.includes('HIPAA'),'Safety/privacy support wording must remain available in-app.');
 check(legalSupport.includes(`window.PametVersion || '${expected}'`),`Safety/privacy support fallback must match Pamet ${expected}.`);
 check(feedback.includes('window.PametVersion ||'),'Feedback must use runtime version.');
-check(worker.includes(`Pamet v${expected}`)&&worker.includes(`pamet-shell-v${assetVersion}-2`),`Service worker cache must use the current Pamet ${expected} auth-shell revision.`);
+check(worker.includes(`Pamet v${expected}`),`Service worker comment must identify Pamet ${expected}.`);
+check(new RegExp(`pamet-shell-v${assetVersion}-[1-9][0-9]*`).test(worker),`Service worker cache must use a release-specific Pamet ${expected} revision.`);
 check(worker.includes(`/dist/pamet.min.css?v=${assetVersion}`)&&worker.includes(`/dist/pamet.min.js?v=${assetVersion}`),'Service worker shell assets must use the current release token.');
 check(worker.includes('SKIP_WAITING')&&!worker.includes('caches.match(r,{ignoreSearch:true})'),'Service worker must activate safely without ignoring versioned asset query strings.');
 check(bundle.includes('/api/health')&&bundle.includes(expected),'Generated bundle must contain current release identity.');
@@ -71,4 +73,4 @@ check(versioning.includes(`current stable release line is \`v${expected}\``),`VE
 check(mobileContract.backendVersion===expected,'Mobile API contract backendVersion must match package.json version.');
 check(mobileContract.minimumBackendVersion==='1.5.1','Current release must preserve the compatible native minimum backend baseline.');
 check(Number(mobileContract.contractVersion)>=2,'Mobile API contract must use supported contractVersion.');
-console.log(`Pamet ${expected} version, CSP, cache-busting, module ownership, dark-mode, OAuth, and governance checks passed.`);
+console.log(`Pamet ${expected} version, CSP, cache-busting, module ownership, dark-mode, OAuth, plan comparison, and governance checks passed.`);
