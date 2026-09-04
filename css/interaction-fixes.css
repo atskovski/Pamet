@@ -1,0 +1,164 @@
+/* Pamet interaction polish — layout-only overrides for rewards, Insights, and security surfaces. */
+
+/* Logging reward: remove the accidental double-ring treatment and center the current tier. */
+.logging-milestone-head{
+  align-items:center;
+}
+.logging-current-tier{
+  display:grid;
+  place-items:center;
+  flex:0 0 auto;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  padding:0;
+}
+.logging-current-badge{
+  display:flex;
+  width:clamp(6.75rem,10vw,8rem);
+  aspect-ratio:1;
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+  gap:.35rem;
+  border:1px solid var(--border-color,var(--line));
+  border-radius:50%;
+  background:var(--surface,#fff);
+  color:var(--text-primary,var(--ink-primary));
+  padding:.8rem;
+  text-align:center;
+  font-size:.82rem;
+  font-weight:900;
+  line-height:1.05;
+}
+.logging-current-badge .logging-tier-icon{
+  width:2.65rem;
+  height:2.65rem;
+  border:0;
+  background:transparent;
+}
+.logging-current-badge .logging-tier-icon svg{
+  width:1.7rem;
+  height:1.7rem;
+}
+.logging-current-badge.tier-bronze{color:#8b5e38}
+.logging-current-badge.tier-silver{color:#657983}
+.logging-current-badge.tier-gold{color:#95680e}
+.logging-current-badge.tier-platinum{color:#5e737e}
+.logging-current-badge.tier-diamond{color:#357689}
+.logging-current-badge.tier-beast{color:var(--brand-primary,var(--teal-deep))}
+
+/* Pattern window: keep all four windows visible, aligned, and responsive. */
+.insights-page-head{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:end;
+  gap:1rem;
+}
+.insights-window{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(5.4rem,1fr));
+  gap:.5rem;
+  align-items:center;
+}
+.insights-window .chip-btn{
+  min-height:2.75rem;
+  padding:.55rem .9rem;
+  justify-content:center;
+  text-align:center;
+  white-space:nowrap;
+}
+.insights-window-summary{
+  margin:.45rem 0 0;
+  color:var(--text-secondary,var(--ink-secondary));
+  font-size:.78rem;
+  line-height:1.45;
+}
+.insights-action-status{
+  margin:.75rem 0;
+  padding:.7rem .85rem;
+  border:1px solid var(--border-color,var(--line));
+  border-radius:.8rem;
+  background:var(--surface-soft,var(--paper-warm));
+  color:var(--text-primary,var(--ink-primary));
+  font-size:.8rem;
+  font-weight:700;
+  line-height:1.4;
+}
+.observation-evidence{
+  margin-top:.8rem;
+  padding:.85rem .9rem;
+  border:1px solid var(--border-color,var(--line));
+  border-radius:.8rem;
+  background:var(--surface-soft,var(--paper-warm));
+}
+.observation-evidence[hidden]{display:none!important}
+.observation-evidence.is-open{display:block}
+.observation-evidence h4{margin:0 0 .35rem}
+.observation-evidence .evidence-window{
+  margin:0 0 .6rem;
+  color:var(--text-secondary,var(--ink-secondary));
+  font-size:.76rem;
+}
+.observation-actions{
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:.55rem 1rem;
+}
+.observation-actions .archive-action{
+  display:inline-flex;
+  align-items:center;
+  gap:.35rem;
+}
+.observation-actions .archive-action svg{
+  width:1rem;
+  height:1rem;
+}
+
+/* Make live plan feedback easier to scan without turning it into another large card. */
+.plan-limit-row{
+  min-height:2.9rem;
+}
+.plan-limit-text{
+  flex:1 1 auto;
+  font-size:.78rem;
+  line-height:1.45;
+}
+
+/* Security & devices: align the explanatory copy with the section content. */
+#securityCard .security-note{
+  max-width:78ch;
+  margin:1rem 0 0!important;
+  padding:0!important;
+  text-align:left;
+  font-size:.78rem;
+  line-height:1.55;
+}
+
+@media(max-width:820px){
+  .insights-page-head{grid-template-columns:1fr;align-items:start}
+  .insights-window{width:100%;grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+
+@media(max-width:620px){
+  .logging-milestone-head{
+    align-items:center;
+  }
+  .logging-current-tier{
+    width:100%;
+    justify-items:center;
+  }
+  .logging-current-badge{
+    width:7.25rem;
+  }
+  .insights-window{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+  .insights-window .chip-btn{
+    width:100%;
+  }
+  #securityCard .security-note{
+    margin-top:.75rem!important;
+  }
+}

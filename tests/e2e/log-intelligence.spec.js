@@ -24,7 +24,7 @@ async function addCustomSymptom(page, name) {
   await expect(page.locator('#symptomGrid .sym-btn', { hasText: name })).toBeVisible();
 }
 
-test('@production v1.6.6 Log a symptom explains the form, enforces Free limits, and auto-summarizes', async ({ page }, testInfo) => {
+test('@production v1.6.7 Log a symptom explains the form, enforces Free limits, and auto-summarizes', async ({ page }, testInfo) => {
   await registerAccount(page, testInfo);
   await page.locator('#openLog').click();
   await expect(page.locator('#logBackdrop')).toHaveClass(/open/);
@@ -38,7 +38,8 @@ test('@production v1.6.6 Log a symptom explains the form, enforces Free limits, 
   await expect(page.getByText('When did the symptoms start?', { exact: false })).toBeVisible();
   await expect(page.getByText('Anything unusual today?', { exact: false })).toBeVisible();
 
-  await expect(page.locator('[data-plan-limit="symptoms"]')).toContainText('Free plan · 0 of 3 custom symptoms used.');
+  await expect(page.locator('[data-plan-limit="symptoms"]')).toContainText('Free plan · 0 of 3 custom symptoms used');
+  await expect(page.locator('[data-plan-limit="symptoms"]')).toContainText('0 selected today');
   await expect(page.locator('[data-plan-limit="moods"]')).toContainText('0 of 3 custom moods');
   await expect(page.locator('[data-plan-limit="activities"]')).toContainText('0 of 3 custom activities');
   await expect(page.locator('[data-plan-limit="meds"]')).toContainText('Specific medication names are available with Pro and Ultra');
@@ -46,7 +47,7 @@ test('@production v1.6.6 Log a symptom explains the form, enforces Free limits, 
   await addCustomSymptom(page, 'Sinus pressure');
   await addCustomSymptom(page, 'Jaw tension');
   await addCustomSymptom(page, 'Light sensitivity');
-  await expect(page.locator('[data-plan-limit="symptoms"]')).toContainText('3 of 3 custom symptoms used.');
+  await expect(page.locator('[data-plan-limit="symptoms"]')).toContainText('3 of 3 custom symptoms used');
   await page.locator('#addSymptomPlus').click();
   await expect(page.locator('#pametLogPlanTitle')).toContainText('reached the Free limit');
   await expect(page.locator('[data-log-compare-plans]')).toBeVisible();
@@ -75,7 +76,7 @@ test('@production v1.6.6 Log a symptom explains the form, enforces Free limits, 
   await expect(page.locator('#notesInput')).toHaveValue(/More caffeine/);
 });
 
-test('@production v1.6.6 logging milestones and Home observation toggle stay in sync', async ({ page }, testInfo) => {
+test('@production v1.6.7 logging milestones and Home observation toggle stay in sync', async ({ page }, testInfo) => {
   await registerAccount(page, testInfo);
   await expect(page.locator('#pametRewardDays')).toHaveText('0');
   await expect(page.locator('#pametTierRow .logging-tier')).toHaveCount(6);

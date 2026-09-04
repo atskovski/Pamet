@@ -1,5 +1,15 @@
 # Pamet Change Log
 
+## [1.6.7] — 2026-09-04
+
+### Patterns interactions and UI alignment
+
+- Added functional 7 / 30 / 60 / 90-day Insights windows with 7 days as the default.
+- Added working supporting-evidence expansion and per-profile observation archive / restore behavior.
+- Added live plan-aware selection feedback while preserving Free (3), Pro (10), and Ultra (unlimited) custom-field quotas.
+- Centered and scaled logging reward badges and aligned Security & Devices helper copy.
+- Added Chromium, Firefox, and mobile regression coverage for the repaired interactions.
+
 ## [1.6.6] — 2026-09-04
 
 ### Richer logging, observations, and milestones
