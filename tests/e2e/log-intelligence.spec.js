@@ -24,7 +24,7 @@ async function addCustomSymptom(page, name) {
   await expect(page.locator('#symptomGrid .sym-btn', { hasText: name })).toBeVisible();
 }
 
-test('@production v1.6.6 Log a symptom explains the form, enforces Free limits, and auto-summarizes', async ({ page }, testInfo) => {
+test('@production v1.6.7 Log a symptom explains the form, enforces Free limits, and auto-summarizes', async ({ page }, testInfo) => {
   await registerAccount(page, testInfo);
   await page.locator('#openLog').click();
   await expect(page.locator('#logBackdrop')).toHaveClass(/open/);
@@ -75,7 +75,7 @@ test('@production v1.6.6 Log a symptom explains the form, enforces Free limits, 
   await expect(page.locator('#notesInput')).toHaveValue(/More caffeine/);
 });
 
-test('@production v1.6.6 logging milestones and Home observation toggle stay in sync', async ({ page }, testInfo) => {
+test('@production v1.6.7 logging milestones and Home observation toggle stay in sync', async ({ page }, testInfo) => {
   await registerAccount(page, testInfo);
   await expect(page.locator('#pametRewardDays')).toHaveText('0');
   await expect(page.locator('#pametTierRow .logging-tier')).toHaveCount(6);

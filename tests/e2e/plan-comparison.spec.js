@@ -30,12 +30,12 @@ test('@production Settings plan actions, legal version, and upgrade chooser stay
   await page.locator('.tab[data-tab="settings"]').click();
 
   const legalFooter = page.locator('.pamet-legal-footer .footer-line');
-  await expect(legalFooter).toContainText('Pamet v1.6.6');
+  await expect(legalFooter).toContainText('Pamet v1.6.7');
   await expect(legalFooter).not.toContainText('Pamet v1.6.4');
   await page.getByRole('button', { name: 'Privacy, safety & HIPAA information' }).click();
   const safetyDialog = page.locator('#pametSafetyDialog');
   await expect(safetyDialog).toBeVisible();
-  await expect(safetyDialog.locator('.pamet-support-foot')).toContainText('Pamet v1.6.6');
+  await expect(safetyDialog.locator('.pamet-support-foot')).toContainText('Pamet v1.6.7');
   await expect(safetyDialog.locator('.pamet-support-foot')).not.toContainText('Pamet v1.6.4');
   await safetyDialog.getByRole('button', { name: 'Close' }).click();
   await expect(safetyDialog).not.toBeVisible();
