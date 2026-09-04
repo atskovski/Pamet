@@ -136,7 +136,7 @@ test('@production Free paid feature entry points show the correct plan lock inst
     await closeLock();
   }
 
-  const caregiver = page.getByRole('button', { name: 'Share securely', exact: true });
+  const caregiver = page.locator('[data-care-share="caregiver"],[data-enhanced-care-share="caregiver"]').first();
   await expect(caregiver).toBeVisible();
   await caregiver.click();
   await expectLock('Caregiver sharing is included with Pro and Ultra');
@@ -144,7 +144,7 @@ test('@production Free paid feature entry points show the correct plan lock inst
   await expect(page.locator('#careUxModalRoot .care-share-modal')).not.toBeVisible();
   await closeLock();
 
-  const provider = page.getByRole('button', { name: 'Create visit brief', exact: true });
+  const provider = page.locator('[data-care-share="provider"],[data-enhanced-care-share="provider"]').first();
   await expect(provider).toBeVisible();
   await provider.click();
   await expectLock('Primary care sharing is included with Pro and Ultra');
