@@ -74,13 +74,26 @@ The same table is also included in the canonical `db/schema.sql` baseline.
 
 The migration creates `pamet_external_identities`, which links a provider's stable subject identifier to an existing Pamet user without storing provider tokens.
 
-## Acceptance checklist
+## Production acceptance gate
+
+`Pamet Live Acceptance` now runs with `PAMET_REQUIRE_OAUTH=true`. Production is not considered green unless both providers are genuinely enabled.
+
+The gate verifies all of the following without exposing credentials:
+
+1. `GET /api/auth/oauth/providers` returns `{ google: true, apple: true }`.
+2. `GET /api/auth/oauth/google/start` returns a 302 redirect to `accounts.google.com`.
+3. `GET /api/auth/oauth/apple/start` returns a 302 redirect to `appleid.apple.com`.
+4. The standard production health, readiness, billing, authentication-fail-closed, and release-version checks still pass.
+
+This prevents a deployment from reporting green merely because the OAuth endpoint exists while the provider credentials are missing.
+
+## End-to-end acceptance checklist
 
 After secrets and the migration are applied:
 
-1. `GET /api/auth/oauth/providers` returns the expected provider flags.
-2. The login page shows **Continue with Google** and/or **Continue with Apple**.
-3. A brand-new provider identity creates a Pamet account and returns to the app signed in.
+1. The login page shows **Continue with Google** and **Continue with Apple**.
+2. A brand-new Google identity creates a Pamet account and returns to the app signed in.
+3. A brand-new Apple identity creates a Pamet account and returns to the app signed in.
 4. A matching existing account is linked only when provider email authority meets Pamet's safety rule; ambiguous matches fail closed.
 5. Canceling a provider flow returns to Pamet without creating a session.
 6. Replayed or browser-mismatched OAuth state is rejected.
