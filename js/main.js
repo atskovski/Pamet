@@ -25,7 +25,7 @@ import "./product-clarity.js";
 import "./insights.js";
 import "./experience.js";
 import "./care-ux.js";
-import "./ui-ux-v162.js";
+import "./ui-ux.js";
 import "./legal-support.js";
 import "./version-update.js";
 
@@ -44,7 +44,7 @@ function applyReleaseVersion(version = PAMET_VERSION) {
 function protectReleaseFooter() {
   applyReleaseVersion(PAMET_VERSION);
   const observer = new MutationObserver((mutations) => {
-    if (!mutations.some((mutation) => mutation.target?.closest?.('.footer-line') || mutation.target?.classList?.contains?.('footer-line'))) return;
+    if (!mutations.some((mutation) => mutation.target?.closest?.('.footer-line') || mutation.target?.classList?.contains?.('.footer-line'))) return;
     applyReleaseVersion(PAMET_VERSION);
   });
   document.querySelectorAll('.footer-line').forEach((footer) => observer.observe(footer, { childList: true, characterData: true, subtree: true }));
