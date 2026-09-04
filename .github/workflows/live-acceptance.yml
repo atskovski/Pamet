@@ -18,13 +18,14 @@ jobs:
   deployed-release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 20
       - name: Wait for and verify Wasmer production release
         env:
           PAMET_BASE_URL: https://pamet.wasmer.app
+          PAMET_REQUIRE_OAUTH: 'true'
         run: |
           set -euo pipefail
           for attempt in 1 2 3 4 5 6; do
@@ -36,5 +37,5 @@ jobs:
               sleep 30
             fi
           done
-          echo "Wasmer production did not converge to the repository release."
+          echo "Wasmer production did not converge to the repository release and required production dependencies."
           exit 1
