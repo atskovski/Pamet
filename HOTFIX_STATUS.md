@@ -2,11 +2,12 @@
 
 Date: 2026-09-04  
 Base release: **Pamet 1.6.5**  
-Assurance baseline: **Pamet 1.6.5**
+Assurance baseline: **Pamet 1.6.5**  
+Dependency baseline: **Pamet 1.6.4**
 
 ## Scope
 
-Pamet 1.6.6 is a client-focused tracking, Home, and observational-insights patch. It keeps the 1.6.5 authentication, billing, server-side entitlement verification, encryption, database architecture, and dependency baseline while extending the browser journal schema with optional context fields and clearer plan-aware custom-field limits.
+Pamet 1.6.6 is a client-focused tracking, Home, and observational-insights patch. It keeps the 1.6.5 authentication, billing, server-side entitlement verification, encryption, and database architecture unchanged. The dependency graph is also unchanged from the lockfile baseline established in Pamet 1.6.4. This patch extends the browser journal schema with optional context fields and clearer plan-aware custom-field limits.
 
 ## Improvements
 
@@ -39,4 +40,4 @@ Pamet 1.6.6 is not considered live until all of the following are true:
 
 ## Assurance note
 
-Independent penetration, accessibility, legal/compliance, provider, capacity, and production-readiness records that explicitly identify Pamet 1.6.5 remain the external assurance baseline for unchanged server/security architecture. The new client tracking and analytics behavior still requires the repository CI/browser gates in this release and is not presented as a clinical system or independent medical validation.
+Independent penetration, accessibility, legal/compliance, provider, capacity, and production-readiness records that explicitly identify Pamet 1.6.5 remain the external assurance baseline for unchanged server/security architecture. The unchanged `package-lock.json` dependency graph remains rooted at the explicitly declared Pamet 1.6.4 dependency baseline. The new client tracking and analytics behavior still requires the repository CI/browser gates in this release and is not presented as a clinical system or independent medical validation.
