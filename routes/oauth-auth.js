@@ -5,6 +5,7 @@ const express = require('express');
 const mysql = require('mysql2/promise');
 
 const SESSION_COOKIE = 'pamet_session';
+const OAUTH_STATE_COOKIE = 'pamet_oauth_state';
 const SESSION_TTL_DAYS = 30;
 const STATE_TTL_MS = 10 * 60 * 1000;
 const JWKS_TTL_MS = 60 * 60 * 1000;
@@ -17,6 +18,7 @@ const clean = (value, max = 254) => String(value || '').trim().slice(0, max);
 const emailOk = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 const b64url = (value) => Buffer.from(value).toString('base64url');
 const fromB64url = (value) => Buffer.from(String(value || ''), 'base64url');
+const readCookie = (req, name) => String(req.headers.cookie || '').split(';').map((item) => item.trim().split('=')).find(([key]) => key === name)?.[1] || '';
 
 function databaseOptions() {
   if (process.env.DATABASE_URL) return process.env.DATABASE_URL;
@@ -46,15 +48,16 @@ async function db() {
 
 function providerConfig() {
   const stateSecret = process.env.OAUTH_STATE_SECRET || process.env.IDENTITY_ENCRYPTION_KEY || '';
+  const stateReady = stateSecret.length >= 32;
   return {
     stateSecret,
     google: {
-      enabled: !!(stateSecret && process.env.GOOGLE_OAUTH_CLIENT_ID && process.env.GOOGLE_OAUTH_CLIENT_SECRET),
+      enabled: !!(stateReady && process.env.GOOGLE_OAUTH_CLIENT_ID && process.env.GOOGLE_OAUTH_CLIENT_SECRET),
       clientId: process.env.GOOGLE_OAUTH_CLIENT_ID || '',
       clientSecret: process.env.GOOGLE_OAUTH_CLIENT_SECRET || ''
     },
     apple: {
-      enabled: !!(stateSecret && process.env.APPLE_OAUTH_CLIENT_ID && process.env.APPLE_OAUTH_TEAM_ID && process.env.APPLE_OAUTH_KEY_ID && process.env.APPLE_OAUTH_PRIVATE_KEY),
+      enabled: !!(stateReady && process.env.APPLE_OAUTH_CLIENT_ID && process.env.APPLE_OAUTH_TEAM_ID && process.env.APPLE_OAUTH_KEY_ID && process.env.APPLE_OAUTH_PRIVATE_KEY),
       clientId: process.env.APPLE_OAUTH_CLIENT_ID || '',
       teamId: process.env.APPLE_OAUTH_TEAM_ID || '',
       keyId: process.env.APPLE_OAUTH_KEY_ID || '',
@@ -92,6 +95,32 @@ function readState(state, expectedProvider, secret) {
   return parsed;
 }
 
+function oauthStateCookieValue(state) {
+  return sha(state);
+}
+
+function setOAuthStateCookie(res, state) {
+  const production = (process.env.NODE_ENV || 'development') === 'production';
+  const secure = production ? '; Secure' : '';
+  const sameSite = production ? 'None' : 'Lax';
+  res.append('Set-Cookie', `${OAUTH_STATE_COOKIE}=${oauthStateCookieValue(state)}; Path=/api/auth/oauth/; HttpOnly; SameSite=${sameSite}; Max-Age=${Math.ceil(STATE_TTL_MS / 1000)}${secure}`);
+}
+
+function clearOAuthStateCookie(res) {
+  const production = (process.env.NODE_ENV || 'development') === 'production';
+  const secure = production ? '; Secure' : '';
+  const sameSite = production ? 'None' : 'Lax';
+  res.append('Set-Cookie', `${OAUTH_STATE_COOKIE}=; Path=/api/auth/oauth/; HttpOnly; SameSite=${sameSite}; Max-Age=0${secure}`);
+}
+
+function requireBrowserState(req, state) {
+  const expected = Buffer.from(oauthStateCookieValue(state));
+  const received = Buffer.from(readCookie(req, OAUTH_STATE_COOKIE));
+  if (!received.length || expected.length !== received.length || !crypto.timingSafeEqual(expected, received)) {
+    throw Object.assign(new Error('OAuth state is not bound to this browser.'), { status: 400 });
+  }
+}
+
 function splitJwt(jwt) {
   const parts = String(jwt || '').split('.');
   if (parts.length !== 3) throw Object.assign(new Error('Invalid identity token.'), { status: 401 });
@@ -118,14 +147,16 @@ async function verifyIdToken(jwt, { issuer, audience, nonce, jwksUrl }) {
   const { parts, header, claims } = splitJwt(jwt);
   if (header.alg !== 'RS256' || !header.kid) throw Object.assign(new Error('Unsupported identity token.'), { status: 401 });
   const keys = await jwks(jwksUrl);
-  const jwk = keys.find((key) => key.kid === header.kid && key.kty === 'RSA');
+  const jwk = keys.find((key) => key.kid === header.kid && key.kty === 'RSA' && (!key.alg || key.alg === 'RS256'));
   if (!jwk) throw Object.assign(new Error('Identity provider key was not found.'), { status: 401 });
   const key = crypto.createPublicKey({ key: jwk, format: 'jwk' });
   const valid = crypto.verify('RSA-SHA256', Buffer.from(`${parts[0]}.${parts[1]}`), key, fromB64url(parts[2]));
   if (!valid) throw Object.assign(new Error('Identity token signature is invalid.'), { status: 401 });
   const now = Math.floor(Date.now() / 1000);
+  const issuers = Array.isArray(issuer) ? issuer : [issuer];
   const audiences = Array.isArray(claims.aud) ? claims.aud : [claims.aud];
-  if (claims.iss !== issuer || !audiences.includes(audience) || !claims.sub || Number(claims.exp || 0) <= now || Number(claims.iat || now + 1) > now + 60) {
+  const azpOk = audiences.length <= 1 || claims.azp === audience;
+  if (!issuers.includes(claims.iss) || !audiences.includes(audience) || !azpOk || !claims.sub || Number(claims.exp || 0) <= now || Number(claims.iat || now + 1) > now + 60) {
     throw Object.assign(new Error('Identity token claims are invalid.'), { status: 401 });
   }
   if (nonce && claims.nonce !== nonce) throw Object.assign(new Error('Identity token nonce is invalid.'), { status: 401 });
@@ -216,7 +247,7 @@ async function createSession(connection, userId, res) {
   const raw = randomToken();
   await connection.execute('INSERT INTO pamet_sessions(id,user_id,token_hash,expires_at) VALUES(?,?,?,DATE_ADD(NOW(),INTERVAL ? DAY))', [crypto.randomUUID(), userId, sha(raw), SESSION_TTL_DAYS]);
   const secure = (process.env.NODE_ENV || 'development') === 'production' ? '; Secure' : '';
-  res.setHeader('Set-Cookie', `${SESSION_COOKIE}=${raw}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${SESSION_TTL_DAYS * 86400}${secure}`);
+  res.append('Set-Cookie', `${SESSION_COOKIE}=${raw}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${SESSION_TTL_DAYS * 86400}${secure}`);
 }
 
 async function audit(connection, userId, type, data) {
@@ -224,6 +255,7 @@ async function audit(connection, userId, type, data) {
 }
 
 function safeErrorRedirect(res, provider, error) {
+  clearOAuthStateCookie(res);
   const code = error && error.code === 'account_link_required' ? 'account_link_required' : 'provider_error';
   res.redirect(303, `/?oauth_error=${encodeURIComponent(code)}&provider=${encodeURIComponent(provider)}`);
 }
@@ -254,6 +286,7 @@ function createOAuthRouter({ appBaseUrl } = {}) {
     if (!APP || !['google', 'apple'].includes(provider) || !config[provider]?.enabled) return res.status(503).json({ error: 'This sign-in provider is not configured.' });
     const state = signedState(provider, config.stateSecret);
     const stateData = readState(state, provider, config.stateSecret);
+    setOAuthStateCookie(res, state);
     const callback = `${APP}/api/auth/oauth/${provider}/callback`;
     let url;
     if (provider === 'google') {
@@ -270,11 +303,13 @@ function createOAuthRouter({ appBaseUrl } = {}) {
     const config = providerConfig();
     try {
       if (!config.google.enabled || req.query.error || !req.query.code) throw Object.assign(new Error('Google sign-in was not completed.'), { status: 401 });
+      requireBrowserState(req, req.query.state);
       const state = readState(req.query.state, 'google', config.stateSecret);
       const callback = `${APP}/api/auth/oauth/google/callback`;
       const tokens = await tokenExchange('https://oauth2.googleapis.com/token', { code: String(req.query.code), client_id: config.google.clientId, client_secret: config.google.clientSecret, redirect_uri: callback, grant_type: 'authorization_code' });
-      const claims = await verifyIdToken(tokens.id_token, { issuer: 'https://accounts.google.com', audience: config.google.clientId, nonce: state.nonce, jwksUrl: 'https://www.googleapis.com/oauth2/v3/certs' });
+      const claims = await verifyIdToken(tokens.id_token, { issuer: ['https://accounts.google.com', 'accounts.google.com'], audience: config.google.clientId, nonce: state.nonce, jwksUrl: 'https://www.googleapis.com/oauth2/v3/certs' });
       const resolved = await resolveUser('google', claims);
+      clearOAuthStateCookie(res);
       await createSession(resolved.connection, resolved.user.id, res);
       await audit(resolved.connection, resolved.user.id, resolved.created ? 'identity.account_registered' : 'identity.login', { method: 'google' });
       res.redirect(303, '/?oauth=google');
@@ -285,11 +320,13 @@ function createOAuthRouter({ appBaseUrl } = {}) {
     const config = providerConfig();
     try {
       if (!config.apple.enabled || req.body.error || !req.body.code) throw Object.assign(new Error('Apple sign-in was not completed.'), { status: 401 });
+      requireBrowserState(req, req.body.state);
       const state = readState(req.body.state, 'apple', config.stateSecret);
       const callback = `${APP}/api/auth/oauth/apple/callback`;
       const tokens = await tokenExchange('https://appleid.apple.com/auth/token', { code: String(req.body.code), client_id: config.apple.clientId, client_secret: appleClientSecret(config.apple), redirect_uri: callback, grant_type: 'authorization_code' });
       const claims = await verifyIdToken(tokens.id_token, { issuer: 'https://appleid.apple.com', audience: config.apple.clientId, nonce: state.nonce, jwksUrl: 'https://appleid.apple.com/auth/keys' });
       const resolved = await resolveUser('apple', claims, parseAppleUser(req.body.user));
+      clearOAuthStateCookie(res);
       await createSession(resolved.connection, resolved.user.id, res);
       await audit(resolved.connection, resolved.user.id, resolved.created ? 'identity.account_registered' : 'identity.login', { method: 'apple' });
       res.redirect(303, '/?oauth=apple');
@@ -299,4 +336,4 @@ function createOAuthRouter({ appBaseUrl } = {}) {
   return router;
 }
 
-module.exports = { createOAuthRouter, signedState, readState, verifyIdToken, providerEmailIsAuthoritative };
+module.exports = { createOAuthRouter, signedState, readState, verifyIdToken, providerEmailIsAuthoritative, requireBrowserState };
