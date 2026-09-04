@@ -81,7 +81,7 @@ jobs:
         run: bash scripts/backup-restore-drill.sh
 
   ui-integrity:
-    name: UI integrity (desktop + mobile)
+    name: UI integrity (Chromium + Firefox + mobile)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
@@ -120,8 +120,8 @@ jobs:
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Build production bundles
         run: npm run build
-      - name: Install Chromium for UI integrity
-        run: npx playwright install --with-deps chromium
+      - name: Install Chromium and Firefox for UI integrity
+        run: npx playwright install --with-deps chromium firefox
       - name: Run browser UI integrity gate
         run: npm run test:ui-integrity
       - name: Upload UI integrity evidence
