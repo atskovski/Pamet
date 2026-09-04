@@ -82,6 +82,13 @@ async function json(path, expectedStatus = 200) {
   if (billing.ultraEnabled === true) pass('Ultra billing is enabled'); else fail('Ultra billing is disabled');
   if (billing.emailEnabled === true) pass('email delivery is enabled'); else fail('email delivery is disabled');
 
+  const oauth = (await json('/api/auth/oauth/providers')).body;
+  if (typeof oauth.google === 'boolean' && typeof oauth.apple === 'boolean') {
+    pass(`OAuth provider endpoint is healthy (Google ${oauth.google ? 'configured' : 'not configured'}, Apple ${oauth.apple ? 'configured' : 'not configured'})`);
+  } else {
+    fail('OAuth provider endpoint did not return boolean Google/Apple readiness flags');
+  }
+
   for (const path of ['/api/entitlements', '/api/security/devices', '/api/sharing/invites']) {
     const result = await json(path, 401);
     if (result.body && result.body.error === 'Authentication required.') pass(`${path} fails closed without authentication`);
