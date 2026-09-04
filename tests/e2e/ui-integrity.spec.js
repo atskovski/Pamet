@@ -103,12 +103,14 @@ async function visibleInteractiveInventory(page) {
       const rect = el.getBoundingClientRect();
       return !el.hidden && style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
     };
+    const text = (value) => String(value || '').replace(/\s+/g, ' ').trim();
     const nameOf = (el) => {
       const labelledBy = el.getAttribute('aria-labelledby');
       const labelled = labelledBy ? labelledBy.split(/\s+/).map((id) => document.getElementById(id)?.textContent || '').join(' ') : '';
-      const label = el.id ? document.querySelector(`label[for="${CSS.escape(el.id)}"]`)?.textContent || '' : '';
-      return [el.getAttribute('aria-label'), labelled, label, el.textContent, el.getAttribute('title'), el.getAttribute('placeholder')]
-        .map((v) => String(v || '').replace(/\s+/g, ' ').trim()).find(Boolean) || '';
+      const associatedLabels = el.labels ? [...el.labels].map((node) => node.textContent || '').join(' ') : '';
+      const wrappingLabel = el.closest('label')?.textContent || '';
+      return [el.getAttribute('aria-label'), labelled, associatedLabels, wrappingLabel, el.textContent, el.getAttribute('title'), el.getAttribute('placeholder')]
+        .map(text).find(Boolean) || '';
     };
     return [...document.querySelectorAll('button,a[href],[role="button"],input,select,textarea')]
       .filter(visible)
