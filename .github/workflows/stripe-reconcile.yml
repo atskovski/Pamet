@@ -11,13 +11,14 @@ jobs:
     steps:
       - name: Reconcile Stripe subscriptions with Pamet entitlements
         env:
-          PAMET_APP_URL: ${{ secrets.PAMET_APP_URL }}
           PAMET_CRON_SECRET: ${{ secrets.PAMET_CRON_SECRET }}
         run: |
-          test -n "$PAMET_APP_URL"
-          test -n "$PAMET_CRON_SECRET"
+          if [ -z "$PAMET_CRON_SECRET" ]; then
+            echo "::error::PAMET_CRON_SECRET is not configured in GitHub Actions secrets."
+            exit 1
+          fi
           curl --fail-with-body --silent --show-error \
-            -X POST "$PAMET_APP_URL/api/jobs/stripe-reconcile" \
+            -X POST "https://pamet.wasmer.app/api/jobs/stripe-reconcile" \
             -H "Authorization: Bearer $PAMET_CRON_SECRET" \
             -H "Content-Type: application/json" \
             --data '{}'

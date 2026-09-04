@@ -27,6 +27,27 @@ async function json(path, expectedStatus = 200) {
   return { response, body };
 }
 
+async function stripeWebhookProbe() {
+  const response = await fetch(`${base}/api/stripe/webhook`, {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' },
+    body: '{}',
+    cache: 'no-store',
+    redirect: 'manual',
+    signal: AbortSignal.timeout(15000)
+  });
+  const body = await response.json().catch(() => ({}));
+  if (response.status === 400 && body.error === 'Invalid Stripe webhook.') {
+    pass('Stripe webhook endpoint is configured and rejects unsigned requests');
+    return;
+  }
+  if (response.status === 503 && body.error === 'Stripe webhook not configured.') {
+    fail('Stripe webhook endpoint is not configured in the deployed environment');
+    return;
+  }
+  fail(`Stripe webhook probe returned HTTP ${response.status} with an unexpected response.`);
+}
+
 (async () => {
   console.log(`Pamet real-environment acceptance: ${base}`);
   console.log(`Expected release from repository: ${expectedVersion}`);
@@ -81,6 +102,7 @@ async function json(path, expectedStatus = 200) {
   if (billing.proEnabled === true) pass('Pro billing is enabled'); else fail('Pro billing is disabled');
   if (billing.ultraEnabled === true) pass('Ultra billing is enabled'); else fail('Ultra billing is disabled');
   if (billing.emailEnabled === true) pass('email delivery is enabled'); else fail('email delivery is disabled');
+  await stripeWebhookProbe();
 
   const oauth = (await json('/api/auth/oauth/providers')).body;
   if (typeof oauth.google === 'boolean' && typeof oauth.apple === 'boolean') {
