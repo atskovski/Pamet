@@ -79,3 +79,58 @@ jobs:
         run: npm run test:integration
       - name: Run disposable database backup and restore drill
         run: bash scripts/backup-restore-drill.sh
+
+  ui-integrity:
+    name: UI integrity (desktop + mobile)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: pamet_ui_test
+          MYSQL_USER: pamet
+          MYSQL_PASSWORD: pamet
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      CI: 'true'
+      NODE_ENV: test
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_NAME: pamet_ui_test
+      DB_USER: pamet
+      DB_PASSWORD: pamet
+      AUTO_MIGRATE: 'true'
+      DISABLE_RATE_LIMITS: 'true'
+      DISABLE_BREACHED_PASSWORD_CHECK: 'true'
+      IDENTITY_ENCRYPTION_KEY: '3333333333333333333333333333333333333333333333333333333333333333'
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Build production bundles
+        run: npm run build
+      - name: Install Chromium for UI integrity
+        run: npx playwright install --with-deps chromium
+      - name: Run browser UI integrity gate
+        run: npm run test:ui-integrity
+      - name: Upload UI integrity evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pamet-ui-integrity-${{ github.run_id }}
+          path: |
+            playwright-report
+            test-results/ui-integrity
+          if-no-files-found: ignore
+          retention-days: 14
