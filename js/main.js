@@ -14,6 +14,7 @@ import "./platform-foundation.js";
 import "./icons.js";
 import "./app.js";
 import "./home-dashboard.js";
+import "./home-dashboard-lifecycle.js";
 import "./account-switch.js";
 import "./billing-sharing.js";
 /* Paid feature modules below must consume the server-verified, fail-closed plan boundary. */
