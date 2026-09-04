@@ -1,26 +1,16 @@
 'use strict';
 
-const crypto = require('crypto');
 const express = require('express');
 const mysql = require('mysql2/promise');
 const Stripe = require('stripe');
 const push = require('../lib/push');
 const { distributedRateLimit } = require('../lib/rate-limit');
+const { createJobAuthorizer } = require('../lib/job-auth');
 const { runPushReminders, runWeeklyDigest, runStripeReconcile } = require('../lib/operations-jobs');
 
 let pool;
 let poolInitialization;
 
-function sha(value) { return crypto.createHash('sha256').update(String(value || '')).digest('hex'); }
-function secretEqual(left, right) {
-  const a = Buffer.from(sha(left));
-  const b = Buffer.from(sha(right));
-  return a.length === b.length && crypto.timingSafeEqual(a, b);
-}
-function readBearer(req) {
-  const value = String(req.headers.authorization || '');
-  return value.startsWith('Bearer ') ? value.slice(7).trim() : '';
-}
 function databaseOptions() {
   if (process.env.DATABASE_URL) return process.env.DATABASE_URL;
   const ssl = String(process.env.DB_SSL || '').toLowerCase() === 'true'
@@ -82,17 +72,20 @@ function createOperationsJobsRouter({ appBaseUrl, operationalLog = console.log }
   const router = express.Router();
   const cronLimit = distributedRateLimit({ windowMs: 15 * 60 * 1000, max: 10, name: 'ops-cron' });
   const batchSize = Number(process.env.PAMET_JOB_BATCH_SIZE || 250);
+  const authCheck = createJobAuthorizer({ allowedWorkflows: ['job-auth-acceptance.yml'], allowedEvents: ['push', 'workflow_dispatch'] });
+  const reminderAuth = createJobAuthorizer({ allowedWorkflows: ['push-reminders.yml'] });
+  const digestAuth = createJobAuthorizer({ allowedWorkflows: ['weekly-digest.yml'] });
+  const stripeAuth = createJobAuthorizer({ allowedWorkflows: ['stripe-reconcile.yml'] });
 
-  function authorize(req, res, next) {
-    const secret = readBearer(req);
-    if (!process.env.CRON_SECRET || !secret || !secretEqual(secret, process.env.CRON_SECRET)) return res.status(401).json({ error: 'Unauthorized.' });
-    next();
-  }
   const log = (event) => {
     try { operationalLog(JSON.stringify({ service: 'pamet', at: new Date().toISOString(), ...event })); } catch { /* telemetry must not break jobs */ }
   };
 
-  router.post('/api/jobs/push-reminders', cronLimit, authorize, async (req, res, next) => {
+  router.post('/api/jobs/auth-check', cronLimit, authCheck, (req, res) => {
+    res.json({ authorized: true, source: req.jobAuth && req.jobAuth.source || 'unknown' });
+  });
+
+  router.post('/api/jobs/push-reminders', cronLimit, reminderAuth, async (req, res, next) => {
     try {
       if (!push.configured()) return res.status(503).json({ error: 'Web Push is not configured.' });
       const connection = await database();
@@ -102,7 +95,7 @@ function createOperationsJobsRouter({ appBaseUrl, operationalLog = console.log }
     } catch (error) { next(error); }
   });
 
-  router.post('/api/jobs/weekly-digest', cronLimit, authorize, async (req, res, next) => {
+  router.post('/api/jobs/weekly-digest', cronLimit, digestAuth, async (req, res, next) => {
     try {
       if (!process.env.RESEND_API_KEY || !process.env.EMAIL_FROM) return res.status(503).json({ error: 'Weekly email is not configured.' });
       const connection = await database();
@@ -112,7 +105,7 @@ function createOperationsJobsRouter({ appBaseUrl, operationalLog = console.log }
     } catch (error) { next(error); }
   });
 
-  router.post('/api/jobs/stripe-reconcile', cronLimit, authorize, async (req, res, next) => {
+  router.post('/api/jobs/stripe-reconcile', cronLimit, stripeAuth, async (req, res, next) => {
     try {
       if (!process.env.STRIPE_SECRET_KEY) return res.status(503).json({ error: 'Stripe is not configured.' });
       const connection = await database();
