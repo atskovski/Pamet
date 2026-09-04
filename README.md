@@ -1,6 +1,6 @@
 # Pamet — Personal Health Journal
 
-**Version 1.6.3**  
+**Version 1.6.4**  
 **Your health history, finally useful.**
 
 Pamet is a privacy-first personal health journal for recording symptoms, medications, mood, activity, lifestyle factors, notes, and other user-provided health information over time, then organizing those observations for personal review and healthcare conversations.
@@ -11,57 +11,22 @@ Pamet is not emergency monitoring, a diagnostic service, a clinical decision too
 
 ## Current State
 
-Pamet is an actively developed web/PWA product deployed from GitHub `main` to Wasmer. The production repository also owns the mobile API/entitlement contract used by the native iOS and Android release baselines.
+Pamet is an actively developed web/PWA deployed from GitHub `main` to Wasmer. The production repository also owns the mobile API and entitlement contract used by the native iOS and Android clients.
 
-### Core product
+### Pamet 1.6.4
 
-- Local-first health journal with truthful empty states and no sample health data.
-- Calendar/history review with explicit distinction between **no entry** and **no symptoms recorded**.
-- Long-history Calendar search, symptom filtering, and a **Today** shortcut.
-- Observational Insights with 7/30/90-day windows, category filters, evidence expansion, trend direction, data completeness, and non-destructive Archive/Restore.
-- **Visit Brief** for patient-generated summaries intended to support healthcare conversations.
-- Free / Pro / Ultra plans with server-authoritative entitlements.
-- Multi-profile Ultra journals with isolated local history and quick cross-screen profile switching.
-- Appointment Workspace with visit planning, discussion guides, per-profile drafts, persistence, and scheduled Web Push reminders.
-- Read-only, expiring, revocable caregiver/provider sharing delivered through Resend when email is configured.
-- Password reset/change, revocable sessions, Sign out everywhere, device management, and authenticator MFA.
-- Stripe checkout/subscriptions/webhooks/billing portal with server-side plan validation.
-- Consent-based Web Push reminders and weekly digest infrastructure.
-- Grafana Cloud OTLP logs/metrics, readiness checks, and operational alerts.
-- In-app privacy/safety/support guidance with troubleshooting steps and explicit medical-use boundaries.
+This production-hardening release focuses on consistency, scale, release assurance, and clearer Settings behavior:
 
-### Pamet 1.6.3
+- one canonical Free / Pro / Ultra plan catalog drives the in-app full feature matrix and the README matrix;
+- **Compare Pamet plans** includes a responsive green action that opens the complete plan comparison;
+- CI rejects drift between plan display metadata, mobile entitlements, and server-authoritative capability rules;
+- Notification health now visibly checks browser permission and active push-subscription state, explains what it checks, and provides state-specific repair guidance;
+- scheduled GitHub jobs retain strict OIDC signature/claim validation and can use an automatically refreshed bundled set of GitHub public signing keys when the production provider cannot reach GitHub JWKS directly;
+- scale-oriented MySQL indexes support scheduled digest, push, appointment, and audit access patterns;
+- database-capacity and production-bundle performance budgets are release gates;
+- go-live status separates shipped code, environment acceptance, and independent assurance instead of treating all green CI as external certification.
 
-- Rebuilds Caregiver access around a clear "What will be included" preview so users know exactly what they are sharing before they send it.
-- Keeps caregiver sharing intentionally limited to tracking overview, symptom summary, medications, and optional recent notes.
-- Expands Primary care access into the most detailed clinician-oriented Visit Brief, including full symptom history, medications, supported Pamet observations, recent sleep/stress/hydration/severity context, discussion prompts, and optional notes.
-- Adds an always-available local PDF fallback to both Caregiver access and Primary care access when secure email is unavailable or fails.
-- Corrects checkbox alignment and improves form spacing in sharing dialogs.
-- Gives Appointment Workspace a wider responsive desktop layout, earlier single-column breakpoint, and a dedicated confirmation row so "Confirm this appointment date and time" can never be covered by adjacent UI.
-- Rotates the PWA worker/cache/static asset identity to the 1.6.3 release so existing browsers receive these UI fixes.
-
-### Pamet 1.6.2
-
-- Promotes the refreshed Pamet green/teal/blue app mark across in-app branding and PWA install assets, including 192 px, 512 px, and maskable icons.
-- Adds the production quick profile-switch shortcut to the top app bar and keeps the active profile context visible across the experience.
-- Normalizes Settings and care workflow labels to sentence case for a more consistent UI writing system.
-- Expands **Health history over time** with 30/90/180-day comparisons, normalized symptom-frequency comparisons, severity/sleep/stress/activity measures, data-strength guidance, and user-entered-data context.
-- Adds print/save-to-PDF output for health-history comparisons and local PDF sharing for caregiver and primary-care summaries when outbound email is not configured.
-- Consolidates Primary care access around one advanced visit-brief flow rather than competing popups.
-- Improves Appointment Workspace responsive behavior to reduce overlapping, clipped, or cramped content on desktop and mobile.
-- Rotates the worker registration to `sw.js?v=1620`, the shell cache to `pamet-shell-v162-1`, and static shell asset URLs to the 1.6.2 token so installed PWAs request the new release assets.
-- Publishes backend contract identity `1.6.2` while retaining `1.5.1` as the minimum compatible native backend baseline.
-
-### Pamet 1.6.1
-
-- Corrects the 1.6.0 PWA delivery issue that could leave an already-open browser on the previous cached CSS/JavaScript shell after visual changes were merged.
-- Rotates the worker registration to `sw.js?v=1610`, the shell cache to `pamet-shell-v161-1`, and static bundle URLs to the 1.6.1 asset token so browsers are forced onto the current release assets.
-- Promotes the unified dark-mode palette across Insights cards, Data Completeness, empty states, forms, chips, progress meters, links, and common elevated surfaces so dark mode no longer mixes near-black pages with pure-white cards.
-- Uses near-white primary text, higher-contrast secondary text, visible teal meter fills, and lower-weight inactive controls for clearer hierarchy in dark mode.
-- Updates Privacy, Safety & Support and Settings release surfaces to the current 1.6.1 runtime identity and adds release checks that prevent those surfaces from silently falling behind again.
-- Keeps the 1.6.0 strict CSP and feature-owned frontend architecture unchanged.
-- Publishes backend contract identity `1.6.1` while retaining `1.5.1` as the minimum compatible native backend baseline.
-- Keeps external go-live assurance gates visibly open until real evidence exists.
+Release history belongs in [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Product Model
 
@@ -69,21 +34,22 @@ Pamet is an actively developed web/PWA product deployed from GitHub `main` to Wa
 
 | Plan | Positioning | Core value |
 | --- | --- | --- |
-| **Free — Track** | Build a useful health history | Logging, rolling history, summary, export |
-| **Pro — Understand** | Make history easier to interpret | Unlimited history, observational trends, comparisons, sharing |
-| **Ultra — Prepare** | Prepare for more complex care conversations | Multi-profile, Appointment Workspace, advanced Visit Briefs, advanced coordination |
+| **Free — Track** | Build a useful health history | Logging, history, Insights, standard Visit Brief, export |
+| **Pro — Understand** | Make history easier to interpret | Unlimited history, observational comparisons, deeper trends, sharing |
+| **Ultra — Prepare** | Prepare for more complex care conversations | Multi-profile, Appointment Workspace, advanced Visit Briefs, encrypted sync |
 
-Pamet contains **no advertising on any plan**.
+Pamet contains **no advertising on any plan**. Paid access is enforced by server-verified account and Stripe state; UI copy is not an authorization boundary.
+
+<!-- PLAN_MATRIX:START -->
+### Plan feature matrix
+
+This matrix is generated from `contracts/plan-features.json`, the source of truth used by the in-app **Compare Pamet plans** experience. Update the contract, run `node scripts/sync-plan-catalog.js`, and CI will reject drift between product copy and the application.
 
 | Plan | Monthly | Annual |
 | --- | ---: | ---: |
 | Free | $0 | $0 |
 | Pro | $6.99 | $59.99 |
 | Ultra | $12.99 | $99.99 |
-
-### Plan feature matrix
-
-This table is the quick-reference view of the current Pamet plan model. **✅** means the feature is included for that plan; **—** means it is not included at that tier. Ultra inherits the included Free and Pro capabilities unless a row is explicitly marked otherwise.
 
 | Feature | Free | Pro | Ultra |
 | --- | :---: | :---: | :---: |
@@ -106,14 +72,31 @@ This table is the quick-reference view of the current Pamet plan model. **✅** 
 | Advanced Visit Brief | — | — | ✅ |
 | Encrypted multi-device journal sync | — | — | ✅ |
 
-The server-authoritative entitlement API currently enforces Pro/Ultra access for **correlations, unlimited history, and sharing**, and Ultra-only access for **Appointment Workspace, multiple profiles, Advanced Visit Brief, and encrypted sync**. Product copy and future plan changes should keep this README table synchronized with those entitlements.
+The server-authoritative entitlement API remains the enforcement boundary for paid capabilities; the matrix is product/display metadata, not an authorization mechanism.
+<!-- PLAN_MATRIX:END -->
 
-Paid tiers are offered only when their Stripe configuration passes server-side validation.
+Paid tiers are offered only when their Stripe catalog configuration passes server-side validation.
+
+## Core Product
+
+- Local-first health journal with truthful empty states and no sample health data.
+- Calendar and journal-history review with explicit distinction between **no entry** and **no symptoms recorded**.
+- Observational Insights with 7/30/90-day windows, filters, evidence expansion, trend direction, and data-completeness guidance.
+- Standard and advanced Visit Brief flows for patient-generated summaries intended to support healthcare conversations.
+- Health-history comparison and appointment-preparation tools with explicit non-diagnostic wording.
+- Local print/save-to-PDF output for applicable history, caregiver, and primary-care summaries.
+- Multi-profile Ultra journals with isolated local history and quick profile switching.
+- Appointment Workspace with visit planning, questions, drafts, and privacy-preserving reminders.
+- Read-only, expiring, revocable caregiver/provider sharing.
+- Password reset/change, revocable sessions, device management, Sign out everywhere, and authenticator MFA.
+- Stripe checkout/subscriptions/webhooks/billing portal with server-side plan validation.
+- Consent-based Web Push reminders and weekly digest infrastructure.
+- Grafana Cloud OTLP logs/metrics, readiness checks, operational alerts, and request telemetry.
 
 ## Privacy and Safety Boundaries
 
 - Insights describe recorded associations, frequency, and changes—not diagnoses or causes.
-- Medication co-occurrence is not presented as medication effectiveness or adverse-effect evidence.
+- Medication co-occurrence is not presented as treatment effectiveness or adverse-effect evidence.
 - No emergency detection or automated symptom escalation.
 - No medication recommendations.
 - No live caregiver surveillance or missed-log alerts.
@@ -122,113 +105,107 @@ Paid tiers are offered only when their Stripe configuration passes server-side v
 - Service-worker caching excludes `/api/` and sensitive sharing routes.
 - Browser update flows do not clear local journal data.
 - Appointment reminder notifications intentionally avoid symptom, medication, clinician, or diagnosis details on the lock screen.
-- Pamet does **not** claim HIPAA compliance, SOC 2 certification, independent penetration testing, independent WCAG certification, or independently reviewed local/E2E encryption until the corresponding external evidence is complete.
+- Pamet does **not** claim HIPAA compliance, SOC 2 certification, independent penetration testing, independent WCAG certification, or independently reviewed working-journal encryption until corresponding external evidence exists.
 
 ## Production Architecture
 
-- Static PWA frontend authored in vanilla JavaScript/CSS and bundled/minified with esbuild
-- Feature-owned browser modules with release history maintained in Git/CHANGELOG rather than filenames
-- Strict production CSP with external/self styles and `style-src-attr 'none'`
-- Node.js 20+ / Express 5 secure edge and application runtime
-- `secure-server.js` as the production entrypoint around `server.js`
-- MySQL via `mysql2` for account/session/entitlement/sharing/appointment/audit/sync metadata
-- Optional Redis/Valkey distributed rate limiting with MySQL fallback
-- Stripe subscriptions and idempotent webhooks
-- Resend transactional email
-- Web Push / VAPID
-- Grafana Cloud OTLP logs and metrics
-- GitHub Actions CI, scheduled jobs, live acceptance, billing reconciliation, reminders, and native-release coordination
-- Wasmer deployment from `main` at `pamet.wasmer.app`
+- Static PWA frontend authored in vanilla JavaScript/CSS and bundled/minified with esbuild.
+- Feature-owned browser modules; release history is maintained in Git and `CHANGELOG.md` rather than release-numbered source filenames.
+- Strict production CSP with external/self styles, `script-src-attr 'none'`, and `style-src-attr 'none'`.
+- Node.js 20+ / Express 5 secure edge and application runtime.
+- MySQL via `mysql2` for accounts, sessions, entitlements, sharing, appointments, audit data, push metadata, and encrypted-sync blobs.
+- Optional Redis/Valkey distributed rate limiting with MySQL fallback.
+- Stripe subscriptions and signed/idempotent webhooks.
+- Resend transactional email and VAPID Web Push.
+- GitHub Actions for CI, scheduled jobs, live acceptance, billing reconciliation, reminders, admin-mirror parity, and native-release coordination.
+- Wasmer production deployment at `pamet.wasmer.app`.
 
-Journal entries remain local-first by default. Ultra encrypted sync stores opaque ciphertext rather than plaintext journal content. Encrypted sync is not the same as encrypted working local storage.
+Journal entries remain local-first by default. Ultra encrypted sync stores opaque ciphertext rather than plaintext working-journal content. Encrypted sync is not the same as encrypted working local storage.
 
-## Native Release Coordination
+## Scale and Capacity
 
-- Production owns `contracts/mobile-api.json` as the backend/mobile compatibility contract.
-- `Pamet-iOS` and `Pamet-Android` validate that contract and the live production health endpoint on scheduled/manual checks.
-- When the optional GitHub Actions secret `MOBILE_SYNC_TOKEN` is configured with minimal cross-repository permissions, production `main` changes can dispatch immediate native release checks.
-- Native clients do not copy web JS/CSS automatically; backend/entitlement changes synchronize by contract, while product/safety behavior is implemented natively and independently tested.
-- Pamet 1.6.3 keeps the minimum compatible backend at 1.5.1 because the mobile API contract remains compatible; native binary versions can advance on their own store-release cadence.
-- A mobile contract update is not release-ready until the relevant native tests, lint/static analysis, and release compilation/build pass.
+Pamet does not impose an application-level maximum account count. User IDs are `BIGINT UNSIGNED`; practical capacity is determined by the deployed application-instance count, MySQL connection/IO/storage capacity, provider limits, and traffic shape rather than by a fixed signup ceiling.
 
-See `MOBILE_RELEASE_COORDINATION.md` for the synchronization model and platform release gates.
+The production design uses bounded MySQL pools, cursor-batched background work, bounded appointment processing, indexed scheduled-job access paths, distributed rate limiting where configured, and horizontally deployable stateless HTTP application instances. The default theoretical database pool budget is currently **14 connections per application instance** across the primary, OAuth, scheduled-job, and appointment-reminder pools.
 
-## Design System
+Before increasing application replicas or connection-pool limits, size against the database provider's real `max_connections` with operational reserve. A safe deployment budget is:
 
-Pamet uses a warm clinical visual system with explicit semantic roles:
+`usable DB connections = provider max_connections - administrative/maintenance reserve`
 
-- **Teal:** navigation, primary actions, selection, product interaction
-- **Neutral:** layout, borders, helper information, structural hierarchy
-- **Sage:** favorable/improving health-state presentation where appropriate
-- **Amber:** attention or increased-frequency observation states
-- **Rose:** significant symptom/severity meaning
-- **Purple:** reserved for the separate private Pamet Admin/Superuser environment
+`maximum application instances <= usable DB connections / configured per-instance pool budget`
 
-The current runtime centralizes common icons and defines metadata, helper, body, control, section-heading, and page-heading type roles. In dark mode, the same semantic roles are mapped onto a unified near-black/surface/elevated-surface system with accessible foreground contrast instead of inserting light cards into the dark shell.
+Do not increase `DB_CONNECTION_LIMIT` simply to absorb traffic; that can move a bottleneck from the app to MySQL. Scale HTTP instances and database capacity together, monitor p95 latency/error rate/active connections/CPU/IOPS, and run a production-like load test before publishing a numeric concurrent-user capacity claim. See [`docs/SCALING_AND_CAPACITY.md`](docs/SCALING_AND_CAPACITY.md).
 
-## Accessibility Status
+## Notification Health
 
-Pamet includes automated/static accessibility guardrails for keyboard focus visibility, skip navigation, reduced motion, modal behavior, accessible icon semantics, screen labels, and responsive/mobile layouts.
+The Settings **Notification health** control answers a different question from the reminder toggle: **can this browser/device actually receive Pamet notifications?**
 
-These checks are not an independent accessibility certification. A qualified external WCAG 2.2 AA review, including keyboard-only, screen-reader, 200%/400% zoom/reflow, mobile/landscape, contrast, and error-state testing, remains an explicit assurance gate. See `ACCESSIBILITY_REVIEW.md`.
+It checks browser support, notification permission, and whether the device has an active Pamet push subscription. **Check again** refreshes those states and shows completion/error feedback. The repair action adapts to the current state: enable permission, explain a browser/OS block, or repair an allowed-but-missing subscription. The check does not read or send health-journal content.
 
 ## Release Gates
 
-Every production merge should pass:
+Every production merge should preserve all of the following:
 
-- production bundle build
-- strict-CSP output checks
-- syntax/static release checks
-- version consistency
-- release-specific PWA worker/cache rotation
-- dark-mode surface/contrast checks
-- feature-module ownership checks
-- security/UI assertions
-- Insights/design-system assertions
-- unit/security tests
-- MySQL-backed lifecycle integration tests
-- Stripe/device/session/sharing/sync assertions
-- disposable MySQL backup → isolated restore
-- dependency audit
-- mobile contract validation
-- live Wasmer version/readiness acceptance when the environment is available
+- production bundle build;
+- strict-CSP output checks;
+- syntax/static release checks;
+- semantic version consistency;
+- release-specific PWA worker/cache/static-asset rotation;
+- dark-mode surface/contrast checks;
+- feature-module ownership checks;
+- security/UI assertions;
+- Insights/design-system assertions;
+- unit/security tests;
+- MySQL-backed lifecycle integration tests;
+- Stripe/device/session/sharing/sync assertions;
+- disposable MySQL backup → isolated restore;
+- production dependency audit;
+- mobile contract validation;
+- canonical plan/entitlement drift checks;
+- notification-health UX assertions;
+- database scale/index/cursor-batching checks;
+- production JS/CSS raw and gzip performance budgets;
+- GitHub scheduled-job OIDC verification checks;
+- live Wasmer version/readiness acceptance when the environment is available;
+- admin-mirror parity after production merges.
 
-Real-provider or independent evidence is still required for provider PITR/RPO/RTO, production Stripe live-mode acceptance, independent penetration testing, WCAG 2.2 AA review, privacy/legal/BAA-DPA determinations, and final activation review for encrypted working local storage.
+Environment-only and independent gates remain separate: provider PITR/RPO/RTO evidence, controlled Stripe live-mode lifecycle acceptance, real alert receipt/escalation, independent penetration testing, independent WCAG 2.2 AA review, privacy/legal determination, and independent cryptographic review before enabling encrypted working local storage.
 
-See `GO_LIVE_STATUS.md` for a concise evidence-based status table. Earlier snapshots that say GitHub Actions CI is missing are stale; CI is present in `.github/workflows/ci.yml`.
+A green CI run is required for release. It is not an independent compliance or security certification.
 
 ## Repository Organization
 
 - `js/` — feature-owned browser source modules
-- `css/` — feature-owned source stylesheets and design-system layers
+- `css/` — source stylesheets and design-system layers
 - `lib/` — server-side supporting modules
-- `db/` — deployable schema
-- `scripts/` — production/release checks and operational drills
-- `tests/` — unit and integration coverage
-- `.github/workflows/` — CI, deployment acceptance, billing reconciliation, reminders, admin-mirror trigger, and mobile release coordination
+- `routes/` — extracted server routes
+- `db/` — deployable schema and controlled migrations
+- `scripts/` — release checks and operational drills
+- `tests/` — unit and MySQL integration coverage
+- `contracts/` — authoritative product/mobile compatibility contracts
+- `config/` — non-secret runtime verification metadata such as public OIDC signing keys
+- `.github/workflows/` — CI, scheduled jobs, live acceptance, mirrors, and release coordination
+- `assets/` — application icons and visual assets
 - `dist/` — generated production bundles
-- `assets/` — application icons and login imagery
-- `contracts/` — authoritative mobile/backend compatibility contracts
-
-Release history belongs in `CHANGELOG.md` and Git. Active source modules are named for the feature or responsibility they own rather than the release in which they were introduced. The broader `server.js` decomposition remains a controlled follow-up: route/service extraction should occur in bounded, independently tested slices rather than a single high-risk rewrite.
 
 ## Operational Documentation
 
 | Document | Purpose |
 | --- | --- |
-| `GO_LIVE_STATUS.md` | Evidence-based go-live dashboard and remaining external gates |
-| `PRODUCTION_READINESS.md` | Production configuration and unresolved launch gates |
-| `REAL_ENVIRONMENT_ACCEPTANCE.md` | Deployed environment evidence |
-| `BACKUP_RESTORE_RUNBOOK.md` | Recovery requirements |
+| `GO_LIVE_STATUS.md` | Evidence-based go-live dashboard and remaining gates |
+| `PRODUCTION_READINESS.md` | Engineering production-readiness review |
+| `REAL_ENVIRONMENT_ACCEPTANCE.md` | Deployed-environment acceptance checklist |
+| `docs/SCALING_AND_CAPACITY.md` | Capacity model, database connection budget, and scale validation |
+| `BACKUP_RESTORE_RUNBOOK.md` | Recovery requirements and restore exercises |
 | `ASSURANCE_HANDOFF.md` | External security/privacy/accessibility review handoff |
-| `ACCESSIBILITY_REVIEW.md` | External WCAG 2.2 AA review scope and evidence checklist |
+| `ACCESSIBILITY_REVIEW.md` | External WCAG 2.2 AA review scope |
 | `SECURITY.md` | Security architecture |
-| `THREAT_MODEL.md` | Current general browser/data threat model |
-| `LOCAL_ENCRYPTION_THREAT_MODEL.md` | Local-journal encryption/recovery design gate |
+| `THREAT_MODEL.md` | Browser/data threat model |
+| `LOCAL_ENCRYPTION_THREAT_MODEL.md` | Working-journal encryption review gate |
 | `LEGACY_AUTH_SUNSET.md` | Compatibility-auth retirement criteria |
 | `INCIDENT_RESPONSE.md` | Security/operations response process |
-| `MOBILE_RELEASE_COORDINATION.md` | Production → iOS/Android synchronization and release gates |
-| `PERFORMANCE_AUDIT.md` | Current performance findings, budgets, and follow-up work |
+| `MOBILE_RELEASE_COORDINATION.md` | Production → native synchronization and release gates |
+| `PERFORMANCE_AUDIT.md` | Performance findings and follow-up work |
 | `CHANGELOG.md` | Release history |
 
 ## Run Locally
@@ -238,6 +215,8 @@ Node.js 20+ is required.
 ```bash
 npm install
 npm run build
+npm run check
+npm test
 npm start
 ```
 
