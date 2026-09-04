@@ -21,7 +21,7 @@ jobs:
   verify-production-job-auth:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Wait for production and verify GitHub OIDC job authentication
         env:
           PAMET_APP_URL: https://pamet.wasmer.app
