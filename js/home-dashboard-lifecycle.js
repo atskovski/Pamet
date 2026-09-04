@@ -6,6 +6,7 @@
   if (!S) return;
   const $ = (selector, root = document) => root.querySelector(selector);
   let streakObserver = null;
+  let insightObserver = null;
   let lateTimer = null;
 
   function hasEntries() {
@@ -29,6 +30,22 @@
     syncStreakVisibility();
   }
 
+  function syncObservationVisibility() {
+    const banner = $('#insightBanner');
+    if (!banner) return;
+    if (S.settings.showInsight === false && !banner.hidden) banner.hidden = true;
+  }
+
+  function installObservationGuard() {
+    const banner = $('#insightBanner');
+    if (!banner) return;
+    if (!insightObserver) {
+      insightObserver = new MutationObserver(syncObservationVisibility);
+      insightObserver.observe(banner, { attributes: true, attributeFilter: ['hidden'] });
+    }
+    syncObservationVisibility();
+  }
+
   function syncHomeState() {
     const populated = hasEntries();
     const empty = $('#homeEmptyState');
@@ -42,10 +59,12 @@
     if (recent) recent.hidden = !populated;
     if (starter) starter.hidden = populated;
     if (visitBrief) visitBrief.hidden = false;
-    if (starterKicker) starterKicker.textContent = 'WHAT HOME WILL BUILD';
+    if (starterKicker) starterKicker.textContent = 'WHAT PAMET WILL BUILD';
     if (starterGrid?.children.length > 2) starterGrid.children[2].remove();
 
     installStreakGuard();
+    installObservationGuard();
+    window.dispatchEvent(new CustomEvent('pamet:home-synced', { detail: { populated } }));
   }
 
   function scheduleSync() {

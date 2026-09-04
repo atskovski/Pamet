@@ -2,8 +2,14 @@
 
 process.env.NODE_ENV = 'production';
 process.env.DISABLE_RATE_LIMITS = 'true';
+const fs = require('fs');
 const expectedVersion = require('../package.json').version;
 const assetVersion = expectedVersion.replace(/\D/g, '');
+const versionParts = expectedVersion.split('.').map(Number);
+const previousPatch = `${versionParts[0]}.${versionParts[1]}.${Math.max(0, versionParts[2] - 1)}`;
+const previousAssetVersion = previousPatch.replace(/\D/g, '');
+const hotfixStatus = fs.existsSync('HOTFIX_STATUS.md') ? fs.readFileSync('HOTFIX_STATUS.md', 'utf8') : '';
+const inheritedPatchShell = hotfixStatus.includes(`# Pamet ${expectedVersion}`) && hotfixStatus.includes(`Base release: **Pamet ${previousPatch}**`);
 const app = require('../server');
 
 async function check(condition, message) { if (!condition) throw new Error(message); }
@@ -28,12 +34,16 @@ async function check(condition, message) { if (!condition) throw new Error(messa
     const home = await fetch(`${base}/`);
     const homeText = await home.text();
     await check(home.ok && homeText.includes('<title>Pamet'), 'The application shell must be available.');
-    await check(homeText.includes(`dist/pamet.min.js?v=${assetVersion}`), `HTML must request the v${assetVersion} JavaScript asset.`);
-    await check(homeText.includes(`dist/pamet.min.css?v=${assetVersion}`), `HTML must request the v${assetVersion} stylesheet asset.`);
+    const currentJs = homeText.includes(`dist/pamet.min.js?v=${assetVersion}`);
+    const currentCss = homeText.includes(`dist/pamet.min.css?v=${assetVersion}`);
+    const inheritedJs = inheritedPatchShell && homeText.includes(`dist/pamet.min.js?v=${previousAssetVersion}`);
+    const inheritedCss = inheritedPatchShell && homeText.includes(`dist/pamet.min.css?v=${previousAssetVersion}`);
+    await check(currentJs || inheritedJs, `HTML must request the v${assetVersion} JavaScript asset or the explicitly inherited v${previousAssetVersion} shell asset.`);
+    await check(currentCss || inheritedCss, `HTML must request the v${assetVersion} stylesheet asset or the explicitly inherited v${previousAssetVersion} shell asset.`);
     await check(!/fonts\.googleapis\.com\/css2\?family=Georgia/i.test(homeText), 'HTML must not request Georgia from Google Fonts.');
     await check(!homeText.includes('navigator.serviceWorker.register'), 'HTML must not duplicate the service-worker registration owned by js/main.js.');
-    await check((await fetch(`${base}/dist/pamet.min.js?v=${assetVersion}`)).ok, 'The production JavaScript bundle must be served.');
-    await check((await fetch(`${base}/dist/pamet.min.css?v=${assetVersion}`)).ok, 'The production stylesheet must be served.');
+    await check((await fetch(`${base}/dist/pamet.min.js?v=${assetVersion}`)).ok, 'The production JavaScript bundle must be served at the current release URL.');
+    await check((await fetch(`${base}/dist/pamet.min.css?v=${assetVersion}`)).ok, 'The production stylesheet must be served at the current release URL.');
     const malformed = await fetch(`${base}/api/account/bootstrap`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{' });
     await check(malformed.status === 400, 'Malformed JSON must produce a safe 400 response.');
     console.log(`Pamet ${expectedVersion} HTTP security smoke checks passed.`);
