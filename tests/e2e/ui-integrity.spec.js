@@ -174,7 +174,7 @@ async function clickAndRequireEffect(page, locator, label) {
 
 async function openPlanMatrix(page) {
   await page.locator('.tab[data-tab="settings"]').click();
-  const opener = page.getByRole('button', { name: /see full.*feature|full feature comparison|compare pamet plans/i }).first();
+  const opener = page.getByRole('button', { name: /compare all plans|compare all plan features|see full.*feature|full feature comparison|compare pamet plans/i }).first();
   await expect(opener).toBeVisible();
   await opener.click();
   const matrix = page.locator('[role="dialog"], dialog, .pamet-plan-matrix, .plan-matrix').filter({ hasText: /Free/i }).first();
