@@ -45,22 +45,7 @@ jobs:
             echo "::add-mask::$OIDC_TOKEN"
             export OIDC_TOKEN
 
-            node - <<'NODE'
-            const { verifyGitHubActionsToken } = require('./lib/job-auth');
-            verifyGitHubActionsToken(process.env.OIDC_TOKEN, {
-              allowedWorkflows: ['job-auth-acceptance.yml'],
-              allowedEvents: ['push', 'workflow_dispatch']
-            }).then((result) => {
-              if (!result.ok) {
-                console.error(`Local OIDC verification failed at ${result.reason}.`);
-                process.exit(1);
-              }
-              console.log('Local OIDC verification passed.');
-            }).catch((error) => {
-              console.error(`Local OIDC verification crashed: ${error.message}`);
-              process.exit(1);
-            });
-            NODE
+            node -e "const { verifyGitHubActionsToken } = require('./lib/job-auth'); verifyGitHubActionsToken(process.env.OIDC_TOKEN,{allowedWorkflows:['job-auth-acceptance.yml'],allowedEvents:['push','workflow_dispatch']}).then((r)=>{if(!r.ok){console.error('Local OIDC verification failed at '+r.reason+'.');process.exit(1)} console.log('Local OIDC verification passed.')}).catch((e)=>{console.error('Local OIDC verification crashed: '+e.message);process.exit(1)})"
 
             status="$(curl --silent --show-error --output /tmp/job-auth.json --write-out '%{http_code}' \
               -X POST "$PAMET_APP_URL/api/jobs/auth-check" \
