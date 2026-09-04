@@ -25,11 +25,15 @@ After changing Wasmer environment variables, save and redeploy before retrying e
 5. Review recent successful Checkout sessions/subscriptions against Pamet entitlements.
 6. Run the Stripe reconciliation job after webhook recovery.
 
+Production recovery was verified on September 3, 2026 with a manually resent live Stripe event-destination ping returning HTTP 200 and `{ "received": true }`.
+
 ## Reconciliation job
 
-`.github/workflows/stripe-reconcile.yml` calls the production reconciliation endpoint daily and can also be run manually. GitHub Actions needs a `PAMET_CRON_SECRET` repository secret that matches the production `PAMET_CRON_SECRET` stored in Wasmer. The production application URL is intentionally fixed in the workflow because it is public configuration, not a secret.
+`.github/workflows/stripe-reconcile.yml` calls the production reconciliation endpoint daily and can also be run manually. Scheduled production jobs authenticate with short-lived GitHub Actions OIDC identity tokens scoped to this repository, `main`, the exact approved workflow, and the `pamet-production-jobs` audience. No long-lived GitHub-to-Pamet shared secret is required.
 
-If the workflow reports that `PAMET_CRON_SECRET` is not configured, add the same high-entropy secret to GitHub Actions and Wasmer, then run the workflow manually.
+`CRON_SECRET` remains supported by the application as an optional emergency/manual bearer credential, but it is no longer required by the GitHub Actions schedules. Keep it only in the Wasmer secret store if that fallback is needed; never commit it.
+
+The same OIDC pattern is used for reminder delivery and weekly digests. `.github/workflows/job-auth-acceptance.yml` verifies the production OIDC trust path after relevant changes without executing reminder, digest, or reconciliation work.
 
 ## Common response codes
 
