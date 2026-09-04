@@ -1,11 +1,11 @@
 # Pamet versioning policy
 
-Pamet uses semantic versioning (`MAJOR.MINOR.PATCH`). The current stable release line is `v1.6.1`.
+Pamet uses semantic versioning (`MAJOR.MINOR.PATCH`). The current stable release line is `v1.6.2`.
 
 ## When to increment
 
-- **PATCH** — compatible bug fixes, security hardening, copy/styling changes, cache invalidation, tests, reliability improvements, small workflow changes, and production stabilization. Example: `1.6.0 → 1.6.1`.
-- **MINOR** — a substantial backward-compatible capability or product expansion. Example: `1.6.1 → 1.7.0` for a major new user-facing capability.
+- **PATCH** — compatible bug fixes, security hardening, copy/styling changes, cache invalidation, tests, reliability improvements, small workflow changes, and production stabilization. Example: `1.6.1 → 1.6.2`.
+- **MINOR** — a substantial backward-compatible capability or product expansion. Example: `1.6.2 → 1.7.0` for a major new user-facing capability.
 - **MAJOR** — an intentionally breaking data, API, authentication, or deployment migration that requires coordinated client or user migration.
 
 ## Release source of truth
@@ -31,7 +31,7 @@ Every release must update or verify:
 
 The release CI derives the PWA asset token from the semantic version and fails when the browser worker registration, shell cache, or CSS/JS shell URLs do not rotate with the current release. This prevents a valid source change from being hidden behind an older cache identity.
 
-Git tags and release titles use the `v` prefix (`v1.6.1`). Package metadata and API version values do not.
+Git tags and release titles use the `v` prefix (`v1.6.2`). Package metadata and API version values do not.
 
 ## Release discipline
 
