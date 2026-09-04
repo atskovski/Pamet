@@ -20,7 +20,21 @@ jobs:
       - run: npm run check
       - run: npm test
       - name: Audit production dependencies
-        run: npx --yes npm@11 audit --omit=dev --audit-level=high
+        shell: bash
+        run: |
+          set -uo pipefail
+          for attempt in 1 2 3; do
+            echo "Production dependency audit attempt ${attempt}/3"
+            if timeout 90s npx --yes npm@11 audit --omit=dev --audit-level=high; then
+              exit 0
+            fi
+            status=$?
+            if [ "$attempt" -eq 3 ]; then
+              echo "Production dependency audit did not pass after three bounded attempts."
+              exit "$status"
+            fi
+            sleep 5
+          done
 
   integration:
     runs-on: ubuntu-latest
