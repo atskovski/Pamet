@@ -7,11 +7,11 @@ const localBaseURL = 'http://127.0.0.1:8080';
 
 module.exports = defineConfig({
   testDir: './tests/e2e',
-  timeout: 60_000,
-  expect: { timeout: 8_000 },
+  timeout: 25_000,
+  expect: { timeout: 5_000 },
   fullyParallel: false,
   forbidOnly: Boolean(process.env.CI),
-  retries: process.env.CI ? 1 : 0,
+  retries: 0,
   workers: 1,
   reporter: [
     ['list'],
@@ -24,8 +24,8 @@ module.exports = defineConfig({
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
     serviceWorkers: 'block',
-    actionTimeout: 10_000,
-    navigationTimeout: 15_000
+    actionTimeout: 7_500,
+    navigationTimeout: 12_000
   },
   projects: [
     {
@@ -41,7 +41,7 @@ module.exports = defineConfig({
     command: 'node secure-server.js',
     url: `${localBaseURL}/api/health`,
     reuseExistingServer: !process.env.CI,
-    timeout: 60_000,
+    timeout: 45_000,
     env: {
       ...process.env,
       NODE_ENV: 'test',
