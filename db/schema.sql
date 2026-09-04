@@ -1,4 +1,4 @@
--- Pamet v1.2.0 database schema. Run as a controlled migration before deploying production.
+-- Pamet database schema. Run as a controlled migration before deploying production.
 CREATE TABLE IF NOT EXISTS pamet_users (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
   local_user_id VARCHAR(128) NOT NULL UNIQUE,
@@ -18,7 +18,8 @@ CREATE TABLE IF NOT EXISTS pamet_users (
   confirmation_email_sent_at DATETIME NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  INDEX idx_digest (weekly_digest_enabled)
+  INDEX idx_digest (weekly_digest_enabled),
+  INDEX idx_digest_cursor (weekly_digest_enabled,id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS pamet_sessions (
@@ -67,7 +68,8 @@ CREATE TABLE IF NOT EXISTS pamet_audit_log (
   event_type VARCHAR(80) NOT NULL,
   event_json JSON NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  INDEX idx_audit (user_id, created_at)
+  INDEX idx_audit (user_id, created_at),
+  INDEX idx_audit_event (user_id,event_type,created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Webhook events are recorded before processing so Stripe retries cannot apply twice.
@@ -121,7 +123,8 @@ CREATE TABLE IF NOT EXISTS pamet_push_subscriptions (
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_pamet_push_user FOREIGN KEY (user_id) REFERENCES pamet_users(id) ON DELETE CASCADE,
   CONSTRAINT fk_pamet_push_device FOREIGN KEY (device_id) REFERENCES pamet_devices(id) ON DELETE SET NULL,
-  INDEX idx_push_due (enabled,reminder_hour)
+  INDEX idx_push_due (enabled,reminder_hour),
+  INDEX idx_push_scan (enabled,failure_count,id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS pamet_sync_blobs (
@@ -138,7 +141,8 @@ CREATE TABLE IF NOT EXISTS pamet_appointments (
   status VARCHAR(20) NOT NULL DEFAULT 'scheduled', created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_pamet_appointment_user FOREIGN KEY (user_id) REFERENCES pamet_users(id) ON DELETE CASCADE,
-  INDEX idx_appointment (user_id,starts_at,status)
+  INDEX idx_appointment (user_id,starts_at,status),
+  INDEX idx_appointment_due (status,starts_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS pamet_rate_limits (
