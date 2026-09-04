@@ -2,7 +2,7 @@
 
 const { test, expect } = require('@playwright/test');
 
-const PRIMARY_TABS = ['home', 'calendar', 'patterns', 'report', 'settings'];
+const PRIMARY_TABS = ['home', 'calendar', 'patterns', 'settings'];
 const SAME_ORIGIN_IGNORED = [
   /\/api\/auth\/session(?:\?|$)/,
   /\/api\/billing\/status(?:\?|$)/,
@@ -12,7 +12,8 @@ const SAME_ORIGIN_IGNORED = [
 
 function installRuntimeGuards(page) {
   const problems = [];
-  const origin = new URL(page.context()._options.baseURL || 'http://127.0.0.1:8080').origin;
+  const base = process.env.PAMET_UI_BASE_URL || 'http://127.0.0.1:8080';
+  const origin = new URL(base).origin;
   page.on('pageerror', (error) => problems.push(`pageerror: ${error.message}`));
   page.on('console', (message) => {
     if (message.type() === 'error') problems.push(`console.error: ${message.text()}`);
@@ -81,6 +82,18 @@ async function assertPrimaryNavigation(page) {
     const activeCount = await page.locator('.screen.active').count();
     expect(activeCount, `exactly one screen should be active after navigating to ${tab}`).toBe(1);
   }
+}
+
+async function assertVisitBriefNavigation(page) {
+  await page.locator('.tab[data-tab="home"]').click();
+  const trigger = page.locator('[data-nav="report"]').first();
+  await expect(trigger).toBeVisible();
+  await trigger.click();
+  await expect(page.locator('#screen-report')).toHaveClass(/active/);
+  await expect(page.locator('#emailReport')).toBeVisible();
+  await expect(page.locator('#downloadPdf')).toBeVisible();
+  await page.locator('.tab[data-tab="home"]').click();
+  await expect(page.locator('#screen-home')).toHaveClass(/active/);
 }
 
 async function visibleInteractiveInventory(page) {
@@ -186,6 +199,7 @@ test.describe('Pamet UI integrity', () => {
     const problems = installRuntimeGuards(page);
     await registerDisposableAccount(page, testInfo);
     await assertPrimaryNavigation(page);
+    await assertVisitBriefNavigation(page);
 
     await page.locator('.tab[data-tab="home"]').click();
     const openLog = page.locator('#emptyLogEntry');
@@ -222,6 +236,8 @@ test.describe('Pamet UI integrity', () => {
       const inventory = await assertInteractiveSemantics(page);
       inventory.forEach((item) => seen.add(fingerprint(item)));
     }
+    await page.locator('[data-nav="report"]').first().click();
+    (await assertInteractiveSemantics(page)).forEach((item) => seen.add(fingerprint(item)));
     expect(seen.size, 'the audit should inventory a meaningful set of controls').toBeGreaterThan(15);
   });
 
@@ -251,6 +267,7 @@ test.describe('Pamet UI integrity', () => {
     await page.goto('/');
     await expect(page.locator('#welcome')).toHaveClass(/hidden/);
     await assertPrimaryNavigation(page);
+    await assertVisitBriefNavigation(page);
     await assertInteractiveSemantics(page);
     await openPlanMatrix(page);
   });
