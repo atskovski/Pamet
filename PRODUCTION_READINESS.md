@@ -1,45 +1,54 @@
-# Pamet v1.6.3 Production Readiness Review
+# Pamet v1.6.4 Production Readiness Review
 
-Updated for the 1.6.3 brand, care-workflow, history-comparison, responsive-UI, and release-delivery patch. This is an engineering readiness record, not a compliance certification.
+Updated for the 1.6.4 production-hardening release. This is an engineering readiness record, not a compliance certification.
 
 ## Release posture
 
-Pamet 1.6.3 is a patch release that keeps the 1.6.x strict-CSP and feature-owned frontend architecture while promoting the refreshed Pamet icon system, quick profile switching, more consistent sentence-case UI copy, deeper Health history over time comparisons, local PDF care-summary output, one consolidated Primary care visit-brief flow, and responsive Appointment Workspace fixes. The release also rotates PWA worker/cache identities so installed clients request the new visual and functional bundle.
+Pamet 1.6.4 keeps the 1.6.x strict-CSP and feature-owned architecture while tightening production consistency and scale controls. The release adds a canonical Free/Pro/Ultra catalog and full in-app feature matrix, clearer notification-health behavior, resilient GitHub OIDC scheduled-job verification for environments with restricted JWKS egress, scale-oriented MySQL indexes, and blocking plan/notification/database/performance release checks.
 
-The repository has automated production/security checks, MySQL-backed lifecycle integration coverage, dependency auditing, and a disposable backup → isolated-restore drill. Stronger production-assurance claims still depend on the external and provider-specific evidence listed below.
+The repository has automated production/security checks, MySQL-backed lifecycle integration, dependency auditing, a disposable backup → isolated-restore drill, live Wasmer acceptance, and admin parity. Stronger production-assurance claims still depend on external/provider evidence below.
 
 ## Implemented and verified in code / CI
 
 | Area | Production control |
 |---|---|
-| Runtime | One reviewed Express application behind a thin hardened production edge; explicit health and database-readiness handlers |
-| Release identity | `package.json` is canonical; server, browser runtime, Settings footer, Privacy/Safety support, mobile contract, and PWA release controls are checked for version consistency |
-| PWA release delivery | Worker URL, worker HTTP-cache behavior, shell cache name, and JS/CSS asset query tokens rotate with each release; versioned assets are not matched with `ignoreSearch` |
-| Brand / app icon | Refreshed green/teal/blue Pamet mark is used by in-app branding and PWA install assets, including 192 px, 512 px, and maskable icon variants |
-| Health history comparisons | 30/90/180-day comparisons normalize symptom frequency by logged days and summarize severity, sleep, stress, activity, data strength, and user-entered-data limitations |
-| Care summary portability | Health-history, caregiver, and primary-care outputs can be printed/saved as PDF locally; email sharing remains available when configured |
-| Appointment Workspace | Responsive constraints are applied to reduce overlapping, clipped, and cramped content across desktop/mobile viewport sizes |
-| Dark mode | Unified near-black/surface/elevated-surface system; dark mode is the final stylesheet override layer; Insights completeness/empty states, controls, forms, and common cards use readable dark surfaces and text |
-| Public files | Only the application shell, share page, manifest, service worker, and approved asset/bundle directories are served |
-| HTTP security | Strict CSP without script/style `unsafe-inline`, `script-src-attr 'none'`, `style-src-attr 'none'`, HSTS in production, frame denial, MIME-sniffing prevention, referrer/permissions policies, request IDs, and no-store API/share responses |
-| Authentication | Server-side password verification, breached-password screening, expiring HttpOnly sessions, cross-device login, legacy migration, remote session/device revocation, password recovery, and authenticator MFA |
-| Billing | Server-owned entitlements, exact Stripe price validation, idempotent subscription/customer creation, signed webhooks, and database webhook deduplication |
-| Sharing | Random hash-only tokens, expiry, revocation, plan enforcement, view/download permissions, snapshot limits, and failed-email rollback |
-| Encrypted sync | Ultra API stores versioned AES-256-GCM ciphertext produced in the browser; recovery keys are not transmitted to Pamet |
-| Local working-journal encryption | Not shipped; implementation remains review-gated and Pamet does not claim the working browser journal is encrypted at rest |
-| Reminders | User-consented Web Push subscriptions, VAPID delivery, appointment reminder scheduling, deduplication, and stale-subscription disabling |
-| CI | Production build, release/version/CSP/cache checks, unit/security/UI tests, dependency audit, MySQL-backed lifecycle integration, and disposable backup/restore drill |
-| Observability | Structured events, protected metrics, alert integration, Grafana Cloud OTLP logs/metrics, and readiness visibility |
+| Runtime | Express application behind hardened secure edge; health/readiness endpoints and no-store API behavior |
+| Release identity | `package.json` is canonical across server, browser, mobile contract, support surfaces and PWA controls |
+| PWA delivery | Worker URL/cache/static asset identity rotates per release and version CI rejects stale cache identities |
+| Plan consistency | `contracts/plan-features.json` generates display metadata; CI rejects drift from mobile/server entitlement rules |
+| Notification health | Settings checks support, permission and active subscription, with visible recheck and state-specific repair feedback |
+| Database scale | Scheduled-work indexes, cursor batching, explicit work limits and a documented per-instance connection budget |
+| Performance | Blocking raw/gzip production JS/CSS bundle budgets prevent unbounded front-end growth |
+| HTTP security | Strict CSP without script/style `unsafe-inline`, HSTS, frame denial, MIME/referrer/permissions controls and request IDs |
+| Authentication | Server-side password verification, breached-password screening, HttpOnly sessions, revocation, recovery and MFA |
+| Scheduled-job auth | GitHub OIDC signature + claim validation with network JWKS preference and automatically refreshed bundled public-key fallback |
+| Billing | Server-owned entitlements, exact Stripe price validation, idempotent creation, signed webhooks and event deduplication |
+| Sharing | Random hash-only tokens, expiry/revocation, plan enforcement, snapshot limits and failed-email rollback |
+| Encrypted sync | Ultra API stores versioned browser-produced ciphertext; Pamet does not receive the recovery key |
+| Working-journal encryption | Not shipped; remains independent-review gated |
+| Reminders | User-consented Web Push, bounded reminder jobs, deduplication and stale-subscription disabling |
+| CI | Build, CSP/version/cache/static checks, unit/security/UI tests, plan/notification/scale/performance gates, dependency audit, MySQL lifecycle and restore drill |
+| Observability | Structured events, metrics, readiness, Grafana OTLP and alert integration |
+
+## Scale posture
+
+Pamet does not have a fixed registered-user ceiling. `pamet_users.id` is `BIGINT UNSIGNED`; practical limits are application replicas, database connections/IO/storage, workload concurrency and provider quotas.
+
+The current theoretical default MySQL pool budget is 14 connections per application instance. Production replicas must be sized against the provider's real `max_connections` with reserve capacity. Do not blindly raise connection pools as traffic grows. See `docs/SCALING_AND_CAPACITY.md` and the blocking `scripts/check-db-capacity.js` gate.
+
+A numeric concurrent-user claim requires a production-like load test with p95/p99 latency, error rate, DB connection wait/utilization, CPU/memory/IOPS, and scheduled-job duration. Repository review alone cannot establish that number.
 
 ## Automated lifecycle integration gate
 
-GitHub Actions starts a disposable MySQL 8.4 service and launches the same `secure-server.js` production entry point used in deployment. Synthetic/test data and test-only network interception are used; production credentials, customer data, real charges, and real email delivery are not used.
+GitHub Actions starts MySQL 8.4 and launches the same `secure-server.js` production entry point used in deployment. Synthetic data/test network interception are used; production credentials, customer data, real charges and real email delivery are not used.
 
-The gate covers authentication/session lifecycle, password changes, legacy migration, logout-all, Stripe entitlement transitions and webhook idempotency, device revocation, sharing create/open/revoke, encrypted-sync revision conflicts, and paid-capability closure after downgrade. CI then performs a logical database backup and restores it into a separate schema with integrity checks.
+Coverage includes authentication/session lifecycle, password changes, legacy migration, logout-all, Stripe entitlement transitions/webhook idempotency, device revocation, sharing create/open/revoke, encrypted-sync revision conflicts, paid-capability closure after downgrade, and logical backup → isolated restore.
 
 ## Deployment configuration required
 
-Configure production secrets outside Git. Required integrations include MySQL, Stripe, Resend, scheduler secret, Redis/Valkey where used, VAPID, identity encryption, observability, metrics protection, and alerting. Keep controlled migrations separate from normal request startup and verify `/api/health` and `/api/ready` after each deployment.
+Configure secrets outside Git. Production integrations include MySQL, Stripe, Resend, Redis/Valkey where used, VAPID, identity encryption, observability, metrics protection and alerting. Scheduled GitHub jobs prefer OIDC and do not require a new long-lived GitHub-to-Pamet secret. Bundled OIDC verification material contains only public GitHub signing keys and is refreshed automatically.
+
+Run controlled database migrations separately from ordinary request startup. For 1.6.4, apply `db/migrations/2026-09-04-scale-indexes.sql` to an existing production schema and verify the indexes before declaring database scale acceptance.
 
 Approved Stripe catalog:
 
@@ -50,17 +59,17 @@ Approved Stripe catalog:
 
 ## External and environment-specific launch gates
 
-These cannot honestly be marked complete by repository CI alone:
+Repository CI cannot honestly mark these complete:
 
-1. **Provider backup/restore:** perform a real production-provider PITR or isolated full restore and record achieved RPO/RTO, retention, encryption, and evidence.
-2. **Controlled live billing:** exercise production checkout, trial, cancellation, failed payment, billing portal, webhook retry, and entitlement reconciliation with controlled accounts.
-3. **Deployed dependency acceptance:** verify database TLS, rate limiting/cache as applicable, email, Web Push, logs/metrics, alerts, and `/api/ready` in the actual environment.
-4. **Independent security assurance:** penetration testing plus remediation/retest evidence.
-5. **Independent accessibility assurance:** WCAG 2.2 AA review covering keyboard, screen reader, zoom/reflow, touch, modals, light/dark, and mobile states.
-6. **Independent cryptographic review:** required before enabling or marketing encrypted working-journal storage.
-7. **Privacy/legal/vendor posture:** qualified review of actual data flows, HIPAA applicability, BAA/DPA requirements, consumer-health-data obligations, retention/deletion, and product claims.
-8. **Legacy authentication sunset:** retire compatibility credentials only after measured migration/sunset criteria are satisfied.
+1. provider production PITR/full restore with measured RPO/RTO (#47);
+2. controlled production Stripe lifecycle acceptance (#46);
+3. deployed dependency/provider acceptance including alert receipt/escalation (#49);
+4. independent penetration testing and retest (#43);
+5. independent WCAG 2.2 AA review and retest (#44);
+6. independent cryptographic review before encrypted working-journal storage (#48);
+7. qualified privacy/legal/vendor review (#45);
+8. legacy authentication sunset after production migration telemetry (#8).
 
 ## Release decision
 
-Pamet 1.6.3 should be treated as release-ready only after exact-head CI is green and the deployed environment confirms the same 1.6.3 release identity and current visual/functional bundle. Independent/provider gates remain open until actual evidence exists.
+Pamet 1.6.4 is merge-ready only after exact-head CI is green. It is production-green only after the merged SHA also passes live Wasmer version/readiness, scheduled-job OIDC acceptance and admin parity. Provider/independent gates remain explicitly open until real evidence exists.

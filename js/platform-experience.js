@@ -13,18 +13,25 @@
     if (!health) return 'Checking notification status…';
     if (!health.supported) return 'Closed-app notifications are not supported by this browser.';
     if (health.permission === 'denied') return 'Notifications are blocked in browser or device settings.';
-    if (health.permission === 'default') return 'Notification permission has not been decided yet.';
-    if (health.permission === 'granted' && !health.subscribed) return 'Permission is allowed, but this device is not subscribed.';
-    return 'Notifications are available on this device.';
+    if (health.permission === 'default') return 'Notifications have not been enabled on this device yet.';
+    if (health.permission === 'granted' && !health.subscribed) return 'Permission is allowed, but this device is not subscribed to Pamet reminders.';
+    return 'Notifications are ready on this device.';
   }
 
   function setStatus(health) {
     const output = document.querySelector('#pametNotificationHealthText');
     const repair = document.querySelector('#pametNotificationRepair');
+    const checked = document.querySelector('#pametNotificationCheckedAt');
     if (!output) return;
     output.textContent = statusText(health);
     output.dataset.state = health?.needsAttention ? 'attention' : 'ok';
-    if (repair) repair.hidden = !health?.needsAttention;
+    if (checked && health) checked.textContent = `Checked ${new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}.`;
+    if (!repair) return;
+    repair.hidden = !health?.needsAttention;
+    if (health?.permission === 'default') repair.textContent = 'Enable notifications';
+    else if (health?.permission === 'denied') repair.textContent = 'How to enable';
+    else if (health?.permission === 'granted' && !health?.subscribed) repair.textContent = 'Repair subscription';
+    else repair.textContent = 'Repair';
   }
 
   async function repairNotifications() {
@@ -39,7 +46,9 @@
 
     if (health.permission === 'denied') {
       const output = document.querySelector('#pametNotificationHealthText');
-      if (output) output.textContent = 'Open your browser or device site settings, allow notifications for Pamet, then choose Check again.';
+      const checked = document.querySelector('#pametNotificationCheckedAt');
+      if (output) output.textContent = 'Allow notifications for Pamet in this browser or device’s site settings, return here, then choose Check again.';
+      if (checked) checked.textContent = 'Pamet cannot change browser or operating-system permission settings for you.';
       return;
     }
 
@@ -47,15 +56,35 @@
       try { await Notification.requestPermission(); } catch { /* browser controls permission UX */ }
     }
 
-    const next = await platform.notificationHealth();
+    let next = await platform.notificationHealth();
     if (next.permission === 'granted' && !next.subscribed) {
       const daily = document.querySelector('#setDailyReminder');
       if (daily) {
         if (!daily.checked) daily.click();
         else daily.dispatchEvent(new Event('change', { bubbles: true }));
       }
+      await new Promise((resolve) => setTimeout(resolve, 350));
+      next = await platform.notificationHealth();
     }
-    setTimeout(() => platform.notificationHealth(), 300);
+    setStatus(next);
+  }
+
+  async function recheckNotifications() {
+    const button = document.querySelector('#pametNotificationRecheck');
+    const output = document.querySelector('#pametNotificationHealthText');
+    const checked = document.querySelector('#pametNotificationCheckedAt');
+    if (button) button.disabled = true;
+    if (output) output.textContent = 'Checking notification permission and device subscription…';
+    if (checked) checked.textContent = '';
+    try {
+      const next = await window.PametPlatform?.notificationHealth?.();
+      if (next) setStatus(next);
+      else if (output) output.textContent = 'Notification status is not available yet.';
+    } catch {
+      if (output) output.textContent = 'Pamet could not refresh notification status. Try again.';
+    } finally {
+      if (button) button.disabled = false;
+    }
   }
 
   function downloadData() {
@@ -96,7 +125,8 @@
         <div>
           <strong>Notification health</strong>
           <p id="pametNotificationHealthText" class="platform-setting-status" role="status">Checking notification status…</p>
-          <p class="platform-setting-help">Pamet can check permission and subscription state, but browser or operating-system settings may still require a manual change.</p>
+          <p id="pametNotificationCheckedAt" class="platform-setting-help" aria-live="polite"></p>
+          <p class="platform-setting-help">This checks whether the browser supports notifications, whether permission is allowed, and whether this device has an active Pamet push subscription. It does not read or send health-journal content.</p>
         </div>
         <div class="platform-setting-actions">
           <button type="button" class="btn secondary platform-setting-action" id="pametNotificationRepair" hidden>Repair</button>
@@ -110,8 +140,8 @@
 
     section.querySelector('#pametDownloadData')?.addEventListener('click', downloadData);
     section.querySelector('#pametNotificationRepair')?.addEventListener('click', repairNotifications);
-    section.querySelector('#pametNotificationRecheck')?.addEventListener('click', () => window.PametPlatform?.notificationHealth?.());
-    window.PametPlatform?.notificationHealth?.().then(setStatus);
+    section.querySelector('#pametNotificationRecheck')?.addEventListener('click', recheckNotifications);
+    window.PametPlatform?.notificationHealth?.().then(setStatus).catch(() => {});
     return section;
   }
 

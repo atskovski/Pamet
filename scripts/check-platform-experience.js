@@ -15,7 +15,9 @@ check(main.includes('import "./platform-experience.js"'), 'Platform Settings exp
 check(cssEntry.includes('@import "./platform-experience.css"'), 'Platform Settings styles must be part of the production CSS bundle.');
 check(client.includes('Download my Pamet data') && client.includes('downloadJson'), 'Data portability UI must remain wired to the local export contract.');
 check(client.includes('Notification health') && client.includes('notificationHealth'), 'Notification-health UI must remain wired to platform health checks.');
-check(client.includes('browser or device site settings'), 'Denied-notification recovery must provide a manual recovery path.');
+check(client.includes('browser or device’s site settings') && client.includes('Check again'), 'Denied-notification recovery must provide a manual browser/OS recovery path.');
+check(client.includes('Checking notification permission and device subscription') && client.includes('button.disabled = true'), 'Notification recheck must visibly communicate active status checking.');
+check(client.includes('does not read or send health-journal content'), 'Notification health must explain its data boundary.');
 check(!client.includes('style='), 'Platform Settings experience must remain compatible with strict style CSP.');
 check(css.includes('#141A1E') && css.includes('#F2F5F4'), 'Platform Settings dark mode must retain readable dark-surface contrast.');
 

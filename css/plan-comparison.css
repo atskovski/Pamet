@@ -1,0 +1,29 @@
+/* Pamet plan comparison — canonical Free / Pro / Ultra matrix. */
+.plan-compare { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+.plan-card { min-width:0; padding:16px; border:1px solid var(--border-color); border-radius:14px; background:var(--card-bg); }
+.plan-card.active { border-color:var(--pamet-sage); box-shadow:inset 0 0 0 1px var(--pamet-sage); }
+.plan-card-head { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+.plan-card h4 { margin:0; }
+.plan-card-price { margin:6px 0 2px; font-size:18px; font-weight:750; }
+.plan-card-summary { margin:0; color:var(--text-secondary); font-size:13px; line-height:1.45; }
+.plan-current-badge { flex:0 0 auto; padding:3px 8px; border-radius:999px; background:var(--sage-light); color:var(--pamet-sage-dark); font-size:11px; font-weight:750; }
+.plan-full-compare { margin-top:12px; }
+.plan-full-compare .btn { width:100%; min-height:44px; }
+.plan-matrix-dialog { width:min(960px,calc(100vw - 28px)); max-height:min(84vh,820px); padding:0; border:0; border-radius:18px; background:var(--card-bg); color:var(--text-primary); box-shadow:0 24px 72px rgba(0,0,0,.28); }
+.plan-matrix-dialog::backdrop { background:rgba(10,24,20,.58); }
+.plan-matrix-shell { display:flex; flex-direction:column; max-height:inherit; }
+.plan-matrix-head { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; padding:20px 22px 14px; border-bottom:1px solid var(--border-color); }
+.plan-matrix-head h2 { margin:0; font-size:22px; }
+.plan-matrix-head p { margin:5px 0 0; color:var(--text-secondary); font-size:13px; line-height:1.45; }
+.plan-matrix-close { flex:0 0 auto; width:40px; height:40px; border:1px solid var(--border-color); border-radius:50%; background:var(--card-bg); color:var(--text-primary); font-size:22px; cursor:pointer; }
+.plan-matrix-scroll { overflow:auto; padding:0 22px 18px; }
+.plan-matrix-table { width:100%; border-collapse:separate; border-spacing:0; min-width:650px; }
+.plan-matrix-table th,.plan-matrix-table td { padding:12px 10px; border-bottom:1px solid var(--border-color); text-align:center; vertical-align:middle; }
+.plan-matrix-table th:first-child,.plan-matrix-table td:first-child { text-align:left; min-width:300px; }
+.plan-matrix-table thead th { position:sticky; top:0; z-index:1; background:var(--card-bg); font-size:13px; }
+.plan-matrix-table .current-plan-column { background:color-mix(in srgb,var(--sage-light) 55%,transparent); }
+.plan-matrix-yes { font-weight:800; color:var(--pamet-sage-dark); }
+.plan-matrix-no { color:var(--text-secondary); }
+.plan-matrix-pricing { display:block; margin-top:3px; color:var(--text-secondary); font-size:11px; font-weight:500; }
+.plan-matrix-foot { padding:14px 22px 20px; border-top:1px solid var(--border-color); color:var(--text-secondary); font-size:12px; line-height:1.45; }
+@media(max-width:760px){.plan-compare{grid-template-columns:1fr}.plan-matrix-dialog{width:calc(100vw - 16px);max-height:92vh}.plan-matrix-head,.plan-matrix-foot{padding-left:16px;padding-right:16px}.plan-matrix-scroll{padding-left:16px;padding-right:16px}.plan-matrix-table th:first-child,.plan-matrix-table td:first-child{min-width:230px}}

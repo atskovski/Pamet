@@ -1,8 +1,8 @@
-/* Pamet v1.6.3 in-app safety, privacy, and troubleshooting guidance. */
+/* Pamet v1.6.4 in-app safety, privacy, and troubleshooting guidance. */
 (() => {
   'use strict';
 
-  const VERSION = window.PametVersion || '1.6.3';
+  const VERSION = window.PametVersion || '1.6.4';
   const SAFETY = 'Pamet is not emergency monitoring, a diagnostic service, a clinical decision tool, or a replacement for professional medical care.';
 
   function closeDialog(dialog) {
@@ -72,7 +72,7 @@
             <li>Check that you are online, then try the action once more.</li>
             <li>Refresh Pamet. Your local journal should remain on this browser/device.</li>
             <li>If an account or entitlement screen looks stale, log out and sign back in.</li>
-            <li>For notifications, confirm browser/device notification permission is enabled.</li>
+            <li>For notifications, use Notification health in Settings to check browser permission and this device's push subscription.</li>
             <li>For billing, sharing, or sync issues, wait a moment and retry rather than submitting the same action repeatedly.</li>
           </ol>
           <p>If the problem continues, use <strong>Help improve Pamet</strong> in Settings and choose “Something isn’t working.” Do not include medical details, passwords, recovery keys, payment-card data, or other secrets in feedback.</p>

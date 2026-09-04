@@ -1,5 +1,5 @@
-/* Pamet v1.6.3 production entrypoint. Keep dependency order explicit here. */
-const PAMET_VERSION = '1.6.3';
+/* Pamet v1.6.4 production entrypoint. Keep dependency order explicit here. */
+const PAMET_VERSION = '1.6.4';
 window.PametVersion = PAMET_VERSION;
 window.PametLoadedVersion = PAMET_VERSION;
 
@@ -7,7 +7,9 @@ window.PametLoadedVersion = PAMET_VERSION;
 import "./performance.js";
 import "./auth.js";
 import "./oauth-login.js";
+import "./plan-catalog.generated.js";
 import "./store.js";
+import "./plan-comparison.js";
 import "./platform-foundation.js";
 import "./icons.js";
 import "./app.js";
@@ -75,7 +77,7 @@ window.addEventListener('load', () => {
 /* Release-specific worker URL + updateViaCache:none prevents old PWA shells from masking a new release. */
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js?v=1630', { updateViaCache: 'none' })
+    navigator.serviceWorker.register('sw.js?v=1640', { updateViaCache: 'none' })
       .then((registration) => registration.update().catch(() => {}))
       .catch(() => {});
   });
