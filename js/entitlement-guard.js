@@ -29,6 +29,24 @@
     'accountSecurity', 'push', 'weeklyDigest', 'noAds'
   ]);
   const ALIASES = Object.freeze({ whatChanged:'correlations', medicationTiming:'correlations' });
+  const FEATURE_LABELS = Object.freeze({
+    correlations:'Deeper Insights',
+    unlimitedHistory:'Unlimited history',
+    sharing:'Caregiver and provider sharing',
+    appointmentWorkspace:'Appointment Workspace',
+    multipleProfiles:'Multiple health profiles',
+    advancedVisitBrief:'Advanced Visit Brief',
+    encryptedSync:'Encrypted multi-device sync',
+    whatChanged:'What Changed',
+    medicationTiming:'Medication-timing observations'
+  });
+  const PHASE2_REQUIREMENTS = Object.freeze({
+    profiles:Object.freeze({ feature:'multipleProfiles', label:'Multiple health profiles' }),
+    prep:Object.freeze({ feature:'appointmentWorkspace', label:'Appointment Workspace' }),
+    longitudinal:Object.freeze({ plans:Object.freeze(['ultra']), label:'Health history over time' }),
+    brief:Object.freeze({ feature:'advancedVisitBrief', label:'Advanced Visit Brief' }),
+    sharing:Object.freeze({ plans:Object.freeze(['ultra']), label:'Advanced sharing' })
+  });
   const nativeFetch = window.fetch.bind(window);
   const originalSwitchProfile = S.switchProfile?.bind(S);
   const originalRemoveProfile = S.removeProfile?.bind(S);
@@ -139,30 +157,129 @@
     return refreshPromise;
   }
 
-  function requireCapability(feature, event) {
-    if (has(feature)) return true;
+  function catalogFeature(feature) {
+    const catalog = window.PametPlanCatalog;
+    if (!Array.isArray(catalog?.features)) return null;
+    return catalog.features.find((item) => item.id === feature) || catalog.features.find((item) => item.id === (ALIASES[feature] || feature)) || null;
+  }
+
+  function requirementPlans(requirement) {
+    if (Array.isArray(requirement?.plans) && requirement.plans.length) return requirement.plans.filter((key) => ['pro','ultra'].includes(key));
+    const feature = requirement?.feature;
+    const definition = catalogFeature(feature);
+    if (definition) return ['pro','ultra'].filter((key) => definition[key] === true);
+    const capability = ALIASES[feature] || feature;
+    return ['pro','ultra'].filter((key) => MATRIX[key]?.[capability] === true);
+  }
+
+  function requirementAllowed(requirement) {
+    if (!requirement) return true;
+    if (Array.isArray(requirement.plans)) return state.verified === true && requirement.plans.includes(state.plan);
+    return has(requirement.feature);
+  }
+
+  function lockCopy(plans) {
+    const proAndUltra = plans.includes('pro') && plans.includes('ultra');
+    if (proAndUltra) return {
+      included:'Pro and Ultra',
+      description:'Pro adds deeper insights and secure sharing for individual tracking. Ultra includes everything in Pro, plus family profiles, coordinated care, and appointment preparation.'
+    };
+    return {
+      included:'Ultra',
+      description:'Ultra is designed for family profiles, coordinated care, and appointment preparation. Pro remains the best fit for individual tracking and insights.'
+    };
+  }
+
+  function closeLock(root) {
+    if (root) root.innerHTML = '';
+  }
+
+  function showPlanLock(requirement) {
+    const plans = requirementPlans(requirement);
+    const copy = lockCopy(plans);
+    const feature = requirement?.feature;
+    const label = requirement?.label || FEATURE_LABELS[feature] || catalogFeature(feature)?.label || 'This feature';
+    let root = document.querySelector('#pametEntitlementModalRoot');
+    if (!root) {
+      root = document.createElement('div');
+      root.id = 'pametEntitlementModalRoot';
+      document.body.appendChild(root);
+    }
+    root.innerHTML = `<div class="pamet-modal-backdrop care-ux-backdrop"><section class="pamet-modal phase2-modal entitlement-lock-modal" role="dialog" aria-modal="true" aria-labelledby="pametEntitlementLockTitle"><div class="pamet-modal-head"><div><h2 class="pamet-modal-title" id="pametEntitlementLockTitle">${String(label).replace(/[&<>"']/g, (char) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]))} is included with ${copy.included}</h2><p class="pamet-modal-sub">${copy.description}</p></div><button type="button" class="pamet-close" data-entitlement-close aria-label="Close">×</button></div><button type="button" class="btn btn-primary btn-block" data-entitlement-see-plans>See Pro &amp; Ultra</button></section></div>`;
+    root.querySelectorAll('[data-entitlement-close]').forEach((button) => button.addEventListener('click', () => closeLock(root)));
+    root.querySelector('.pamet-modal-backdrop')?.addEventListener('click', (event) => { if (event.target === event.currentTarget) closeLock(root); });
+    root.querySelector('[data-entitlement-see-plans]')?.addEventListener('click', () => {
+      closeLock(root);
+      const upgrade = document.querySelector('#upgradeBtn');
+      if (upgrade && !upgrade.disabled) upgrade.click();
+      else window.PametPlanComparison?.open?.(state.plan);
+    });
+    requestAnimationFrame(() => root.querySelector('[data-entitlement-see-plans]')?.focus());
+    return root;
+  }
+
+  function requireAccess(requirement, event) {
+    if (requirementAllowed(requirement)) return true;
     event?.preventDefault?.();
     event?.stopImmediatePropagation?.();
-    const upgrade = document.querySelector('#upgradeBtn');
-    if (upgrade && !upgrade.disabled) upgrade.click();
+    showPlanLock(requirement);
     return false;
   }
 
-  /* Stop paid UI surfaces before feature handlers run. Locked controls may remain
-   * visible as upgrade discovery, but they cannot open the paid workflow. */
+  function requireCapability(feature, event, label) {
+    return requireAccess({ feature, label }, event);
+  }
+
+  function shareRequirement(target) {
+    const rowText = String(target?.closest?.('.setting-row')?.textContent || '').toLowerCase();
+    const kind = target?.dataset?.enhancedCareShare || target?.dataset?.careShare || (rowText.includes('primary care') ? 'provider' : rowText.includes('caregiver') ? 'caregiver' : '');
+    return { feature:'sharing', label:kind === 'provider' ? 'Primary care sharing' : kind === 'caregiver' ? 'Caregiver sharing' : 'Caregiver and provider sharing' };
+  }
+
+  /* Stop every visible paid UI surface before feature handlers run. Locked controls
+   * remain visible for discovery, but Free users get a feature-specific plan nudge
+   * instead of entering the paid workflow. The event handler is capture-phase so
+   * later feature modules cannot open their modals first. */
   document.addEventListener('click', (event) => {
-    const target = event.target?.closest?.('[data-care-share],[data-enhanced-care-share],[data-phase2],#quickProfileButton');
+    const target = event.target?.closest?.('[data-care-share],[data-enhanced-care-share],.care-access-action,[data-phase2],[data-pamet-entitlement],#quickProfileButton,#phase2ManageProfilesTop');
     if (!target) return;
-    if (target.id === 'quickProfileButton') return void requireCapability('multipleProfiles', event);
-    if (target.matches('[data-care-share],[data-enhanced-care-share]') || target.dataset.phase2 === 'sharing') return void requireCapability('sharing', event);
-    if (target.dataset.phase2 === 'prep') return void requireCapability('appointmentWorkspace', event);
+    if (target.id === 'quickProfileButton' || target.id === 'phase2ManageProfilesTop') return void requireCapability('multipleProfiles', event, 'Multiple health profiles');
+    if (target.dataset.pametEntitlement) return void requireCapability(target.dataset.pametEntitlement, event, target.dataset.pametEntitlementLabel || undefined);
+    if (target.matches('[data-care-share],[data-enhanced-care-share],.care-access-action')) return void requireAccess(shareRequirement(target), event);
+    const phaseRequirement = PHASE2_REQUIREMENTS[target.dataset.phase2];
+    if (phaseRequirement) return void requireAccess(phaseRequirement, event);
   }, true);
+
+  function wrapPublicMethod(object, key, requirementForArgs) {
+    const original = object?.[key];
+    if (typeof original !== 'function' || original.__pametEntitlementWrapped) return;
+    const wrapped = function (...args) {
+      const requirement = typeof requirementForArgs === 'function' ? requirementForArgs(...args) : requirementForArgs;
+      if (!requireAccess(requirement)) return false;
+      return original.apply(this, args);
+    };
+    try { Object.defineProperty(wrapped, '__pametEntitlementWrapped', { value:true }); } catch {}
+    try { object[key] = wrapped; } catch {}
+  }
+
+  /* Exported feature APIs are hardened too so application code cannot bypass the
+   * same plan boundary by calling a public helper instead of clicking its control. */
+  function hardenPublicPaidApis() {
+    wrapPublicMethod(window.PametCareUx, 'openShare', (kind) => ({ feature:'sharing', label:kind === 'provider' ? 'Primary care sharing' : 'Caregiver sharing' }));
+    wrapPublicMethod(window.PametCareUx, 'openAppointmentWorkspace', { feature:'appointmentWorkspace', label:'Appointment Workspace' });
+    wrapPublicMethod(window.PametCareSharingEnhancements, 'open', (kind) => ({ feature:'sharing', label:kind === 'provider' ? 'Primary care sharing' : 'Caregiver sharing' }));
+    wrapPublicMethod(window.PametPhase2, 'manageProfiles', { feature:'multipleProfiles', label:'Multiple health profiles' });
+    wrapPublicMethod(window.PametPhase2, 'appointmentPrep', { feature:'appointmentWorkspace', label:'Appointment Workspace' });
+    wrapPublicMethod(window.PametPhase2, 'advancedSharing', { plans:['ultra'], label:'Advanced sharing' });
+  }
 
   window.addEventListener('pamet:login', refresh);
   window.addEventListener('pamet:registered', refresh);
   window.addEventListener('pamet:logout', () => apply(null, false));
   window.addEventListener('pamet:logout-all', () => apply(null, false));
   window.addEventListener('focus', () => { if (A.isAuthed?.()) refresh(); });
+  document.addEventListener('DOMContentLoaded', hardenPublicPaidApis, { once:true });
+  document.addEventListener('pamet:settings-rendered', hardenPublicPaidApis);
 
   /* Observe only successful billing synchronization. The entitlement response is
    * still fetched independently; the billing response itself never grants access. */
@@ -178,5 +295,5 @@
   /* Fail closed immediately, then verify asynchronously. */
   apply(null, false);
   refresh();
-  window.PametEntitlements = Object.freeze({ has, refresh, snapshot });
+  window.PametEntitlements = Object.freeze({ has, refresh, snapshot, require:requireCapability, requireAccess, showPlanLock });
 })();

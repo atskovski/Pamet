@@ -58,8 +58,12 @@ check(guard.includes('configurable:false') && guard.includes('S.setPlan = () => 
 check(guard.includes("if (mismatch) return apply(null, false);"), 'Contradictory server capability payloads must fail closed.');
 check(guard.includes("S.patterns = (...args) => has('correlations')"), 'Legacy correlation output must require Pro/Ultra.');
 check(guard.includes("target !== 'primary' && !has('multipleProfiles')"), 'Non-primary profile switching must require Ultra.');
-check(guard.includes("requireCapability('sharing', event)"), 'Paid sharing UI must be intercepted before Free can open the workflow.');
-check(guard.includes("requireCapability('appointmentWorkspace', event)"), 'Appointment Workspace UI must be intercepted before Free/Pro can open it.');
+check(guard.includes("target.matches('[data-care-share],[data-enhanced-care-share],.care-access-action')") && guard.includes("rowText.includes('primary care')") && guard.includes("rowText.includes('caregiver')") && guard.includes("feature:'sharing'"), 'Final caregiver/provider sharing controls must be intercepted even after UI refinement rewrites their data attributes.');
+check(guard.includes("prep:Object.freeze({ feature:'appointmentWorkspace'") && guard.includes('PHASE2_REQUIREMENTS[target.dataset.phase2]'), 'Appointment Workspace UI must be intercepted before Free/Pro can open it.');
+check(guard.includes("profiles:Object.freeze({ feature:'multipleProfiles'") && guard.includes("brief:Object.freeze({ feature:'advancedVisitBrief'"), 'Ultra profile and Advanced Visit Brief controls must stay behind the plan boundary.');
+check(guard.includes("longitudinal:Object.freeze({ plans:Object.freeze(['ultra'])") && guard.includes("sharing:Object.freeze({ plans:Object.freeze(['ultra'])"), 'Prepare-with-Ultra advanced controls must not fall through to Pro or Free.');
+check(guard.includes("included:'Pro and Ultra'") && guard.includes("included:'Ultra'") && guard.includes('See Pro &amp; Ultra'), 'Locked paid controls must render plan-aware upgrade copy instead of opening the feature.');
+check(guard.includes("wrapPublicMethod(window.PametCareUx, 'openAppointmentWorkspace'") && guard.includes("wrapPublicMethod(window.PametPhase2, 'manageProfiles'"), 'Public paid-feature helpers must not bypass the same entitlement boundary.');
 
 const billingIndex = main.indexOf('import "./billing-sharing.js";');
 const guardIndex = main.indexOf('import "./entitlement-guard.js";');
