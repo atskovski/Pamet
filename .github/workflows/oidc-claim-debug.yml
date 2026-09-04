@@ -1,0 +1,31 @@
+name: Temporary OIDC claim diagnostic
+
+on:
+  push:
+    branches: [fix/job-auth-oidc-acceptance]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print non-sensitive GitHub OIDC claims
+        run: |
+          set -euo pipefail
+          OIDC_RESPONSE="$(curl --fail-with-body --silent --show-error \
+            -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=pamet-production-jobs")"
+          OIDC_TOKEN="$(printf '%s' "$OIDC_RESPONSE" | python3 -c 'import json,sys; print(json.load(sys.stdin)["value"])')"
+          export OIDC_TOKEN
+          python3 - <<'PY'
+          import os, json, base64
+          token=os.environ['OIDC_TOKEN']
+          payload=token.split('.')[1]
+          payload += '=' * (-len(payload) % 4)
+          claims=json.loads(base64.urlsafe_b64decode(payload).decode())
+          keys=['iss','aud','repository','ref','event_name','workflow_ref','job_workflow_ref','sub','run_id']
+          print(json.dumps({k:claims.get(k) for k in keys}, indent=2, sort_keys=True))
+          PY
