@@ -1,4 +1,4 @@
-/* Pamet v1.6.3 production stylesheet entrypoint. */
+/* Pamet v1.6.4 production stylesheet entrypoint. */
 @import "./styles.css";
 @import "./brand.css";
 @import "./release-base.css";
@@ -16,4 +16,5 @@
 @import "./care-ux.css";
 @import "./ui-ux.css";
 @import "./care-sharing-enhancements.css";
+@import "./plan-comparison.css";
 @import "./dark-mode.css";
