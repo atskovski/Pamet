@@ -131,7 +131,11 @@
   function refresh() { normalizeVisitBriefLanguage(); installCalendarTools(); installAccessibility(); window.PametIcons?.hydrate(); }
   document.addEventListener('click', (event) => { focusActiveScreen(event); if (event.target.closest('[data-tab="calendar"],#calPrev,#calNext')) setTimeout(installCalendarTools,0); });
   document.addEventListener('keydown', (event) => { if (event.key === 'Escape') document.querySelector('#quickProfileRoot [data-quick-close]')?.click(); });
-  document.addEventListener('pamet:settings-rendered', refresh); window.addEventListener('pamet:login', () => setTimeout(refresh,30));
-  const observer = new MutationObserver(() => requestAnimationFrame(refresh)); observer.observe(document.body,{childList:true,subtree:true});
+  document.addEventListener('pamet:settings-rendered', refresh);
+  window.addEventListener('pamet:login', () => setTimeout(refresh,30));
+  window.addEventListener('pamet:registered', () => setTimeout(refresh,30));
+  window.addEventListener('pamet:profile-updated', () => setTimeout(refresh,0));
+  window.addEventListener('pamet:entry-saved', () => setTimeout(installCalendarTools,0));
+  window.addEventListener('pageshow', refresh);
   refresh();
 })();
