@@ -13,6 +13,8 @@ import "./analytics-engine.js";
 import "./plan-comparison.js";
 import "./platform-foundation.js";
 import "./icons.js";
+/* Plan-aware field limits and canonical medication options must be installed before app.js builds the log form. */
+import "./tracking-intelligence.js";
 import "./app.js";
 import "./home-dashboard.js";
 import "./home-dashboard-lifecycle.js";
@@ -31,7 +33,6 @@ import "./security.js";
 import "./login-experience.js";
 import "./product-clarity.js";
 import "./insights.js";
-import "./tracking-intelligence.js";
 import "./experience.js";
 import "./care-ux.js";
 import "./ui-ux.js";
