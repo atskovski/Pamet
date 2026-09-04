@@ -1,5 +1,5 @@
 /* Pamet v1.6.5 service worker: release-specific shell caching plus user-approved Web Push; API/share data is never cached. */
-const CACHE="pamet-shell-v165-4";
+const CACHE="pamet-shell-v165-5";
 const SHELL=["/","/index.html","/dist/pamet.min.css?v=165","/dist/pamet.min.js?v=165","/manifest.webmanifest","/assets/pamet-mark.svg?v=165","/assets/icon-192.png","/assets/icon-512.png","/assets/icon-maskable-512.png","/assets/login-sunrise.jpg"];
 const PATHS=new Set(SHELL.map(path=>new URL(path,self.location.origin).pathname));
 const STATIC_PREFIXES=["/dist/","/assets/"];
