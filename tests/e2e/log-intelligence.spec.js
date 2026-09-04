@@ -86,13 +86,15 @@ test('@production v1.6.6 logging milestones and Home observation toggle stay in 
 
   await page.locator('#openLog').click();
   await page.locator('#symptomGrid .sym-btn', { hasText: 'Headache' }).click();
+  await page.locator('#moodFlow .chip').filter({ hasText: 'Okay' }).first().click();
+  await page.locator('#activityFlow .chip').filter({ hasText: 'Walk' }).first().click();
   await page.locator('#saveEntry').click();
   await expect(page.locator('#logSuccess')).toBeVisible();
   await expect(page.locator('#pametRewardDays')).toHaveText('1');
   await expect(page.locator('[data-tier-key="bronze"]')).toHaveClass(/is-current/);
   await expect(page.locator('#insightBanner')).toBeVisible();
+  await expect(page.locator('#logBackdrop')).not.toHaveClass(/open/);
 
-  await page.locator('#closeLog').click();
   await page.locator('[data-tab="settings"]').click();
   await expect(page.locator('#setShowInsight')).toBeChecked();
   await page.locator('#setShowInsight').uncheck();
