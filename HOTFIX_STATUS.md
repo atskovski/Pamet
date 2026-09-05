@@ -1,32 +1,25 @@
-# Pamet 1.6.8 Data Quality Hotfix
+# Pamet 1.6.9 Data Quality Layout Hotfix
 
 Date: 2026-09-04  
-Base release: **Pamet 1.6.7**  
-Assurance baseline: **Pamet 1.6.7**
+Base release: **Pamet 1.6.8**  
+Assurance baseline: **Pamet 1.6.8**
 
 ## Scope
 
-Pamet 1.6.8 is a patch-only client clarity, layout, and release-test reliability hotfix. It does not change the database schema, authentication model, billing behavior, server-side entitlement enforcement, encryption design, dependency specifications, or health-analysis safety boundaries reviewed for 1.6.7.
+Pamet 1.6.9 is a patch-only presentation fix for the Patterns / Data Quality card. It does not change the database schema, authentication model, billing behavior, server-side entitlement enforcement, encryption design, or dependency specifications reviewed for 1.6.8.
 
 ## Fixes
 
-- Renames the Patterns completeness summary to Data Quality and centers its primary content.
-- Separates days logged from completeness of the entries that were actually logged.
-- Uses explicit copy such as “100% of logged entries complete” and “1 of 7 days logged” so the score cannot be mistaken for a logging streak.
-- Keeps Data Quality copy synchronized to the selected 7, 30, 60, or 90-day window.
-- Retains the per-field completeness breakdown for symptoms, sleep, stress, hydration, activity, medications, and notes.
-- Uses isolated synthetic sessions for feature UI smoke tests so repeated browser validation does not create real accounts or trigger registration throttles.
+- Removes the legacy high-specificity flex rule from the Data Quality summary rendering path.
+- Presents Data Quality as one centered hierarchy rather than several narrow side-by-side text columns.
+- Keeps logging consistency separate from logged-entry completeness.
+- Uses responsive coverage details: four columns on wide desktop, two on tablet, and one on narrow mobile.
+- Adds Chromium, Firefox, and mobile regression coverage for computed layout, centering, and typography.
 
 ## Release gate
 
-The hotfix is not considered live until all of the following are true:
-
-1. Exact-head CI quality, unit/security, MySQL integration, and Chromium/Firefox/mobile UI-integrity checks are green.
-2. The hotfix PR is squash-merged to `main` without bypassing unresolved gates.
-3. Wasmer deploys the merged `main` SHA.
-4. Production `/api/health` reports `1.6.8`.
-5. Production desktop/mobile browser smoke passes against the deployed SHA.
+The hotfix is not considered live until exact-head CI, merge, Wasmer deployment verification, production browser smoke, and admin parity are green.
 
 ## Assurance note
 
-Existing penetration, accessibility, legal/compliance, provider, capacity, and production-readiness records that explicitly identify Pamet 1.6.7 remain the evidence baseline for this patch. This document does not convert repository/self-review evidence into an independent certification and does not claim that external assurance was rerun merely because the patch version changed.
+Existing external/provider assurance remains inherited from the 1.6.8 baseline. This patch does not claim that penetration, accessibility, legal/compliance, cryptographic, or provider assurance was independently rerun.

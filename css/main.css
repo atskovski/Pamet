@@ -1,4 +1,4 @@
-/* Pamet v1.6.8 production stylesheet entrypoint. Log intelligence loads before the final dark-mode override layer. */
+/* Pamet v1.6.9 production stylesheet entrypoint. Log intelligence loads before the final dark-mode override layer. */
 @import "./styles.css";
 @import "./brand.css";
 @import "./release-base.css";
