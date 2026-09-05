@@ -14,8 +14,10 @@ async function installUltra(page){
 }
 async function ready(page){
   await page.goto('/',{waitUntil:'commit'});
-  await page.waitForFunction(()=>window.PametAuthenticatedFeaturesLoaded===true&&!!window.PametVisitWorkflow&&!!window.PametAdvancedVisitBrief&&!!window.PametCareUx);
+  await page.waitForFunction(()=>window.PametAuthenticatedFeaturesLoaded===true&&!!window.PametVisitWorkflowLoader&&!!window.PametAdvancedVisitBrief&&!!window.PametCareUx);
   await expect.poll(()=>page.evaluate(()=>window.PametEntitlements?.snapshot?.().plan)).toBe('ultra');
+  await page.evaluate(()=>window.PametVisitWorkflowLoader.load());
+  await page.waitForFunction(()=>!!window.PametVisitWorkflow);
 }
 
 test('@production Visit Brief explains Appointment Workspace dependency and back arrow returns to Settings',async({page})=>{
