@@ -1,6 +1,7 @@
 'use strict';
 
 const crypto = require('crypto');
+const path = require('path');
 const express = require('express');
 const mysql = require('mysql2/promise');
 const { distributedRateLimit } = require('../lib/rate-limit');
@@ -173,6 +174,12 @@ function createVisitWorkflowRouter({ appBaseUrl } = {}) {
   const json = express.json({ limit:'160kb', strict:true });
   const limit = distributedRateLimit({ windowMs:60 * 60 * 1000, max:30, name:'visit-workflow' });
   const config = calendarConfig(appBaseUrl);
+
+  router.get('/deferred/visit-workflow.js', (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.type('application/javascript').sendFile(path.join(__dirname, '..', 'js', 'visit-workflow.js'));
+  });
 
   router.get('/api/visit-workflow/config', requireUser, (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
