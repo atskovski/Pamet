@@ -1,5 +1,6 @@
 /* Deferred authenticated feature styling. Dark mode repeats last so feature CSS
  * cannot override the unified dark-surface accessibility layer after lazy load. */
+@import "./theme-aliases.css";
 @import "./home-dashboard.css";
 @import "./home-dashboard-lifecycle.css";
 @import "./care-planning.css";

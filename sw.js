@@ -1,8 +1,8 @@
 /* Pamet v1.6.9 service worker: manifest-driven immutable shell caching plus Web Push. */
-const CACHE="pamet-shell-v169-4";
+const CACHE="pamet-shell-v169-5";
 const BASE_SHELL=["/","/index.html","/manifest.webmanifest","/assets/pamet-mark.svg?v=169","/assets/icon-192.png","/assets/icon-512.png","/assets/icon-maskable-512.png","/assets/login-sunrise.jpg"];
 const STATIC_PREFIXES=["/dist/","/assets/"];
-const DEFERRED_NETWORK_FIRST=new Set(["/dist/pamet.plan-management.min.js","/dist/pamet.plan-matrix.min.js"]);
+const DEFERRED_NETWORK_FIRST=new Set(["/dist/pamet.plan-management.min.js","/dist/pamet.plan-matrix.min.js","/dist/pamet.insights-charting.min.js","/dist/pamet.insights-charting.min.css"]);
 const isStaticPath=(pathname)=>STATIC_PREFIXES.some(prefix=>pathname.startsWith(prefix))||pathname==="/manifest.webmanifest";
 
 async function releaseAssets(){

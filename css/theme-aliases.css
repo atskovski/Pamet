@@ -1,0 +1,20 @@
+/* Semantic theme aliases used by newer authenticated feature styles.
+ * Keep these rooted in Pamet's canonical palette so deferred feature bundles
+ * never fall through to invalid nested CSS custom-property references. */
+:root {
+  --teal-deep: #0F3D3E;
+  --brand-primary: var(--teal-deep);
+  --surface: var(--card-bg, #FFFFFF);
+  --surface-soft: var(--surface-secondary, #F7EFE5);
+  --paper-warm: var(--surface-secondary, #F7EFE5);
+  --ink-muted: var(--text-tertiary, #8C7D6E);
+}
+
+body.dark {
+  --teal-deep: var(--sage-mid, #93B89A);
+  --brand-primary: var(--teal-deep);
+  --surface: var(--card-bg, #201913);
+  --surface-soft: var(--surface-secondary, #241C15);
+  --paper-warm: var(--surface-secondary, #241C15);
+  --ink-muted: var(--text-tertiary, #9E8E7D);
+}
