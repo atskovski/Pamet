@@ -1,14 +1,9 @@
-/* Lightweight loader keeps paid account-management UI off the authenticated critical bundle. */
+/* Lightweight loader keeps account-management and checkout UI off the authenticated critical bundle. */
 (function (global) {
   "use strict";
 
   if (global.PametPlanManagementLoader) return;
   let pending = null;
-
-  function paidPlan() {
-    const key = global.PametPlanComparison?.currentPlan?.() || "free";
-    return key === "pro" || key === "ultra";
-  }
 
   function load() {
     if (global.PametPlanManagement) return Promise.resolve(global.PametPlanManagement);
@@ -41,7 +36,7 @@
     "click",
     (event) => {
       const button = event.target.closest?.("#upgradeBtn");
-      if (!button || !paidPlan()) return;
+      if (!button) return;
       event.preventDefault();
       event.stopImmediatePropagation();
       open().catch(() => {});

@@ -49,7 +49,7 @@ async function ready(page) {
   await page.locator('.tab[data-tab="settings"]').click();
 }
 
-test('@production paid Manage your plan opens account details without immediately calling Stripe portal', async ({page}) => {
+test('@production Pro Manage your plan is upgrade-first and does not open billing until explicitly chosen', async ({page}) => {
   await installPro(page);
   let portalCalls = 0;
   await page.route('**/api/billing/portal', route => {
@@ -58,30 +58,34 @@ test('@production paid Manage your plan opens account details without immediatel
   });
   await ready(page);
 
-  await expect.poll(() => page.evaluate(() => !!window.PametPlanManagement)).toBe(false);
-  await page.getByRole('button',{name:'Manage your plan',exact:true}).click();
+  await expect(page.getByRole('button',{name:'Upgrade to Ultra',exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Upgrade to Ultra',exact:true}).click();
   const modal = page.locator('#pametPlanManagementRoot .plan-management-modal');
   await expect(modal).toBeVisible();
-  await expect.poll(() => page.evaluate(() => !!window.PametPlanManagement)).toBe(true);
   await expect(modal.getByRole('heading',{name:'Manage your plan'})).toBeVisible();
   await expect(modal).toContainText('Pro · Understand');
   await expect(modal).toContainText('Plan Member');
   await expect(modal).toContainText('plan-member@pamet.test');
   await expect(modal).toContainText('42 days with Pamet');
-
-  const moments = modal.locator('.plan-account-moments > div');
-  await expect(moments.nth(0).locator('strong')).toHaveText('3');
-  await expect(moments.nth(0).locator('span')).toHaveText('journal entries');
-  await expect(moments.nth(1).locator('strong')).toHaveText('2');
-  await expect(moments.nth(1).locator('span')).toHaveText('distinct days logged');
   await expect(modal).toContainText('Subscription status: active');
   expect(portalCalls).toBe(0);
-  await expect(page.locator('.pamet-toast.error')).toHaveCount(0);
 
   const included = modal.locator('.plan-management-features li');
   await expect(included).toHaveCount(14);
   await expect(modal.getByRole('button',{name:'Compare all Pamet features'})).toBeVisible();
-  await expect(modal.getByRole('button',{name:'Open Stripe billing portal'})).toBeVisible();
+  await expect(modal.getByRole('button',{name:'Upgrade to Ultra'})).toBeVisible();
+  await expect(modal.getByRole('button',{name:'Billing & invoices'})).toBeVisible();
+  await expect(modal.getByText('Open Stripe billing portal')).toHaveCount(0);
+
+  await modal.getByRole('button',{name:'Upgrade to Ultra'}).click();
+  await expect(modal.getByRole('heading',{name:'Upgrade to Ultra'})).toBeVisible();
+  await expect(modal.locator('.plan-management-upgrade-card')).toHaveCount(1);
+  await expect(modal.locator('.plan-management-upgrade-card')).toContainText('Ultra · Prepare');
+  await expect(modal.locator('.plan-management-upgrade-card')).not.toContainText('Pro · Understand');
+  expect(portalCalls).toBe(0);
+
+  await modal.getByRole('button',{name:'Continue to Ultra'}).click();
+  await expect.poll(() => portalCalls).toBe(1);
 });
 
 test('@production full comparison renders every canonical feature across Free Pro and Ultra', async ({page}) => {

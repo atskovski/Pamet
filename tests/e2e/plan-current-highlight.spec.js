@@ -80,7 +80,7 @@ test('@production Settings follows the server-verified plan after upgrade or pla
   await expect(free).toHaveClass(/active/);
   await expect(free.locator('.plan-current-badge')).toHaveText('Current plan');
   await expect(planLine).toHaveText('Free · Track');
-  await expect(planAction).toHaveText('Upgrade your plan');
+  await expect(planAction).toHaveText('Upgrade to Pro');
 
   verifiedPlan = 'pro';
   await page.evaluate(async () => {
@@ -96,7 +96,7 @@ test('@production Settings follows the server-verified plan after upgrade or pla
   await expect(pro.locator('.plan-current-badge')).toHaveText('Current plan');
   await expect(free).not.toHaveClass(/active/);
   await expect(planLine).toHaveText('Pro · Understand');
-  await expect(planAction).toHaveText('Manage your plan');
+  await expect(planAction).toHaveText('Upgrade to Ultra');
 
   verifiedPlan = 'ultra';
   await page.evaluate(() => window.PametEntitlements.refresh());

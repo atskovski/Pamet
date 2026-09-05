@@ -33,40 +33,74 @@ test('@production Visit Brief explains Appointment Workspace dependency and back
   await expect(page.locator('#screen-settings')).toHaveClass(/active/);
 });
 
-test('Appointment Workspace saves to Pamet then asks which calendar should receive the appointment',async({page})=>{
+test('@production Appointment Workspace saves immediately while secure sync is unavailable and keeps confirmation beside the save actions',async({page})=>{
   await installUltra(page);
-  let appointments=[];
-  await page.route('**/api/appointments',async route=>{
-    const request=route.request();
-    if(request.method()==='POST'){
-      const body=request.postDataJSON();
-      appointments=[{id:'appt-calendar-1',...body,status:'scheduled'}];
-      return route.fulfill({status:201,contentType:'application/json',body:JSON.stringify({appointment:appointments[0]})});
-    }
-    return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({appointments})});
-  });
+  await page.route('**/api/appointments',route=>route.fulfill({status:401,contentType:'application/json',body:JSON.stringify({error:'Authentication required.'})}));
   await ready(page);
   await page.evaluate(()=>window.PametCareUx.openAppointmentWorkspace());
   const form=page.locator('#careAppointmentForm');
   await expect(form).toBeVisible();
-  const destination=page.locator('#careCalendarDestination');
-  await expect(destination).toBeVisible();
-  await expect(destination.locator('option')).toHaveText(['Ask me after saving','Google Calendar','Apple Calendar','Pamet only']);
-  await destination.selectOption('ask');
+  await expect(page.locator('#careCalendarDestination')).toHaveCount(0);
+  await expect(page.locator('#careRetrySync')).toHaveCount(0);
+
   await page.locator('#careClinician').fill('Dr. Rivera');
   await page.locator('#careStarts').fill('2026-09-18T09:30');
   await page.locator('#careDateConfirmed').check();
   await page.locator('#careReason').fill('Review headache changes');
   await page.locator('#careQuestions').fill('What changed since my last visit?\nWhat should I keep tracking?');
   await page.locator('#careSaveAppointment').click();
-  const chooser=page.locator('#visitWorkflowModalRoot .visit-calendar-modal');
-  await expect(chooser).toBeVisible();
-  await expect(chooser).toContainText('Appointment saved');
-  await expect(chooser.getByRole('button',{name:'Google Calendar'})).toBeVisible();
-  await expect(chooser.getByRole('button',{name:'Apple Calendar'})).toBeVisible();
-  await expect(chooser.getByRole('button',{name:'Keep in Pamet only'})).toBeVisible();
-  await chooser.getByRole('button',{name:'Keep in Pamet only'}).click();
-  await expect(page.locator('#visitWorkflowNotice')).toContainText('Appointment saved in Pamet');
+
+  const saveStatus=page.locator('[data-care-save-status]');
+  await expect(saveStatus).toBeVisible();
+  await expect(saveStatus).toContainText('Appointment saved to Upcoming and saved visits');
+  await expect(saveStatus).toContainText('Secure account sync will continue automatically');
+  const actions=page.locator('#careAppointmentForm .pamet-form-actions');
+  const actionBox=await actions.boundingBox(),statusBox=await saveStatus.boundingBox();
+  expect(actionBox).not.toBeNull();expect(statusBox).not.toBeNull();
+  expect(statusBox.y).toBeGreaterThanOrEqual(actionBox.y+actionBox.height-2);
+
+  const list=page.locator('#careAppointmentList');
+  await expect(list).toContainText('Dr. Rivera');
+  await expect(list).toContainText('Review headache changes');
+  await expect(list).toContainText('Saved on this device');
+  await expect(list.getByRole('button',{name:'Google Calendar'})).toBeVisible();
+  await expect(list.getByRole('button',{name:'Apple Calendar'})).toBeVisible();
+  await expect(page.locator('#careServerState')).toContainText('Secure sync pending automatically');
+
+  await page.locator('#careUxModalRoot [data-care-close]').click();
+  await page.evaluate(()=>window.PametCareUx.openAppointmentWorkspace());
+  await expect(page.locator('#careAppointmentList')).toContainText('Dr. Rivera');
+});
+
+test('Appointment Workspace automatically syncs locally saved visits and exposes calendar actions after saving',async({page})=>{
+  await installUltra(page);
+  let appointments=[];
+  await page.route('**/api/appointments',async route=>{
+    const request=route.request();
+    if(request.method()==='POST'){
+      const body=request.postDataJSON();
+      const created={id:'appt-calendar-1',...body,status:'scheduled'};
+      appointments=[created];
+      return route.fulfill({status:201,contentType:'application/json',body:JSON.stringify({id:created.id,saved:true})});
+    }
+    return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({appointments})});
+  });
+  await ready(page);
+  await page.evaluate(()=>window.PametCareUx.openAppointmentWorkspace());
+  await page.locator('#careClinician').fill('Dr. Rivera');
+  await page.locator('#careStarts').fill('2026-09-18T09:30');
+  await page.locator('#careDateConfirmed').check();
+  await page.locator('#careReason').fill('Review headache changes');
+  await page.locator('#careQuestions').fill('What changed since my last visit?\nWhat should I keep tracking?');
+  await page.locator('#careSaveAppointment').click();
+
+  const list=page.locator('#careAppointmentList');
+  await expect(list).toContainText('Dr. Rivera');
+  await expect(list.getByRole('button',{name:'Google Calendar'})).toBeVisible();
+  await expect(list.getByRole('button',{name:'Apple Calendar'})).toBeVisible();
+  await expect.poll(()=>appointments.length).toBe(1);
+  await expect(page.locator('#careServerState')).toContainText('Secure sync connected');
+  await expect(list).toContainText('Saved in Pamet');
 });
 
 test('@production Email visit brief sends a PDF payload through Pamet instead of navigating to mailto',async({page})=>{

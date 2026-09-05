@@ -53,7 +53,7 @@ check(experience.includes("title.textContent = 'Visit Brief'")&&experience.inclu
 check(icons.includes('window.PametIcons')&&design.includes('--pamet-type-page')&&design.includes('--pamet-primary:#0f3d3e'),'Central icon, type, and semantic color systems must ship.');
 check(clarity.includes('No entry recorded for this day')&&clarity.includes('Mild symptoms')&&clarity.includes('Today'),'Calendar must distinguish missing entries from symptom-free entries and explain its legend.');
 check(planning.includes('Currently viewing')&&planning.includes('Invitation sent')&&planning.includes('Discussion guide'),'Profile context, sharing confirmation, and appointment preparation must remain intact.');
-check(planComparison.includes('Compare all plans')&&planComparison.includes('Upgrade your plan')&&planComparison.includes('Compare all plan features')&&planComparison.includes('PametPlanCatalog'),'Canonical plan comparison and upgrade actions must remain active.');
+check(planComparison.includes('Compare all plans')&&planComparison.includes('Upgrade to Pro')&&planComparison.includes('Upgrade to Ultra')&&planComparison.includes('Compare all plan features')&&planComparison.includes('PametPlanCatalog'),'Canonical plan comparison and next-tier upgrade actions must remain active.');
 check(planComparisonCss.includes('grid-column:1 / -1')&&planComparisonCss.includes('.plan-upgrade-modal')&&planComparisonCss.includes('width:min(760px'),'Plan actions and paid-tier chooser must retain the aligned responsive layout.');
 check(store.includes('return [];')&&!store.includes('function sampleEntries'),'New users must start with no sample health entries.');
 check(app.includes('Entry saved — Pamet is updating your patterns.'),'Saved-entry feedback must use Pamet language.');

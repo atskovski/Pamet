@@ -42,9 +42,7 @@ const expectedServerRules = {
   advancedVisitBrief: "advancedVisitBrief: req.user.plan === 'ultra'",
   encryptedSync: "encryptedSync: req.user.plan === 'ultra'"
 };
-for (const [capability, rule] of Object.entries(expectedServerRules)) {
-  check(server.includes(rule), `Server-authoritative entitlement rule drifted for ${capability}.`);
-}
+for (const [capability, rule] of Object.entries(expectedServerRules)) check(server.includes(rule), `Server-authoritative entitlement rule drifted for ${capability}.`);
 
 check(server.includes("if (!['pro', 'ultra'].includes(req.user.plan)) return res.status(403).json({ error: 'Sharing requires Pamet Pro or Ultra.' });"), 'Sharing creation must reject Free on the server.');
 check((server.match(/Appointment workspace requires Pamet Ultra\./g) || []).length >= 3, 'Appointment routes must enforce Ultra.');
@@ -70,15 +68,16 @@ check(insights.includes('if (!paidComparisons()) return observations;'), 'Free I
 check(insights.includes("E?.has?.('medicationTiming') === true"), 'Medication observations must require the Pro/Ultra entitlement.');
 
 check(comparison.includes('Compare all plans'), 'Settings must offer a clear full-plan comparison action.');
-check(comparison.includes('Upgrade your plan'), 'Free-plan Settings must expose a clear upgrade action.');
-check(comparison.includes('Compare all plan features'), 'Upgrade chooser must link to the full comparison.');
+check(comparison.includes('Upgrade to Pro') && comparison.includes('Upgrade to Ultra'), 'Settings upgrade CTA must advance one tier at a time.');
+check(comparison.includes('Compare all plan features'), 'Legacy upgrade chooser must still link to the full comparison when invoked elsewhere.');
 check(comparison.includes('/dist/pamet.plan-matrix.min.js'), 'Full plan matrix must stay deferred from the authenticated critical bundle.');
 check(matrix.includes('Compare all Pamet features'), 'Deferred matrix must present the complete Pamet comparison heading.');
 check(matrix.includes('PAMET PLAN CATALOG') && matrix.includes('current catalog features'), 'Full comparison must explain its canonical catalog source.');
 check(matrix.includes('PametPlanCatalog') && comparison.includes('PametPlanCatalog'), 'Plan comparison surfaces must use the canonical generated catalog.');
 check(managementLoader.includes('/dist/pamet.plan-management.min.js'), 'Paid account management must stay deferred from the critical feature bundle.');
-check(management.includes('#upgradeBtn') && management.includes('Open Stripe billing portal'), 'Paid Manage your plan must show account context before explicit billing actions.');
-check(management.includes('/api/billing/status') && management.includes('/api/billing/portal'), 'Plan management must separate read-only billing status from portal creation.');
+check(management.includes('#upgradeBtn') && management.includes('Upgrade to ${esc(planByKey(nextKey).name)}') && management.includes('Manage billing'), 'Manage your plan must use next-tier upgrade actions and reserve billing management for paid accounts.');
+check(management.includes('/api/billing/status') && management.includes('/api/billing/portal'), 'Plan management must separate read-only billing status from explicit upgrade/billing actions.');
+check(management.includes('openUpgrade') && management.includes('targetKey'), 'Plan management must render only the next upgrade tier in its upgrade flow.');
 check(!JSON.stringify(catalog).includes('Scheduled caregiver updates'), 'Canonical plan contract must not advertise removed live caregiver surveillance.');
 check(!JSON.stringify(catalog).includes('FHIR-ready data export'), 'Canonical plan contract must not advertise unshipped FHIR export.');
 
