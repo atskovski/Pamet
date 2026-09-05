@@ -12,6 +12,7 @@ const modernFiles = new Set([
   'plan-comparison.js',
   'plan-management.js',
   'plan-management-loader.js',
+  'plan-matrix.js',
   'visit-workflow-loader.js'
 ]);
 
