@@ -223,14 +223,19 @@ function createVisitWorkflowRouter({ appBaseUrl } = {}) {
   router.get('/api/calendar/google/start', limit, requireUser, async (req, res, next) => {
     try {
       if (req.user.plan !== 'ultra') return res.status(403).json({ error:'Appointment workspace requires Pamet Ultra.' });
-      if (!config.googleEnabled) return res.redirect(302, `/api/calendar/google/template?appointmentId=${encodeURIComponent(String(req.query.appointmentId || ''))}`);
       const appointment = await appointmentForUser(req.user.id, req.query.appointmentId);
+      const wantsJson = String(req.headers.accept || '').includes('application/json');
+      if (!config.googleEnabled) {
+        const target = googleTemplateUrl(appointment);
+        await audit(req.user.id, 'appointment.calendar_opened', { provider:'google-template', appointmentId:appointment.id });
+        return wantsJson ? res.json({ url:target, direct:false }) : res.redirect(302, target);
+      }
       const state = signedCalendarState(req.user.id, appointment.id, config.stateSecret);
       setStateCookie(res, state);
       const callback = `${config.appBaseUrl}/api/calendar/google/callback`;
       const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
       url.search = new URLSearchParams({ client_id:config.googleClientId, redirect_uri:callback, response_type:'code', scope:'https://www.googleapis.com/auth/calendar.events', state, access_type:'online', include_granted_scopes:'true', prompt:'select_account' }).toString();
-      res.redirect(302, url.toString());
+      return wantsJson ? res.json({ url:url.toString(), direct:true }) : res.redirect(302, url.toString());
     } catch (error) { next(error); }
   });
 
