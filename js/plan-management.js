@@ -7,11 +7,7 @@
   const catalog = global.PametPlanCatalog;
   if (!Auth || !Store || !catalog) return;
 
-  const esc = (value) =>
-    String(value ?? "").replace(
-      /[&<>"']/g,
-      (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]
-    );
+  const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
   const planByKey = (key) => catalog.plans.find((item) => item.key === key) || catalog.plans[0];
   const currentPlanKey = () => global.PametPlanComparison?.currentPlan?.() || "free";
   const upgradeKeys = (key) => (key === "free" ? ["pro", "ultra"] : key === "pro" ? ["ultra"] : []);
@@ -96,8 +92,7 @@
   }
   function renderAccountFacts(stats) {
     const fullName = [stats.user.firstName, stats.user.lastName].filter(Boolean).join(" ") || "Pamet member";
-    const age =
-      stats.accountDays === null ? "Account age unavailable" : `${stats.accountDays} day${stats.accountDays === 1 ? "" : "s"} with Pamet`;
+    const age = stats.accountDays === null ? "Account age unavailable" : `${stats.accountDays} day${stats.accountDays === 1 ? "" : "s"} with Pamet`;
     return `<div class="plan-account-grid">
       <div><span>Name</span><strong>${esc(fullName)}</strong></div>
       <div><span>Email</span><strong>${esc(stats.user.email || "Not available")}</strong></div>
@@ -151,8 +146,7 @@
       const subscription = response.user?.subscriptionStatus || "none";
       const node = root.querySelector("[data-billing-state]");
       if (node) {
-        node.textContent =
-          subscription === "none" ? "No paid subscription is active on this account." : `Subscription status: ${subscription}`;
+        node.textContent = subscription === "none" ? "No paid subscription is active on this account." : `Subscription status: ${subscription}`;
       }
     } catch {
       const node = root.querySelector("[data-billing-state]");
@@ -379,10 +373,7 @@
         : key === "pro"
           ? '<button type="button" class="btn btn-primary" data-plan-management-upgrade>Upgrade to Ultra</button>'
           : '<button type="button" class="btn btn-primary" data-plan-management-billing>Manage billing</button>';
-    const secondaryBilling =
-      key === "pro"
-        ? '<button type="button" class="data-btn plan-management-secondary-billing" data-plan-management-billing>Billing & invoices</button>'
-        : "";
+    const secondaryBilling = key === "pro" ? '<button type="button" class="data-btn plan-management-secondary-billing" data-plan-management-billing>Billing & invoices</button>' : "";
     root.innerHTML = `<div class="pamet-modal-backdrop plan-management-backdrop">
       <section class="pamet-modal plan-management-modal" role="dialog" aria-modal="true" aria-labelledby="planManagementTitle">
         <header class="plan-management-head plan-management-head-with-back">
