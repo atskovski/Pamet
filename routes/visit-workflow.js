@@ -66,10 +66,11 @@ async function requireUser(req, res, next) {
 
 function calendarConfig(appBaseUrl) {
   const stateSecret = process.env.OAUTH_STATE_SECRET || process.env.IDENTITY_ENCRYPTION_KEY || '';
+  const directGoogleCalendar = String(process.env.GOOGLE_CALENDAR_ENABLED || '').toLowerCase() === 'true';
   return {
     appBaseUrl: String(appBaseUrl || process.env.APP_BASE_URL || '').replace(/\/$/, ''),
     stateSecret,
-    googleEnabled: !!(stateSecret.length >= 32 && process.env.GOOGLE_OAUTH_CLIENT_ID && process.env.GOOGLE_OAUTH_CLIENT_SECRET && (appBaseUrl || process.env.APP_BASE_URL)),
+    googleEnabled: !!(directGoogleCalendar && stateSecret.length >= 32 && process.env.GOOGLE_OAUTH_CLIENT_ID && process.env.GOOGLE_OAUTH_CLIENT_SECRET && (appBaseUrl || process.env.APP_BASE_URL)),
     googleClientId: process.env.GOOGLE_OAUTH_CLIENT_ID || '',
     googleClientSecret: process.env.GOOGLE_OAUTH_CLIENT_SECRET || ''
   };
@@ -262,4 +263,4 @@ function createVisitWorkflowRouter({ appBaseUrl } = {}) {
   return router;
 }
 
-module.exports = { createVisitWorkflowRouter, buildIcs, googleEvent, googleTemplateUrl, readCalendarState, signedCalendarState, sendVisitBriefEmail };
+module.exports = { createVisitWorkflowRouter, buildIcs, googleEvent, googleTemplateUrl, readCalendarState, signedCalendarState, sendVisitBriefEmail, calendarConfig };
