@@ -1,6 +1,6 @@
 # Pamet versioning policy
 
-Pamet uses semantic versioning (`MAJOR.MINOR.PATCH`). The current stable release line is `v1.6.7`.
+Pamet uses semantic versioning (`MAJOR.MINOR.PATCH`). The current stable release line is `v1.6.8`.
 
 ## When to increment
 
