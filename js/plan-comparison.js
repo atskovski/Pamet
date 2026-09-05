@@ -77,15 +77,6 @@
     if (upgrade) upgrade.textContent = activePlan === "free" ? "Upgrade your plan" : "Manage your plan";
   }
 
-  function refreshVerifiedPlan(event) {
-    const verifiedPlan = plan(event?.detail?.plan || currentPlan()).key;
-    queueMicrotask(() => {
-      refreshSettings();
-      const dialog = document.querySelector("#pametPlanMatrixDialog");
-      if (dialog?.open || dialog?.hasAttribute("open")) ensureDialog(verifiedPlan);
-    });
-  }
-
   function observeSettings() {
     const container = document.querySelector("#planCompare");
     if (!container || settingsObserver) return;
@@ -151,7 +142,7 @@
 
   document.addEventListener("DOMContentLoaded", observeSettings, { once: true });
   document.addEventListener("pamet:settings-rendered", () => queueMicrotask(() => { observeSettings(); refreshSettings(); }));
-  global.addEventListener("pamet:entitlements", refreshVerifiedPlan);
+  global.addEventListener("pamet:entitlements", () => queueMicrotask(refreshSettings));
   document.querySelectorAll(".tab[data-tab]").forEach((tab) => tab.addEventListener("click", () => requestAnimationFrame(refreshSettings)));
   if (document.body) installModalObserver();
   else document.addEventListener("DOMContentLoaded", installModalObserver, { once: true });
