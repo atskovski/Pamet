@@ -1,0 +1,48 @@
+/* Pamet login persistence control. */
+.remember-me-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: -2px 0 14px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  user-select: none;
+}
+
+.remember-me-row input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  margin: 2px 0 0;
+  accent-color: var(--pamet-sage);
+  cursor: pointer;
+}
+
+.remember-me-row input[type="checkbox"]:focus-visible {
+  outline: 2px solid var(--pamet-sage);
+  outline-offset: 3px;
+}
+
+.remember-me-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  line-height: 1.35;
+}
+
+.remember-me-copy strong {
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.remember-me-copy small {
+  color: var(--text-tertiary);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+@media (max-width: 390px) {
+  .remember-me-row { margin-bottom: 12px; }
+  .remember-me-copy small { font-size: 10.5px; }
+}
