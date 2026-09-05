@@ -7,13 +7,18 @@
   const catalog = global.PametPlanCatalog;
   if (!Auth || !Store || !catalog) return;
 
-  const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#39;"
-  }[char]));
+  const esc = (value) =>
+    String(value ?? "").replace(
+      /[&<>"']/g,
+      (char) =>
+        ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;"
+        })[char]
+    );
 
   const planByKey = (key) => catalog.plans.find((item) => item.key === key) || catalog.plans[0];
   const currentPlanKey = () => global.PametPlanComparison?.currentPlan?.() || "free";
@@ -145,9 +150,10 @@
       if (!response.url) throw new Error("Billing portal URL was not returned.");
       global.location.assign(response.url);
     } catch (error) {
-      const message = error.status === 401
-        ? "Your billing session could not be verified. Your Pamet account is still open here; sign out and back in before changing billing details."
-        : error.message || "Billing management is temporarily unavailable.";
+      const message =
+        error.status === 401
+          ? "Your billing session could not be verified. Your Pamet account is still open here; sign out and back in before changing billing details."
+          : error.message || "Billing management is temporarily unavailable.";
       status(root, message, "error");
       button.disabled = false;
     }
@@ -196,7 +202,14 @@
           <ul>${renderIncluded(included)}</ul>
         </section>
 
-        ${next.length ? `<section class="plan-management-next"><span>What Ultra adds</span><p>${next.slice(0, 4).map((feature) => esc(feature.label)).join(" · ")}</p></section>` : `<section class="plan-management-next complete"><span>Ultra plan</span><p>Your plan includes every feature currently listed in Pamet’s canonical plan catalog.</p></section>`}
+        ${
+          next.length
+            ? `<section class="plan-management-next"><span>What Ultra adds</span><p>${next
+                .slice(0, 4)
+                .map((feature) => esc(feature.label))
+                .join(" · ")}</p></section>`
+            : `<section class="plan-management-next complete"><span>Ultra plan</span><p>Your plan includes every feature currently listed in Pamet’s canonical plan catalog.</p></section>`
+        }
 
         <div data-plan-management-status class="plan-management-status info" hidden role="status" aria-live="polite"></div>
         <p class="plan-management-billing-state" data-billing-state>Refreshing billing status…</p>
@@ -221,13 +234,17 @@
     loadBillingStatus(root);
   }
 
-  document.addEventListener("click", (event) => {
-    const button = event.target.closest?.("#upgradeBtn");
-    if (!button || currentPlanKey() === "free") return;
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    open();
-  }, true);
+  document.addEventListener(
+    "click",
+    (event) => {
+      const button = event.target.closest?.("#upgradeBtn");
+      if (!button || currentPlanKey() === "free") return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      open();
+    },
+    true
+  );
 
   global.PametPlanManagement = Object.freeze({ open, close, accountStats, planFeatures });
 })(window);
