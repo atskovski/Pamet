@@ -1,7 +1,8 @@
 /* Pamet v1.6.9 service worker: manifest-driven immutable shell caching plus Web Push. */
-const CACHE="pamet-shell-v169-3";
+const CACHE="pamet-shell-v169-4";
 const BASE_SHELL=["/","/index.html","/manifest.webmanifest","/assets/pamet-mark.svg?v=169","/assets/icon-192.png","/assets/icon-512.png","/assets/icon-maskable-512.png","/assets/login-sunrise.jpg"];
 const STATIC_PREFIXES=["/dist/","/assets/"];
+const DEFERRED_NETWORK_FIRST=new Set(["/dist/pamet.plan-management.min.js","/dist/pamet.plan-matrix.min.js"]);
 const isStaticPath=(pathname)=>STATIC_PREFIXES.some(prefix=>pathname.startsWith(prefix))||pathname==="/manifest.webmanifest";
 
 async function releaseAssets(){
@@ -32,6 +33,13 @@ self.addEventListener('fetch',event=>{
   const navigation=request.mode==='navigate';
   const staticAsset=isStaticPath(url.pathname);
   if(!navigation&&!staticAsset)return;
+  if(DEFERRED_NETWORK_FIRST.has(url.pathname)){
+    event.respondWith(fetch(request,{cache:'no-store'}).then(response=>{
+      if(response?.ok){const copy=response.clone();caches.open(CACHE).then(cache=>cache.put(request,copy)).catch(()=>{})}
+      return response;
+    }).catch(()=>caches.match(request).then(cached=>cached||Response.error())));
+    return;
+  }
   if(staticAsset){
     event.respondWith(caches.match(request).then(cached=>cached||fetch(request).then(response=>{
       if(response?.ok){const copy=response.clone();caches.open(CACHE).then(cache=>cache.put(request,copy)).catch(()=>{})}
