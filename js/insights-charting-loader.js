@@ -3,28 +3,27 @@
   'use strict';
 
   if (global.PametInsightsChartingLoader) return;
+  const ASSET_REVISION = '1695-chart2';
   let pending = null;
   let engine = null;
 
-  function bucketWidthFor(days) {
-    if (days <= 14) return 1;
-    if (days <= 30) return 3;
-    if (days <= 60) return 7;
-    if (days <= 90) return 10;
-    if (days <= 180) return 14;
-    return 30;
+  // The production chart engine now preserves one slot for every calendar day.
+  // Keep the loading shell aligned with that contract so users never see stale
+  // grouped-window metadata while the deferred bundle initializes.
+  function bucketWidthFor() {
+    return 1;
   }
 
   function loadingMarkup(options = {}) {
     const days = Number(options.days || 7);
     return `<section class="insights-chart-card insights-chart-loading"
       data-chart-mode-current="basic" data-chart-window="${days}"
-      data-chart-bucket-days="${bucketWidthFor(days)}" aria-busy="true">
+      data-chart-bucket-days="${bucketWidthFor(days)}" data-chart-point-count="${days}" aria-busy="true">
       <div class="insights-chart-head">
         <div>
           <span class="pamet-eyebrow">Dynamic chart · ${days}-day window</span>
           <h3>Preparing your chart</h3>
-          <p>Pamet is loading the chart view only when you open Patterns.</p>
+          <p>Pamet is loading the daily chart view for the selected window.</p>
         </div>
       </div>
     </section>`;
@@ -42,7 +41,7 @@
     return new Promise((resolve, reject) => {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
-      link.href = '/dist/pamet.insights-charting.min.css?v=1695';
+      link.href = `/dist/pamet.insights-charting.min.css?v=${ASSET_REVISION}`;
       link.dataset.pametInsightsCharting = 'true';
       link.addEventListener('load', () => {
         link.dataset.loaded = 'true';
@@ -56,7 +55,7 @@
   function loadScript() {
     return new Promise((resolve, reject) => {
       const script = document.createElement('script');
-      script.src = '/dist/pamet.insights-charting.min.js?v=1695';
+      script.src = `/dist/pamet.insights-charting.min.js?v=${ASSET_REVISION}`;
       script.async = true;
       script.addEventListener('load', () => {
         const loaded = global.PametInsightsCharts;
