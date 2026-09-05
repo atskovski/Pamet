@@ -31,13 +31,22 @@ check(
 );
 check(
   insightsChartingLoader.includes('/dist/pamet.insights-charting.min.js') &&
+  insightsChartingLoader.includes('/dist/pamet.insights-charting.min.css') &&
   insightsChartingLoader.includes('PametInsightsCharts') &&
   insightsChartingLoader.includes('PametInsightsController?.render?.()'),
-  'Patterns must lazy-load the chart engine and re-render Insights when the deferred asset is ready.'
+  'Patterns must lazy-load the chart engine and styles and re-render Insights when the deferred assets are ready.'
 );
 check(cssMain.includes('@import "./design-system.css";'), 'Formal design system must remain loaded.');
 check(cssMain.trim().endsWith('@import "./dark-mode.css";') && authenticatedCss.trim().endsWith('@import "./dark-mode.css";'), 'Unified dark mode must remain the final visual override layer for both full and deferred styles.');
-check(authenticatedCss.includes('@import "./insights-overhaul.css";') && authenticatedCss.includes('@import "./insights-charting.css";') && insightsCss.includes('.tracking-quality-card') && insightsCss.includes('.insights-window-kpis') && insightsChartingCss.includes('.insights-chart-card') && insightsChartingCss.includes('.advanced-comparison-grid'), 'Redesigned Insights and charting surfaces must remain in the deferred authenticated stylesheet.');
+check(
+  !cssMain.includes('@import "./insights-charting.css";') &&
+  !authenticatedCss.includes('@import "./insights-charting.css";') &&
+  insightsCss.includes('.tracking-quality-card') &&
+  insightsCss.includes('.insights-window-kpis') &&
+  insightsChartingCss.includes('.insights-chart-card') &&
+  insightsChartingCss.includes('.advanced-comparison-grid'),
+  'Chart-specific styling must remain in its own deferred asset while the core redesigned Insights surfaces stay in authenticated CSS.'
+);
 check(darkMode.includes('.insights-empty') && darkMode.includes('--text-primary: #F2F5F4'), 'Dark-mode Insights surfaces and readable foreground hierarchy must remain enforced.');
 check(experience.includes("title.textContent = 'Visit Brief'") && experience.includes('Email visit brief'), 'Doctor Report must remain renamed to Visit Brief in the active product UI.');
 check(insightsController.includes("[['all','All'],['symptom','Symptoms'],['lifestyle','Lifestyle'],['medication','Medications'],['sleepstress','Sleep / Stress']]"), 'Insights must expose all approved observation categories.');
