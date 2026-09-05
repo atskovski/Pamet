@@ -86,7 +86,7 @@
     const line = document.querySelector("#planLineText");
     if (line) { const item = plan(activePlan); line.textContent = `${item.name} · ${item.positioning}`; }
     const upgrade = document.querySelector("#upgradeBtn");
-    if (upgrade) upgrade.textContent = activePlan === "free" ? "Upgrade to Pro" : activePlan === "pro" ? "Upgrade to Ultra" : "Manage your plan";
+    if (upgrade) upgrade.textContent = activePlan === "free" ? "Upgrade to Pro or Ultra" : activePlan === "pro" ? "Upgrade to Ultra" : "Manage your plan";
     const weeklyHelp = document.querySelector("#setWeeklyDigest")?.closest(".setting-row")?.querySelector(".help");
     if (weeklyHelp) weeklyHelp.dataset.help = "Weekly email only says your summary is ready. Health details stay inside Pamet.";
   }
