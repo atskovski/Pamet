@@ -8,9 +8,9 @@ if (!fs.existsSync(manifestPath)) throw new Error('Asset manifest is missing. Ru
 const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 const entries = {
   bootstrapJs: { file: 'dist/pamet.min.js', raw: 170 * 1024, gzip: 55 * 1024 },
-  // The one-year Insights window expansion remains inside the deferred feature bundle.
-  // Keep a narrow 1 KiB raw allowance while retaining the existing gzip and total budgets.
-  featuresJs: { file: 'dist/pamet.features.min.js', raw: 192 * 1024, gzip: 65 * 1024 },
+  // One-year Insights plus the local Ultra caregiver PDF fallback stay deferred.
+  // Allow 2 KiB additional raw feature code while preserving gzip and total budgets.
+  featuresJs: { file: 'dist/pamet.features.min.js', raw: 194 * 1024, gzip: 65 * 1024 },
   bootstrapCss: { file: 'dist/pamet.min.css', raw: 115 * 1024, gzip: 38 * 1024 },
   featuresCss: { file: 'dist/pamet.features.min.css', raw: 90 * 1024, gzip: 30 * 1024 }
 };
