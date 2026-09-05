@@ -312,9 +312,6 @@
 #pametPlanMatrixDialog .plan-matrix-foot{
   justify-content:flex-end;
 }
-#pametPlanMatrixDialog .plan-matrix-foot:not(:has([data-plan-matrix-manage])){
-  display:none;
-}
 
 /* Keep data portability internals available to the app, but remove raw format choices from Settings. */
 .settings-card:has(#changePasswordBtn) #exportCsv,
