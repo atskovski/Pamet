@@ -6,6 +6,7 @@ const check = (condition, message) => { if (!condition) throw new Error(message)
 const main = fs.readFileSync('js/main.js','utf8');
 const authenticated = fs.readFileSync('js/authenticated-features.js','utf8');
 const insights = fs.readFileSync('js/insights.js','utf8');
+const insightsChartingLoader = fs.readFileSync('js/insights-charting-loader.js','utf8');
 const insightsCharting = fs.readFileSync('js/insights-charting.js','utf8');
 const insightsController = fs.readFileSync('js/interaction-controller.js','utf8');
 const experience = fs.readFileSync('js/experience.js','utf8');
@@ -18,7 +19,22 @@ const insightsChartingCss = fs.readFileSync('css/insights-charting.css','utf8');
 const darkMode = fs.readFileSync('css/dark-mode.css','utf8');
 
 check(main.includes(`const PAMET_VERSION = '${expected}'`), `Pamet browser release must identify the current ${expected} product-system line.`);
-check(main.includes('./icons.js') && authenticated.includes('./insights.js') && authenticated.includes('./insights-charting.js') && authenticated.includes('./interaction-controller.js') && authenticated.includes('./experience.js') && !main.includes('import "./insights.js"'), 'Feature-owned product-system runtime layers must remain bundled while paid/heavy Insights and experience code stay deferred.');
+check(
+  main.includes('./icons.js') &&
+  authenticated.includes('./insights.js') &&
+  authenticated.includes('./insights-charting-loader.js') &&
+  !authenticated.includes('import "./insights-charting.js"') &&
+  authenticated.includes('./interaction-controller.js') &&
+  authenticated.includes('./experience.js') &&
+  !main.includes('import "./insights.js"'),
+  'Insights chart rendering must stay out of the critical authenticated bundle while its loader, controller, and experience layers remain deferred.'
+);
+check(
+  insightsChartingLoader.includes('/dist/pamet.insights-charting.min.js') &&
+  insightsChartingLoader.includes('PametInsightsCharts') &&
+  insightsChartingLoader.includes('PametInsightsController?.render?.()'),
+  'Patterns must lazy-load the chart engine and re-render Insights when the deferred asset is ready.'
+);
 check(cssMain.includes('@import "./design-system.css";'), 'Formal design system must remain loaded.');
 check(cssMain.trim().endsWith('@import "./dark-mode.css";') && authenticatedCss.trim().endsWith('@import "./dark-mode.css";'), 'Unified dark mode must remain the final visual override layer for both full and deferred styles.');
 check(authenticatedCss.includes('@import "./insights-overhaul.css";') && authenticatedCss.includes('@import "./insights-charting.css";') && insightsCss.includes('.tracking-quality-card') && insightsCss.includes('.insights-window-kpis') && insightsChartingCss.includes('.insights-chart-card') && insightsChartingCss.includes('.advanced-comparison-grid'), 'Redesigned Insights and charting surfaces must remain in the deferred authenticated stylesheet.');
@@ -26,8 +42,8 @@ check(darkMode.includes('.insights-empty') && darkMode.includes('--text-primary:
 check(experience.includes("title.textContent = 'Visit Brief'") && experience.includes('Email visit brief'), 'Doctor Report must remain renamed to Visit Brief in the active product UI.');
 check(insightsController.includes("[['all','All'],['symptom','Symptoms'],['lifestyle','Lifestyle'],['medication','Medications'],['sleepstress','Sleep / Stress']]"), 'Insights must expose all approved observation categories.');
 check(insightsController.includes('[7, 14, 30, 60, 90, 180, 360]'), 'Insights must support every approved history window from 7 through 360 days.');
-check(insightsCharting.includes('bucketWidthFor') && insightsCharting.includes('Missing days remain missing') && insightsCharting.includes('three-period rolling trend') && insightsCharting.includes("sleepHours") && insightsCharting.includes("stressLevel") && insightsCharting.includes("waterGlasses"), 'Insights charts must adapt bucket size by window, preserve missingness, and expose native-unit factor trends.');
-check(insightsController.includes("label: 'Advanced charting'") && insightsController.includes("feature: 'correlations'") && insightsCharting.includes("data-chart-mode=\"advanced\"") && insightsCharting.includes("' · Pro+'"), 'Advanced charting must remain plan-gated while basic charting stays available.');
+check(insightsCharting.includes('bucketWidthFor') && insightsCharting.includes('Missing days remain missing') && insightsCharting.includes('three-period rolling trend') && insightsCharting.includes('sleepHours') && insightsCharting.includes('stressLevel') && insightsCharting.includes('waterGlasses'), 'Insights charts must adapt bucket size by window, preserve missingness, and expose native-unit factor trends.');
+check(insightsController.includes("label: 'Advanced charting'") && insightsController.includes("feature: 'correlations'") && insightsCharting.includes('data-chart-mode="advanced"') && insightsCharting.includes("' · Pro+'"), 'Advanced charting must remain plan-gated while basic charting stays available.');
 check(insightsController.includes('First seen') && insightsController.includes('Last seen') && insights.includes('More frequent recently') && insights.includes('Less frequent recently'), 'Observation history and trend direction must be visible.');
 check(insightsController.includes('Why am I seeing this?') && insightsController.includes('Why Pamet surfaced this'), 'Evidence expansion must be available.');
 check(insightsController.includes('Tracking quality') && insightsController.includes('Tracking consistency') && insightsController.includes('Entry detail') && insightsController.includes('Baseline mix') && insightsController.includes('Most useful next step'), 'Insights must explain tracking quality with distinct, actionable signals.');
