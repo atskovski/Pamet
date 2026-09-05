@@ -7,7 +7,13 @@
 
   const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
   const plan = (key) => catalog.plans.find((item) => item.key === key) || catalog.plans[0];
-  const currentPlan = () => plan(global.PametStore?.settings?.plan || global.PametStore?._settings?.plan || "free").key;
+  const currentPlan = () => {
+    const entitlements = global.PametEntitlements?.snapshot?.();
+    const key = entitlements?.verified === true
+      ? entitlements.plan
+      : (global.PametStore?.settings?.plan || global.PametStore?._settings?.plan || "free");
+    return plan(key).key;
+  };
   let settingsGuard = false;
   let settingsObserver;
   let modalRootObserver;
@@ -148,5 +154,5 @@
   else document.addEventListener("DOMContentLoaded", installModalObserver, { once: true });
   queueMicrotask(observeSettings);
 
-  global.PametPlanComparison = Object.freeze({ catalog, render, open, plan, refreshSettings });
+  global.PametPlanComparison = Object.freeze({ catalog, render, open, plan, refreshSettings, currentPlan });
 })(window);

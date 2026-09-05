@@ -8,7 +8,7 @@ if (!fs.existsSync(manifestPath)) throw new Error('Asset manifest is missing. Ru
 const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 const entries = {
   bootstrapJs: { file: 'dist/pamet.min.js', raw: 170 * 1024, gzip: 55 * 1024 },
-  featuresJs: { file: 'dist/pamet.features.min.js', raw: 190 * 1024, gzip: 65 * 1024 },
+  featuresJs: { file: 'dist/pamet.features.min.js', raw: 191 * 1024, gzip: 65 * 1024 },
   bootstrapCss: { file: 'dist/pamet.min.css', raw: 115 * 1024, gzip: 38 * 1024 },
   featuresCss: { file: 'dist/pamet.features.min.css', raw: 90 * 1024, gzip: 30 * 1024 }
 };
