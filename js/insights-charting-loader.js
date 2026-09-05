@@ -30,11 +30,31 @@
     </section>`;
   }
 
-  function load() {
-    if (engine) return Promise.resolve(proxy);
-    if (pending) return pending;
+  function loadStyles() {
+    const existing = document.querySelector('link[data-pamet-insights-charting]');
+    if (existing?.dataset.loaded === 'true') return Promise.resolve();
+    if (existing) {
+      return new Promise((resolve, reject) => {
+        existing.addEventListener('load', resolve, { once:true });
+        existing.addEventListener('error', reject, { once:true });
+      });
+    }
+    return new Promise((resolve, reject) => {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = '/dist/pamet.insights-charting.min.css?v=1695';
+      link.dataset.pametInsightsCharting = 'true';
+      link.addEventListener('load', () => {
+        link.dataset.loaded = 'true';
+        resolve();
+      }, { once:true });
+      link.addEventListener('error', () => reject(new Error('Insights chart styles could not be loaded.')), { once:true });
+      document.head.appendChild(link);
+    });
+  }
 
-    pending = new Promise((resolve, reject) => {
+  function loadScript() {
+    return new Promise((resolve, reject) => {
       const script = document.createElement('script');
       script.src = '/dist/pamet.insights-charting.min.js?v=1695';
       script.async = true;
@@ -46,16 +66,25 @@
         }
         engine = loaded;
         global.PametInsightsCharts = proxy;
-        resolve(proxy);
-        requestAnimationFrame(() => global.PametInsightsController?.render?.());
+        resolve();
       }, { once:true });
       script.addEventListener('error', () => reject(new Error('Insights charting could not be loaded.')), { once:true });
       document.head.appendChild(script);
-    }).catch((error) => {
-      pending = null;
-      throw error;
     });
+  }
 
+  function load() {
+    if (engine) return Promise.resolve(proxy);
+    if (pending) return pending;
+    pending = Promise.all([loadStyles(), loadScript()])
+      .then(() => {
+        requestAnimationFrame(() => global.PametInsightsController?.render?.());
+        return proxy;
+      })
+      .catch((error) => {
+        pending = null;
+        throw error;
+      });
     return pending;
   }
 
