@@ -76,6 +76,22 @@ function calendarConfig(appBaseUrl) {
     googleClientSecret: process.env.GOOGLE_OAUTH_CLIENT_SECRET || ''
   };
 }
+function visitBriefEmailStatus() {
+  const providerConfigured = !!(process.env.RESEND_API_KEY && process.env.EMAIL_FROM);
+  const approved = String(process.env.PAMET_FEATURE_VISIT_BRIEF_EMAIL || '').toLowerCase() === 'true';
+  const enabled = providerConfigured && approved;
+  return { providerConfigured, approved, enabled, reason:enabled ? null : (approved ? 'provider-unconfigured' : 'privacy-review') };
+}
+function visitBriefEmailUnavailableMessage(status = visitBriefEmailStatus()) {
+  return status.reason === 'privacy-review'
+    ? 'Emailing Visit Brief PDFs is temporarily unavailable. Download the PDF instead.'
+    : 'Email delivery is not configured yet. Download the PDF instead.';
+}
+function requireVisitBriefEmailEnabled() {
+  const status = visitBriefEmailStatus();
+  if (!status.enabled) throw Object.assign(new Error(visitBriefEmailUnavailableMessage(status)), { status:503 });
+  return status;
+}
 function signedCalendarState(userId, appointmentId, secret) {
   const payload = Buffer.from(JSON.stringify({ provider:'google-calendar', userId:String(userId), appointmentId:String(appointmentId), nonce:crypto.randomBytes(18).toString('base64url'), issuedAt:Date.now() })).toString('base64url');
   const signature = crypto.createHmac('sha256', secret).update(payload).digest('base64url');
@@ -157,7 +173,7 @@ async function audit(userId, type, data = {}) {
   try { const connection = await db(); await connection.execute('INSERT INTO pamet_audit_log(user_id,event_type,event_json) VALUES(?,?,?)', [userId || null, type, JSON.stringify(data)]); } catch {}
 }
 async function sendVisitBriefEmail({ to, subject, pdf, filename, fetchImpl = fetch }) {
-  if (!process.env.RESEND_API_KEY || !process.env.EMAIL_FROM) throw Object.assign(new Error('Email delivery is not configured yet.'), { status: 503 });
+  requireVisitBriefEmailEnabled();
   const html = '<!doctype html><html><body style="font-family:Arial,sans-serif;color:#263638"><h2 style="color:#0F3D3E">Pamet Visit Brief</h2><p>A Pamet user chose to send you a Visit Brief. The health summary is attached as a PDF rather than included in the email body.</p><p>Please handle the attachment according to your normal privacy and records practices.</p><p style="font-size:12px;color:#5B6B73">Pamet organizes user-recorded information and does not provide a diagnosis or clinical assessment.</p></body></html>';
   const response = await fetchImpl('https://api.resend.com/emails', {
     method:'POST',
@@ -183,11 +199,14 @@ function createVisitWorkflowRouter({ appBaseUrl } = {}) {
 
   router.get('/api/visit-workflow/config', requireUser, (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
-    res.json({ googleCalendarEnabled:config.googleEnabled, googleCalendarFallback:true, appleCalendarEnabled:true, emailEnabled:!!(process.env.RESEND_API_KEY && process.env.EMAIL_FROM) });
+    const email = visitBriefEmailStatus();
+    res.json({ googleCalendarEnabled:config.googleEnabled, googleCalendarFallback:true, appleCalendarEnabled:true, emailEnabled:email.enabled, emailDisabledReason:email.reason });
   });
 
   router.post('/api/visit-brief/email', limit, requireUser, json, async (req, res, next) => {
     try {
+      const email = visitBriefEmailStatus();
+      if (!email.enabled) return res.status(503).json({ error:visitBriefEmailUnavailableMessage(email) });
       const to = clean(req.body?.to, 254).toLowerCase();
       const mode = req.body?.mode === 'advanced' ? 'advanced' : 'standard';
       if (!EMAIL_RE.test(to)) return res.status(400).json({ error:'Enter a valid recipient email address.' });
@@ -275,4 +294,4 @@ function createVisitWorkflowRouter({ appBaseUrl } = {}) {
   return router;
 }
 
-module.exports = { createVisitWorkflowRouter, buildIcs, googleEvent, googleTemplateUrl, readCalendarState, signedCalendarState, sendVisitBriefEmail, calendarConfig };
+module.exports = { createVisitWorkflowRouter, buildIcs, googleEvent, googleTemplateUrl, readCalendarState, signedCalendarState, sendVisitBriefEmail, calendarConfig, visitBriefEmailStatus };
