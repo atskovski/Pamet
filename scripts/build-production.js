@@ -75,7 +75,11 @@ function collectImports(entryName, seen = new Set()) {
   for (const match of source.matchAll(/import\s+["']\.\/([^"']+\.js)["']/g)) collectImports(match[1], seen);
   return seen;
 }
-const browserSources = new Set([...collectImports('main.js'), ...collectImports('authenticated-features.js')]);
+const browserSources = new Set([
+  ...collectImports('main.js'),
+  ...collectImports('authenticated-features.js'),
+  ...collectImports('plan-management.js')
+]);
 for (const name of browserSources) {
   const source = fs.readFileSync(path.join(tempJs, name), 'utf8');
   if (/\bstyle\s*=\s*["']/.test(source)) throw new Error(`Strict CSP build still contains a style attribute in active js/${name}`);
@@ -98,10 +102,12 @@ const buildCss = (entry, outfile) => buildSync({
 
 const bootstrapJs = path.join(dist, 'pamet.min.js');
 const featuresJs = path.join(dist, 'pamet.features.min.js');
+const planManagementJs = path.join(dist, 'pamet.plan-management.min.js');
 const bootstrapCss = path.join(dist, 'pamet.min.css');
 const featuresCss = path.join(dist, 'pamet.features.min.css');
 buildJs('main.js', bootstrapJs);
 buildJs('authenticated-features.js', featuresJs);
+buildJs('plan-management.js', planManagementJs);
 buildCss('bootstrap.css', bootstrapCss);
 buildCss('authenticated.css', featuresCss);
 
@@ -123,4 +129,4 @@ const manifest = {
 };
 fs.writeFileSync(path.join(dist, 'asset-manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
 fs.rmSync(temp, { recursive: true, force: true });
-console.log(`Pamet performance-first production bundles built: ${manifest.bootstrapJs}, ${manifest.featuresJs}, ${manifest.bootstrapCss}, ${manifest.featuresCss}`);
+console.log(`Pamet performance-first production bundles built: ${manifest.bootstrapJs}, ${manifest.featuresJs}, ${manifest.bootstrapCss}, ${manifest.featuresCss}; deferred plan management: /dist/pamet.plan-management.min.js`);
