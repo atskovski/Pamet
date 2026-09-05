@@ -54,23 +54,30 @@ async function seedPatternHistory(page) {
   });
 }
 
-test('@production Patterns windows, evidence, and archive actions are functional', async ({ page }, testInfo) => {
+test('@production Patterns windows, evidence, archive actions, and Free long-history locks are functional', async ({ page }, testInfo) => {
   await startSyntheticFreeSession(page, testInfo);
   await seedPatternHistory(page);
   await page.locator('[data-tab="patterns"]').click();
 
   const windows = page.locator('#screen-patterns [data-insights-days]');
-  await expect(windows).toHaveCount(4);
+  await expect(windows).toHaveCount(7);
   await expect(page.locator('[data-insights-days="7"]')).toHaveClass(/active/);
   await expect(page.locator('#screen-patterns .insights-window-summary')).toContainText('last 7 days');
   await expect(page.locator('#screen-patterns .readiness-copy')).toContainText('7-day window');
+  await expect(page.locator('[data-insights-days="180"]')).toHaveClass(/history-locked/);
+  await expect(page.locator('[data-insights-days="365"]')).toHaveClass(/history-locked/);
 
-  for (const days of [30, 60, 90, 7]) {
+  for (const days of [14, 30, 60, 90, 7]) {
     await page.locator(`[data-insights-days="${days}"]`).click();
     await expect(page.locator(`[data-insights-days="${days}"]`)).toHaveClass(/active/);
     await expect(page.locator('#screen-patterns .insights-window-summary')).toContainText(`last ${days} days`);
     await expect(page.locator('#screen-patterns .readiness-copy')).toContainText(`${days}-day window`);
   }
+
+  await page.locator('[data-insights-days="180"]').click();
+  await expect(page.locator('#pametEntitlementLockTitle')).toContainText('Long-term Insights is included with Pro and Ultra');
+  await expect(page.locator('[data-insights-days="7"]')).toHaveClass(/active/);
+  await page.locator('[data-entitlement-close]').click();
 
   const card = page.locator('#screen-patterns .observation-card').first();
   await expect(card).toBeVisible();
