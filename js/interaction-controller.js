@@ -76,6 +76,15 @@
     return { days, completeness, label, note };
   }
 
+  function completenessMessage(score, loggedDays) {
+    if (!loggedDays) return `Log at least one day in this ${state.days}-day window to measure entry completeness.`;
+    if (score >= 100) return 'Your logged entries include all recommended tracking details.';
+    if (score >= 85) return 'Your logged entries include nearly all recommended tracking details.';
+    if (score >= 70) return 'Your logged entries include most recommended tracking details.';
+    if (score >= 50) return 'Adding a few more tracking details will make comparisons easier to interpret.';
+    return 'Add more tracking details to the days you log to improve the quality of comparisons.';
+  }
+
   function observationCard(item, isArchived) {
     const id = `evidence-${item.id.replace(/[^a-z0-9]+/gi, '-')}`;
     const expanded = state.expanded.has(item.id);
@@ -112,6 +121,9 @@
       .filter((item) => state.category === 'all' || item.category === state.category);
     const info = readiness(entries, allObservations);
     const c = info.completeness;
+    const completenessScore = Number(c.overall || 0);
+    const completenessTitle = info.days ? `${completenessScore}% of logged entries complete` : 'No logged entries in this window';
+    const completenessCopy = completenessMessage(completenessScore, info.days);
     const completenessItems = [['Symptoms', c.symptom], ['Sleep', c.sleep], ['Stress', c.stress], ['Hydration', c.hydration], ['Activity', c.activity], ['Medications', c.medication], ['Notes', c.notes]];
     const categories = paidComparisons()
       ? [['all', 'All'], ['symptom', 'Symptoms'], ['lifestyle', 'Lifestyle'], ['medication', 'Medications'], ['sleepstress', 'Sleep / Stress']]
@@ -123,7 +135,7 @@
     column.innerHTML = `<div class="insights-page-head" data-insights-controller><div><span class="pamet-eyebrow">Observational history</span><h2 class="screen-title">Insights</h2><p class="pamet-helper">${escapeHtml(helper)}</p><p class="insights-window-summary" aria-live="polite">Showing the last <strong>${state.days} days</strong>.</p></div><div class="insights-window" role="group" aria-label="Observation window">${WINDOWS.map((days) => `<button type="button" data-insights-days="${days}" class="chip-btn${state.days === days ? ' active' : ''}" aria-pressed="${state.days === days}">${days} days</button>`).join('')}</div></div>
       ${state.status ? `<div class="insights-action-status" role="status">${escapeHtml(state.status)}</div>` : ''}
       <section class="insights-readiness" aria-labelledby="readinessTitle"><div class="readiness-copy"><span class="pamet-eyebrow">Pattern readiness · ${state.days}-day window</span><h3 id="readinessTitle">${escapeHtml(info.label)}</h3><p>${escapeHtml(info.note)}</p></div><div class="readiness-score"><strong>${info.days}</strong><span>logged days in window</span></div></section>
-      <section class="completeness-card" aria-labelledby="completenessTitle"><div><span class="pamet-eyebrow">Data completeness · ${state.days} days</span><h3 id="completenessTitle">${Number(c.overall || 0)}% complete</h3><p class="pamet-helper">More complete entries make summaries easier to interpret. Missing fields are not treated as zero.</p></div><div class="completeness-grid">${completenessItems.map(([label, value]) => `<div class="completeness-item"><div><span>${escapeHtml(label)}</span><strong>${Number(value || 0)}%</strong></div><div class="mini-meter" aria-hidden="true"><progress max="100" value="${Number(value || 0)}"></progress></div></div>`).join('')}</div></section>
+      <section class="completeness-card" aria-labelledby="completenessTitle"><div class="completeness-summary"><span class="pamet-eyebrow">Data quality · last ${state.days} days</span><h3 id="completenessTitle">${escapeHtml(completenessTitle)}</h3><p class="completeness-context"><strong>${info.days} of ${state.days} days logged</strong><span aria-hidden="true">·</span><span>${escapeHtml(completenessCopy)}</span></p><p class="pamet-helper completeness-definition">Completeness measures how fully you filled out the entries you logged. It does not mean you logged every day in this window.</p></div><div class="completeness-grid">${completenessItems.map(([label, value]) => `<div class="completeness-item"><div><span>${escapeHtml(label)}</span><strong>${Number(value || 0)}%</strong></div><div class="mini-meter" aria-hidden="true"><progress max="100" value="${Number(value || 0)}"></progress></div></div>`).join('')}</div></section>
       <div class="insights-toolbar" aria-label="Insight filters"><div class="insights-categories">${categories.map(([key, label]) => `<button type="button" class="chip-btn${state.category === key ? ' active' : ''}" data-insights-category="${key}" aria-pressed="${state.category === key}">${label}</button>`).join('')}</div><button type="button" class="link-btn archived-toggle" data-insights-archived>${state.showArchived ? 'Back to active observations' : `Archived (${archived.size})`}</button></div>
       <div class="observation-list">${visible.length ? visible.map((item) => observationCard(item, archived.has(item.id))).join('') : emptyState(info, archived)}</div>`;
 
