@@ -30,9 +30,9 @@ check(!server.includes("express.static(path.join(__dirname),"), 'The repository 
 check(server.includes("app.use('/assets'") && server.includes("app.use('/dist'") && !server.includes("app.use('/js'") && !server.includes("app.use('/css'"), 'Production must expose only assets and built bundles, not source modules.');
 check(server.includes('immutable: false') && server.includes('maxAge: 0'), 'Unversioned application assets must revalidate after deployments.');
 const productionHtml = fs.readFileSync('index.html', 'utf8');
-check(productionHtml.includes(`dist/pamet.min.js?v=${assetVersion}`) && productionHtml.includes(`dist/pamet.min.css?v=${assetVersion}`), `Executable assets must use the Pamet ${pkg.version} release bundle URL.`);
+check(productionHtml.includes(`dist/pamet.min.js?v=${assetVersion}`) && productionHtml.includes(`dist/pamet.min.css?v=${assetVersion}`), `Source executable compatibility assets must use the Pamet ${pkg.version} release bundle URL.`);
 check(!productionHtml.includes('?v=1200'), 'Historical v=1200 executable asset references must not return.');
-check(main.includes(`navigator.serviceWorker.register('sw.js?v=${assetVersion}0', { updateViaCache: 'none' })`), `PWA service-worker registration must rotate with Pamet ${pkg.version} and bypass the worker HTTP cache.`);
+check(new RegExp(`navigator\\.serviceWorker\\.register\\('sw\\.js\\?v=${assetVersion}[1-9][0-9]*'`).test(main), `PWA service-worker registration must rotate beyond Pamet ${pkg.version} and bypass the worker HTTP cache.`);
 check(main.includes('registration.update()'), 'PWA startup must actively check the release worker for updates.');
 check(server.includes('Content-Security-Policy') && server.includes('Strict-Transport-Security') && server.includes("app.disable('x-powered-by')"), 'Production security headers must remain enabled.');
 check(server.includes("script-src-attr 'none'") && server.includes("style-src-attr 'none'") && !server.includes("script-src 'self' 'unsafe-inline'") && !server.includes("style-src 'self' 'unsafe-inline'"), 'Inner application CSP must block inline script/style attributes and unsafe-inline execution/presentation.');
@@ -41,6 +41,7 @@ check(secureServer.includes("const VERSION = require('./package.json').version")
 check(secureServer.includes("app.get('/sw.js'") && secureServer.includes("Cache-Control', 'no-store, max-age=0'"), 'The production edge must force service-worker revalidation.');
 check(server.includes("const VERSION = require('./package.json').version;"), 'The application server must use the same canonical package release version.');
 check(secureServer.includes('renderVersionedIndex') && secureServer.includes('X-Pamet-Version'), 'Production HTML and headers must expose the canonical release version.');
+check(secureServer.includes("max-age=31536000, immutable") && secureServer.includes('asset-manifest.json'), 'The production edge must serve content-hashed release assets immutably from the generated manifest.');
 check(server.includes('distributedRateLimit') && limiter.includes('REDIS_URL') && limiter.includes('pExpire') && server.includes('limits.billing'), 'Sensitive handlers must use shared Redis/Valkey rate limits.');
 check(server.includes('priceIsValid') && [699, 5999, 1299, 9999].every((amount) => server.includes(`amount: ${amount}`)), 'Stripe prices must be verified against the approved catalog.');
 check(server.includes('idempotencyKey') && server.includes('pamet_stripe_events') && server.includes('INSERT IGNORE INTO pamet_stripe_events'), 'Stripe writes and webhooks must be idempotent.');
