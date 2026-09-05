@@ -1,8 +1,9 @@
 # Pamet External Assurance Readiness
 
+Last reviewed: 2026-09-05  
 Status: **evidence pack ready; independent review still required**.
 
-This document turns production-readiness issue #9 into a concrete review package. It is not a certification, legal opinion, accessibility conformance claim, penetration-test result, HIPAA determination, or regulatory approval.
+This document supports external go-live gates #43, #44, #45, and #48 with a concrete review package. It is not a certification, legal opinion, accessibility conformance claim, penetration-test result, HIPAA determination, cryptographic approval, or regulatory approval.
 
 ## 1. Independent penetration test scope
 
@@ -89,12 +90,18 @@ Caregiver/provider sharing needs an explicit policy decision before broad produc
 
 Use these repository artifacts as the starting evidence set:
 
+- `GO_LIVE_STATUS.md`
 - `PRODUCTION_READINESS.md`
+- `ASSURANCE_HANDOFF.md`
+- `SECURITY.md`
+- `THREAT_MODEL.md`
 - `docs/LOCAL_ENCRYPTION_THREAT_MODEL.md`
+- `docs/EXTERNAL_READINESS_RUNBOOK.md`
 - `.github/workflows/ci.yml`
 - `tests/integration.test.js`
 - `tests/ui-hardening.test.js`
 - `tests/crypto-ui.test.js`
+- `tests/ops-alert.test.js`
 - `scripts/backup-restore-drill.sh`
 - `scripts/check-production.js`
 - `server.js`, `secure-server.js`, and `lib/edge-account.js`
@@ -102,15 +109,15 @@ Use these repository artifacts as the starting evidence set:
 
 Also provide deployment architecture, production vendor list, data-flow diagram, secret inventory by name (never secret values), backup policy, incident-response contacts/process, privacy policy, terms, and release/change-management process.
 
-## 7. Exit criteria for issue #9
+## 7. Exit criteria for external assurance gates
 
-Issue #9 should remain open until all applicable external reviews are completed and material findings are remediated/retested. Minimum closure evidence:
+Issues #43, #44, #45, and #48 must remain open until their applicable independent reviews are completed and material findings are remediated/retested. Minimum closure evidence across the applicable gates:
 
-- independent penetration-test report and retest closure for high/critical findings
-- documented privacy/data-protection review
-- documented legal determination for applicable healthcare/privacy obligations
-- vendor DPA/BAA posture recorded as applicable
-- independent accessibility review and remediation/retest results
+- independent penetration-test report and retest closure for high/critical findings (#43)
+- documented privacy/data-protection and legal determination for applicable healthcare/privacy obligations (#45)
+- vendor DPA/BAA posture recorded as applicable (#45)
+- independent WCAG 2.2 AA accessibility review and remediation/retest results (#44)
+- independent cryptographic design/code review before enabling working-journal encryption (#48)
 - final product/marketing claims reviewed against the deployed behavior
 
-Until then, describe Pamet as being in staged/beta production readiness—not independently audited, certified, or broadly compliance-assured.
+Until the applicable gates are closed, describe Pamet as staged/beta production readiness—not independently audited, certified, broadly compliance-assured, or cryptographically reviewed beyond the evidence actually obtained.
