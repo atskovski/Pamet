@@ -58,6 +58,13 @@ test('@production Settings follows the server-verified plan after upgrade or pla
       body: JSON.stringify({ plan: verifiedPlan, capabilities: CAPABILITIES[verifiedPlan] })
     });
   });
+  await page.route('**/api/billing/sync', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ user: { plan: verifiedPlan } })
+    });
+  });
 
   await page.goto('/', { waitUntil: 'commit' });
   await page.waitForFunction(() => typeof window.PametLoadAuthenticatedFeatures === 'function');
@@ -76,7 +83,15 @@ test('@production Settings follows the server-verified plan after upgrade or pla
   await expect(planAction).toHaveText('Upgrade your plan');
 
   verifiedPlan = 'pro';
-  await page.evaluate(() => window.PametEntitlements.refresh());
+  await page.evaluate(async () => {
+    const response = await fetch('/api/billing/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}'
+    });
+    await response.json();
+  });
+  await expect.poll(async () => page.evaluate(() => window.PametEntitlements.snapshot().plan)).toBe('pro');
   await expect(pro).toHaveClass(/active/);
   await expect(pro.locator('.plan-current-badge')).toHaveText('Current plan');
   await expect(free).not.toHaveClass(/active/);
