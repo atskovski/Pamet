@@ -54,7 +54,7 @@ async function seedPatternHistory(page) {
   });
 }
 
-test('@production Patterns windows, evidence, archive actions, and Free long-history locks are functional', async ({ page }, testInfo) => {
+test('@production Patterns windows, finding details, evidence, archive actions, and Free long-history locks are functional', async ({ page }, testInfo) => {
   await startSyntheticFreeSession(page, testInfo);
   await seedPatternHistory(page);
   await page.locator('[data-tab="patterns"]').click();
@@ -63,15 +63,17 @@ test('@production Patterns windows, evidence, archive actions, and Free long-his
   await expect(windows).toHaveCount(7);
   await expect(page.locator('[data-insights-days="7"]')).toHaveClass(/active/);
   await expect(page.locator('#screen-patterns .insights-window-summary')).toContainText('last 7 days');
-  await expect(page.locator('#screen-patterns .readiness-copy')).toContainText('7-day window');
+  await expect(page.locator('#screen-patterns .insights-findings-card .pamet-eyebrow')).toContainText('7-day window');
   await expect(page.locator('[data-insights-days="180"]')).toHaveClass(/history-locked/);
   await expect(page.locator('[data-insights-days="365"]')).toHaveClass(/history-locked/);
+  await expect(page.locator('#screen-patterns [data-pattern-count]')).toHaveText('1');
 
   for (const days of [14, 30, 60, 90, 7]) {
     await page.locator(`[data-insights-days="${days}"]`).click();
     await expect(page.locator(`[data-insights-days="${days}"]`)).toHaveClass(/active/);
     await expect(page.locator('#screen-patterns .insights-window-summary')).toContainText(`last ${days} days`);
-    await expect(page.locator('#screen-patterns .readiness-copy')).toContainText(`${days}-day window`);
+    await expect(page.locator('#screen-patterns .insights-findings-card .pamet-eyebrow')).toContainText(`${days}-day window`);
+    await expect(page.locator('#screen-patterns .tracking-quality-card .pamet-eyebrow').first()).toContainText(`last ${days} days`);
   }
 
   await page.locator('[data-insights-days="180"]').click();
@@ -79,15 +81,21 @@ test('@production Patterns windows, evidence, archive actions, and Free long-his
   await expect(page.locator('[data-insights-days="7"]')).toHaveClass(/active/);
   await page.locator('[data-entitlement-close]').click();
 
+  const preview = page.locator('#screen-patterns .finding-preview').first();
+  await expect(preview).toBeVisible();
+  await expect(preview).toContainText('Headache is your most frequently recorded symptom');
+  await expect(preview).toContainText('1 supporting entry');
+  await preview.click();
+
   const card = page.locator('#screen-patterns .observation-card').first();
   await expect(card).toBeVisible();
-  await card.locator('[data-observation-evidence]').click();
   await expect(card.locator('.observation-evidence')).toBeVisible();
   await expect(card.locator('.observation-evidence')).toContainText('Why Pamet surfaced this');
   await expect(card.locator('.observation-evidence')).toContainText('7-day window');
 
   await card.locator('[data-observation-archive]').click();
   await expect(page.locator('#screen-patterns .insights-action-status')).toContainText('Observation archived');
+  await expect(page.locator('#screen-patterns [data-pattern-count]')).toHaveText('0');
   const archivedToggle = page.locator('#screen-patterns .archived-toggle');
   await expect(archivedToggle).toContainText('Archived (1)');
   await archivedToggle.click();
@@ -95,7 +103,48 @@ test('@production Patterns windows, evidence, archive actions, and Free long-his
   await expect(page.locator('#screen-patterns .observation-card').first().locator('[data-observation-archive]')).toContainText('Restore');
 });
 
-test('@production Data quality separates entry completeness from days logged and stays centered', async ({ page }, testInfo) => {
+test('@production Pattern count and named findings recompute when the selected window changes', async ({ page }, testInfo) => {
+  await startSyntheticFreeSession(page, testInfo);
+  await page.evaluate(() => {
+    const store = window.PametStore;
+    const now = new Date();
+    [10, 20].forEach((offset, index) => {
+      const date = new Date(now);
+      date.setDate(date.getDate() - offset);
+      store.addEntry({
+        id: `window-pattern-${Date.now()}-${index}`,
+        date: date.toISOString(),
+        symptoms: ['Headache'],
+        severity: 5,
+        sleepHours: 7,
+        stressLevel: 3,
+        waterGlasses: 6,
+        energyLevel: 6,
+        mood: 'Okay',
+        activity: 'Walk',
+        medications: [],
+        notes: 'Window-specific pattern fixture'
+      });
+    });
+  });
+
+  await page.locator('[data-tab="patterns"]').click();
+  await expect(page.locator('#screen-patterns [data-pattern-count]')).toHaveText('0');
+  await expect(page.locator('#screen-patterns #findingsTitle')).toHaveText('Start your baseline');
+  await expect(page.locator('#screen-patterns .finding-preview')).toHaveCount(0);
+
+  await page.locator('[data-insights-days="30"]').click();
+  await expect(page.locator('#screen-patterns [data-pattern-count]')).toHaveText('1');
+  await expect(page.locator('#screen-patterns #findingsTitle')).toHaveText('1 pattern worth reviewing');
+  await expect(page.locator('#screen-patterns .finding-preview')).toHaveCount(1);
+  await expect(page.locator('#screen-patterns .finding-preview').first()).toContainText('Headache');
+
+  await page.locator('[data-insights-days="7"]').click();
+  await expect(page.locator('#screen-patterns [data-pattern-count]')).toHaveText('0');
+  await expect(page.locator('#screen-patterns .finding-preview')).toHaveCount(0);
+});
+
+test('@production Tracking quality separates logging consistency, entry detail, baseline mix, and field coverage', async ({ page }, testInfo) => {
   await startSyntheticFreeSession(page, testInfo);
   await page.evaluate(() => {
     const store = window.PametStore;
@@ -116,56 +165,45 @@ test('@production Data quality separates entry completeness from days logged and
   });
   await page.locator('[data-tab="patterns"]').click();
 
-  const summary = page.locator('#screen-patterns .completeness-summary');
-  await expect(summary).toBeVisible();
-  await expect(summary.locator('.pamet-eyebrow')).toHaveText('Data quality · last 7 days');
-  await expect(summary.locator('#completenessTitle')).toHaveText('100% of logged entries complete');
-  await expect(summary.locator('.completeness-context strong')).toHaveText('1 of 7 days logged');
-  await expect(summary.locator('.completeness-context')).toContainText('Your logged entries include all recommended tracking details.');
-  await expect(summary.locator('.completeness-definition')).toContainText('does not mean you logged every day');
+  const quality = page.locator('#screen-patterns .tracking-quality-card');
+  await expect(quality).toBeVisible();
+  await expect(quality.locator('.tracking-quality-head .pamet-eyebrow')).toHaveText('Tracking quality · last 7 days');
+  await expect(quality.locator('#trackingQualityTitle')).toHaveText('Limited tracking foundation');
+  await expect(quality.locator('[data-quality-metric="consistency"] strong')).toHaveText('14%');
+  await expect(quality.locator('[data-quality-metric="consistency"]')).toContainText('1 of 7 calendar days logged');
+  await expect(quality.locator('[data-quality-metric="detail"] strong')).toHaveText('100%');
+  await expect(quality.locator('[data-quality-metric="baseline"] strong')).toHaveText('1 / 0');
+  await expect(quality.locator('[data-quality-next]')).toContainText('Log 2 more days');
+  await expect(quality.locator('.quality-field')).toHaveCount(7);
+  await expect(quality.locator('[data-quality-field="notes"]')).toContainText('1 of 1 logged entry');
+  await expect(quality.locator('.quality-footnote')).toContainText('does not measure diagnostic certainty');
 
-  const layout = await summary.evaluate((element) => {
-    const card = element.closest('.completeness-card');
-    const title = element.querySelector('#completenessTitle');
-    const eyebrow = element.querySelector('.pamet-eyebrow');
-    const context = element.querySelector('.completeness-context');
-    const definition = element.querySelector('.completeness-definition');
-    const grid = card.querySelector('.completeness-grid');
-    const cardRect = card.getBoundingClientRect();
-    const summaryRect = element.getBoundingClientRect();
-    const titleRect = title.getBoundingClientRect();
-    const center = (rect) => rect.left + rect.width / 2;
+  const layout = await quality.evaluate((element) => {
+    const metrics = element.querySelector('.quality-metrics');
+    const fields = element.querySelector('.quality-fields-grid');
     return {
-      summaryTracks: getComputedStyle(element).gridTemplateColumns.trim().split(/\s+/).filter(Boolean).length,
-      detailTracks: getComputedStyle(grid).gridTemplateColumns.trim().split(/\s+/).filter(Boolean).length,
-      centerDelta: Math.abs(center(summaryRect) - center(cardRect)),
-      titleCenterDelta: Math.abs(center(titleRect) - center(summaryRect)),
-      eyebrowCenterDelta: Math.abs(center(eyebrow.getBoundingClientRect()) - center(summaryRect)),
-      contextCenterDelta: Math.abs(center(context.getBoundingClientRect()) - center(summaryRect)),
-      definitionCenterDelta: Math.abs(center(definition.getBoundingClientRect()) - center(summaryRect)),
-      titleTextAlign: getComputedStyle(title).textAlign,
-      titleLineHeight: Number.parseFloat(getComputedStyle(title).lineHeight),
-      titleFontSize: Number.parseFloat(getComputedStyle(title).fontSize),
+      metricTracks: getComputedStyle(metrics).gridTemplateColumns.trim().split(/\s+/).filter(Boolean).length,
+      fieldTracks: getComputedStyle(fields).gridTemplateColumns.trim().split(/\s+/).filter(Boolean).length,
       viewportWidth: window.innerWidth
     };
   });
 
-  expect(layout.summaryTracks).toBe(1);
-  expect(layout.centerDelta).toBeLessThanOrEqual(3);
-  expect(layout.titleCenterDelta).toBeLessThanOrEqual(3);
-  expect(layout.eyebrowCenterDelta).toBeLessThanOrEqual(3);
-  expect(layout.contextCenterDelta).toBeLessThanOrEqual(3);
-  expect(layout.definitionCenterDelta).toBeLessThanOrEqual(3);
-  expect(layout.titleTextAlign).toBe('center');
-  expect(layout.titleFontSize).toBeGreaterThan(20);
-  expect(layout.titleLineHeight).toBeGreaterThan(layout.titleFontSize);
-  if (layout.viewportWidth > 980) expect(layout.detailTracks).toBe(4);
-  else if (layout.viewportWidth > 620) expect(layout.detailTracks).toBe(2);
-  else expect(layout.detailTracks).toBe(1);
+  if (layout.viewportWidth > 980) {
+    expect(layout.metricTracks).toBe(3);
+    expect(layout.fieldTracks).toBe(4);
+  } else if (layout.viewportWidth > 620) {
+    expect(layout.metricTracks).toBe(2);
+    expect(layout.fieldTracks).toBe(2);
+  } else {
+    expect(layout.metricTracks).toBe(1);
+    expect(layout.fieldTracks).toBe(1);
+  }
 
   await page.locator('[data-insights-days="30"]').click();
-  await expect(summary.locator('.pamet-eyebrow')).toHaveText('Data quality · last 30 days');
-  await expect(summary.locator('.completeness-context strong')).toHaveText('1 of 30 days logged');
+  await expect(quality.locator('.tracking-quality-head .pamet-eyebrow')).toHaveText('Tracking quality · last 30 days');
+  await expect(quality.locator('[data-quality-metric="consistency"] strong')).toHaveText('3%');
+  await expect(quality.locator('[data-quality-metric="consistency"]')).toContainText('1 of 30 calendar days logged');
+  await expect(quality.locator('[data-quality-field="sleep"]')).toContainText('1 of 1 logged entry');
 });
 
 test('@production Log counters react to selections while preserving custom-field quotas', async ({ page }, testInfo) => {
