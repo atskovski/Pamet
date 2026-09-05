@@ -68,16 +68,21 @@ check(insights.includes('if (!paidComparisons()) return observations;'), 'Free I
 check(insights.includes("E?.has?.('medicationTiming') === true"), 'Medication observations must require the Pro/Ultra entitlement.');
 
 check(comparison.includes('Compare all plans'), 'Settings must offer a clear full-plan comparison action.');
-check(comparison.includes('Upgrade to Pro') && comparison.includes('Upgrade to Ultra'), 'Settings upgrade CTA must advance one tier at a time.');
+check(comparison.includes('Upgrade to Pro or Ultra') && comparison.includes('Upgrade to Ultra'), 'Settings must let Free choose Pro or Ultra while Pro advances to Ultra.');
 check(comparison.includes('Compare all plan features'), 'Legacy upgrade chooser must still link to the full comparison when invoked elsewhere.');
 check(comparison.includes('/dist/pamet.plan-matrix.min.js'), 'Full plan matrix must stay deferred from the authenticated critical bundle.');
 check(matrix.includes('Compare all Pamet features'), 'Deferred matrix must present the complete Pamet comparison heading.');
-check(matrix.includes('PAMET PLAN CATALOG') && matrix.includes('current catalog features'), 'Full comparison must explain its canonical catalog source.');
-check(matrix.includes('PametPlanCatalog') && comparison.includes('PametPlanCatalog'), 'Plan comparison surfaces must use the canonical generated catalog.');
+check(matrix.includes('data-plan-matrix-back') && matrix.includes('Back to Manage your plan'), 'Full comparison must provide a back path to Manage your plan.');
+check(matrix.includes('data-plan-matrix-upgrade="pro"') && matrix.includes('data-plan-matrix-upgrade="ultra"'), 'Free comparison must provide direct Pro and Ultra upgrade actions.');
+check(!matrix.includes('PAMET PLAN CATALOG') && !matrix.includes('canonical plan catalog'), 'Customer-facing plan comparison must not expose internal catalog implementation language.');
+check(matrix.includes('PametPlanCatalog') && comparison.includes('PametPlanCatalog'), 'Plan comparison surfaces must use the canonical generated catalog internally.');
 check(managementLoader.includes('/dist/pamet.plan-management.min.js'), 'Paid account management must stay deferred from the critical feature bundle.');
-check(management.includes('#upgradeBtn') && management.includes('Upgrade to ${esc(planByKey(nextKey).name)}') && management.includes('Manage billing'), 'Manage your plan must use next-tier upgrade actions and reserve billing management for paid accounts.');
+check(management.includes('#upgradeBtn') && management.includes('["pro", "ultra"]') && management.includes('Upgrade to Pro or Ultra') && management.includes('Manage billing'), 'Manage your plan must offer both paid tiers to Free while reserving billing management for paid accounts.');
+check(management.includes('body: JSON.stringify({ plan: targetKey, interval, checkoutAttemptId: attempt })'), 'Free checkout must use the selected Pro or Ultra tier instead of hard-coding Pro.');
+check(management.includes('featureSection(from, { current: true })') && management.includes('plan-management-upgrade-grid'), 'Upgrade views must show the current plan together with complete target-plan feature sections.');
+check(management.includes('data-plan-management-back') && management.includes('data-plan-management-checkout-back'), 'Plan management and secure checkout must retain back navigation.');
 check(management.includes('/api/billing/status') && management.includes('/api/billing/portal'), 'Plan management must separate read-only billing status from explicit upgrade/billing actions.');
-check(management.includes('openUpgrade') && management.includes('targetKey'), 'Plan management must render only the next upgrade tier in its upgrade flow.');
+check(management.includes('if (from === "free") checkoutFreeToPlan') && management.includes('else openBilling'), 'Free purchases must use checkout while an existing Pro subscription upgrades through billing management.');
 check(!JSON.stringify(catalog).includes('Scheduled caregiver updates'), 'Canonical plan contract must not advertise removed live caregiver surveillance.');
 check(!JSON.stringify(catalog).includes('FHIR-ready data export'), 'Canonical plan contract must not advertise unshipped FHIR export.');
 
