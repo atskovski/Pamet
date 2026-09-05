@@ -41,17 +41,23 @@ test('push reminder job processes UUID subscriptions in bounded batches', async 
   assert.equal(connection.updates.length, 2);
 });
 
-test('weekly digest uses bounded batches and sends aggregate summaries', async () => {
+test('weekly digest uses bounded batches without sending health details in email', async () => {
   const connection = connectionFor({ pamet_users: [
-    { id: 1, email: 'one@example.test', latest_digest_json: JSON.stringify({ loggedDays: 3, symptomDays: 1, averageSleep: 7, topSymptoms: [{ name: 'Headache', count: 1 }] }) },
+    { id: 1, email: 'one@example.test', latest_digest_json: JSON.stringify({ loggedDays: 3, symptomDays: 1, averageSleep: 7, topSymptoms: [{ name: 'Migraine Sentinel', count: 1 }] }) },
     { id: 2, email: 'two@example.test', latest_digest_json: JSON.stringify({ loggedDays: 5, symptomDays: 2, averageSleep: 6.5 }) }
   ] });
-  const recipients = [];
-  const result = await runWeeklyDigest({ connection, sendMail: async (to) => { recipients.push(to); return true; }, appBaseUrl: 'https://pamet.example', batchSize: 1 });
-  assert.deepEqual(recipients, ['one@example.test', 'two@example.test']);
+  const messages = [];
+  const result = await runWeeklyDigest({ connection, sendMail: async (to, subject, body) => { messages.push({ to, subject, body }); return true; }, appBaseUrl: 'https://pamet.example', batchSize: 1 });
+  assert.deepEqual(messages.map((message) => message.to), ['one@example.test', 'two@example.test']);
   assert.equal(result.attempted, 2);
   assert.equal(result.sent, 2);
   assert.equal(result.batches, 2);
+  for (const message of messages) {
+    assert.equal(message.subject, 'Your Pamet weekly summary is ready');
+    assert.match(message.body, /Open Pamet to review your weekly summary/);
+    assert.match(message.body, /does not include symptoms, medications, sleep, mood, notes, or other health details/);
+    assert.doesNotMatch(message.body, /Migraine Sentinel|days logged|symptom days|average sleep|Most frequently recorded/);
+  }
 });
 
 test('stripe reconciliation updates only mismatched entitlements', async () => {
