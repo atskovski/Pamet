@@ -1,5 +1,6 @@
 'use strict';
 
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const { buildSync } = require('esbuild');
@@ -8,12 +9,13 @@ const root = path.resolve(__dirname, '..');
 const temp = path.join(root, '.csp-build');
 const tempJs = path.join(temp, 'js');
 const sourceJs = path.join(root, 'js');
+const dist = path.join(root, 'dist');
+const VERSION = require(path.join(root, 'package.json')).version;
 
 function replaceRequired(source, from, to, label) {
   if (!source.includes(from)) throw new Error(`CSP build transform not found: ${label}`);
   return source.replace(from, to);
 }
-
 function transformFile(name, transform) {
   const target = path.join(tempJs, name);
   const source = fs.readFileSync(target, 'utf8');
@@ -52,32 +54,73 @@ transformFile('billing-sharing.js', (input) => input
   .replace('class="data-btn" data-close style="margin-top:8px"', 'class="data-btn modal-secondary-action" data-close')
   .replace('id="includeNotes" type="checkbox" style="width:auto;margin-right:6px"', 'id="includeNotes" type="checkbox" class="share-notes-checkbox"')
   .replace("p.style.cssText='margin:18px 0 0;padding-top:12px;border-top:1px solid var(--border-color);font-size:11px;color:var(--text-tertiary)';", ''));
-
 transformFile('insights.js', (input) => replaceRequired(input,
   '<div class="mini-meter" aria-hidden="true"><span style="width:${value}%"></span></div>',
   '<div class="mini-meter" aria-hidden="true"><progress max="100" value="${value}"></progress></div>',
   'insights completeness meter'));
-
 transformFile('product-clarity.js', (input) => replaceRequired(input,
   '<div class="pattern-readiness-meter" aria-label="Pattern baseline strength"><span style="width:${Math.min(100, strength)}%"></span></div>',
   '<div class="pattern-readiness-meter" aria-label="Pattern baseline strength"><progress max="100" value="${Math.min(100, strength)}"></progress></div>',
   'pattern readiness meter'));
-
 transformFile('login-experience.js', (input) => replaceRequired(input,
   '    welcome.style.setProperty("--login-scene", `url("/assets/${scenes[index]}")`);',
   '    welcome.classList.remove("login-scene-sunrise", "login-scene-morning", "login-scene-dusk");\n    welcome.classList.add(`login-scene-${scenes[index].replace(/^login-|\\.jpg$/g, "")}`);',
   'login scene inline style'));
 
-const mainSource = fs.readFileSync(path.join(tempJs, 'main.js'), 'utf8');
-const browserSources = ['main.js', ...Array.from(mainSource.matchAll(/import\s+["']\.\/([^"']+\.js)["']/g), (match) => match[1])];
+function collectImports(entryName, seen = new Set()) {
+  if (seen.has(entryName)) return seen;
+  seen.add(entryName);
+  const file = path.join(tempJs, entryName);
+  const source = fs.readFileSync(file, 'utf8');
+  for (const match of source.matchAll(/import\s+["']\.\/([^"']+\.js)["']/g)) collectImports(match[1], seen);
+  return seen;
+}
+const browserSources = new Set([...collectImports('main.js'), ...collectImports('authenticated-features.js')]);
 for (const name of browserSources) {
   const source = fs.readFileSync(path.join(tempJs, name), 'utf8');
   if (/\bstyle\s*=\s*["']/.test(source)) throw new Error(`Strict CSP build still contains a style attribute in active js/${name}`);
   if (/\.style\.(?:setProperty|cssText|display|overflow|width|height|color|background)/.test(source)) throw new Error(`Strict CSP build still contains presentation CSSOM mutation in active js/${name}`);
 }
 
-fs.mkdirSync(path.join(root, 'dist'), { recursive: true });
-buildSync({ entryPoints: [path.join(tempJs, 'main.js')], bundle: true, minify: true, outfile: path.join(root, 'dist', 'pamet.min.js') });
-buildSync({ entryPoints: [path.join(root, 'css', 'main.css')], bundle: true, minify: true, external: ['../assets/*'], outfile: path.join(root, 'dist', 'pamet.min.css') });
+fs.mkdirSync(dist, { recursive: true });
+for (const name of fs.readdirSync(dist)) {
+  if (/^pamet\.(?:bootstrap|features|styles)\.[a-f0-9]{12}\.(?:js|css)$/.test(name)) fs.rmSync(path.join(dist, name), { force: true });
+}
+
+const buildJs = (entry, outfile) => buildSync({
+  entryPoints: [path.join(tempJs, entry)], bundle: true, minify: true,
+  platform: 'browser', format: 'iife', target: ['es2020'], outfile
+});
+const buildCss = (entry, outfile) => buildSync({
+  entryPoints: [path.join(root, 'css', entry)], bundle: true, minify: true,
+  external: ['../assets/*'], outfile
+});
+
+const bootstrapJs = path.join(dist, 'pamet.min.js');
+const featuresJs = path.join(dist, 'pamet.features.min.js');
+const bootstrapCss = path.join(dist, 'pamet.min.css');
+const featuresCss = path.join(dist, 'pamet.features.min.css');
+buildJs('main.js', bootstrapJs);
+buildJs('authenticated-features.js', featuresJs);
+buildCss('bootstrap.css', bootstrapCss);
+buildCss('authenticated.css', featuresCss);
+
+function hashedAlias(file, label) {
+  const bytes = fs.readFileSync(file);
+  const hash = crypto.createHash('sha256').update(bytes).digest('hex').slice(0, 12);
+  const ext = path.extname(file);
+  const name = `pamet.${label}.${hash}${ext}`;
+  fs.copyFileSync(file, path.join(dist, name));
+  return `/dist/${name}`;
+}
+const manifest = {
+  version: VERSION,
+  generatedAt: new Date().toISOString(),
+  bootstrapJs: hashedAlias(bootstrapJs, 'bootstrap'),
+  featuresJs: hashedAlias(featuresJs, 'features'),
+  bootstrapCss: hashedAlias(bootstrapCss, 'styles'),
+  featuresCss: hashedAlias(featuresCss, 'features')
+};
+fs.writeFileSync(path.join(dist, 'asset-manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
 fs.rmSync(temp, { recursive: true, force: true });
-console.log('Pamet strict-CSP production bundles built.');
+console.log(`Pamet performance-first production bundles built: ${manifest.bootstrapJs}, ${manifest.featuresJs}, ${manifest.bootstrapCss}, ${manifest.featuresCss}`);

@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const main = fs.readFileSync('js/main.js', 'utf8');
+const authenticated = fs.readFileSync('js/authenticated-features.js', 'utf8');
 const cssMain = fs.readFileSync('css/main.css', 'utf8');
 const mobileCss = fs.readFileSync('css/mobile.css', 'utf8');
 const securityUi = fs.readFileSync('js/security.js', 'utf8');
@@ -14,9 +15,9 @@ const assurance = fs.readFileSync('docs/EXTERNAL_ASSURANCE_READINESS.md', 'utf8'
 
 function check(condition, message) { if (!condition) throw new Error(message); }
 
-check(main.includes('./account-switch.js'), 'Production bundle must include safe account switching.');
-check(main.includes('./qr-sharing.js') && main.includes('./security.js'), 'Authenticator QR/security modules must ship together.');
-check(!main.includes('./local-encryption.js'), 'Local encryption must remain disabled until independent review approves migration enablement.');
+check(main.includes('./account-switch.js'), 'Bootstrap must include safe account switching.');
+check(authenticated.includes('./qr-sharing.js') && main.includes('./security.js'), 'Authenticator security must stay eager while QR sharing ships in the authenticated feature bundle.');
+check(!main.includes('./local-encryption.js') && !authenticated.includes('./local-encryption.js'), 'Local encryption must remain disabled until independent review approves migration enablement.');
 check(cssMain.includes('./mobile.css'), 'Mobile viewport overrides must remain in the production style pipeline.');
 check(mobileCss.includes('place-items:center!important') && mobileCss.includes('height:100dvh!important'), 'Security/recovery dialogs must be viewport-centered.');
 check(mobileCss.includes('font-size:16px!important'), 'Mobile form controls must prevent iOS focus zoom.');

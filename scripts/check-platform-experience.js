@@ -3,16 +3,14 @@
 const fs = require('fs');
 
 const client = fs.readFileSync('js/platform-experience.js', 'utf8');
-const main = fs.readFileSync('js/main.js', 'utf8');
+const authenticated = fs.readFileSync('js/authenticated-features.js', 'utf8');
 const cssEntry = fs.readFileSync('css/main.css', 'utf8');
 const css = fs.readFileSync('css/platform-experience.css', 'utf8');
 
-function check(condition, message) {
-  if (!condition) throw new Error(message);
-}
+function check(condition, message) { if (!condition) throw new Error(message); }
 
-check(main.includes('import "./platform-experience.js"'), 'Platform Settings experience must be loaded from the production entrypoint.');
-check(cssEntry.includes('@import "./platform-experience.css"'), 'Platform Settings styles must be part of the production CSS bundle.');
+check(authenticated.includes('import "./platform-experience.js"'), 'Platform Settings experience must be loaded from the authenticated production entrypoint.');
+check(cssEntry.includes('@import "./platform-experience.css"'), 'Platform Settings styles must remain represented in the full production CSS contract.');
 check(client.includes('Download my Pamet data') && client.includes('downloadJson'), 'Data portability UI must remain wired to the local export contract.');
 check(client.includes('Notification health') && client.includes('notificationHealth'), 'Notification-health UI must remain wired to platform health checks.');
 check(client.includes('browser or device’s site settings') && client.includes('Check again'), 'Denied-notification recovery must provide a manual browser/OS recovery path.');

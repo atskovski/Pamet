@@ -1,9 +1,8 @@
 'use strict';
 
 // Backwards-compatible deployment entry point. The reviewed Express application
-// remains in server.js; this edge wrapper adds account-keyed login throttling,
-// breached-password screening, legacy identity migration, release normalization,
-// server-rendered release identity, CSP enforcement, and release-safe scheduled jobs.
+// remains in server.js; this edge wrapper owns release identity, strict CSP,
+// performance-first static delivery, auth hardening and bounded operations routes.
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
@@ -24,14 +23,39 @@ const nodeEnv = process.env.NODE_ENV || 'development';
 const appBaseUrl = (process.env.APP_BASE_URL || `http://localhost:${port}`).replace(/\/$/, '');
 const platform = createPlatformFoundation({ version: VERSION, nodeEnv });
 const json = express.json({ limit: '256kb', strict: true });
+const performanceJson = express.json({ limit: '8kb', strict: true, type: ['application/json', 'text/plain'] });
 const sha = (value) => crypto.createHash('sha256').update(String(value || '')).digest('hex');
 const normalizedEmail = (req) => String(req.body && req.body.email || '').trim().toLowerCase().slice(0, 254);
 const releaseAssetVersion = VERSION.replace(/\D/g, '') || 'current';
+const distDir = path.join(__dirname, 'dist');
 const indexTemplate = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+
+function releaseAssets() {
+  const fallback = {
+    bootstrapJs: '/dist/pamet.min.js', featuresJs: '/dist/pamet.features.min.js',
+    bootstrapCss: '/dist/pamet.min.css', featuresCss: '/dist/pamet.features.min.css'
+  };
+  try {
+    const manifest = JSON.parse(fs.readFileSync(path.join(distDir, 'asset-manifest.json'), 'utf8'));
+    const valid = (value, ext) => new RegExp(`^/dist/pamet\\.(?:bootstrap|features|styles)\\.[a-f0-9]{12}\\.${ext}$`).test(String(value || ''));
+    return {
+      bootstrapJs: valid(manifest.bootstrapJs, 'js') ? manifest.bootstrapJs : fallback.bootstrapJs,
+      featuresJs: valid(manifest.featuresJs, 'js') ? manifest.featuresJs : fallback.featuresJs,
+      bootstrapCss: valid(manifest.bootstrapCss, 'css') ? manifest.bootstrapCss : fallback.bootstrapCss,
+      featuresCss: valid(manifest.featuresCss, 'css') ? manifest.featuresCss : fallback.featuresCss
+    };
+  } catch { return fallback; }
+}
+const assets = releaseAssets();
+const relative = (value) => String(value).replace(/^\//, '');
+const featureMeta = `  <meta name="pamet-features-js" content="${assets.featuresJs}" />\n  <meta name="pamet-features-css" content="${assets.featuresCss}" />\n`;
 const versionedIndex = indexTemplate
   .replace(/Pamet v\d+\.\d+\.\d+ · Your health history, finally useful\./g, `Pamet v${VERSION} · Your health history, finally useful.`)
-  .replace(/dist\/pamet\.min\.css\?v=\d+/g, `dist/pamet.min.css?v=${releaseAssetVersion}`)
-  .replace(/dist\/pamet\.min\.js\?v=\d+/g, `dist/pamet.min.js?v=${releaseAssetVersion}`)
+  .replace(/dist\/pamet\.min\.css\?v=\d+/g, relative(assets.bootstrapCss))
+  .replace(/dist\/pamet\.min\.js\?v=\d+/g, relative(assets.bootstrapJs))
+  .replace(/\s*<meta name="pamet-features-js"[^>]*>\s*/g, '\n')
+  .replace(/\s*<meta name="pamet-features-css"[^>]*>\s*/g, '\n')
+  .replace('</head>', `${featureMeta}</head>`)
   .replace(/class="metric-icon" style="--icon-bg:var\(--warm-light\)"/g, 'class="metric-icon tone-warm"')
   .replace(/class="metric-icon" style="--icon-bg:var\(--sage-light\)"/g, 'class="metric-icon tone-sage"')
   .replace(/class="metric-badge" data-badge="\+3 vs last" style="--badge:var\(--warm-terracotta\)"/g, 'class="metric-badge tone-terracotta" data-badge="+3 vs last"')
@@ -44,9 +68,7 @@ const versionedIndex = indexTemplate
   .replace(/\s*<script>\s*\/\/ Register the service worker[\s\S]*?<\/script>/, '');
 
 function hardenedCsp(value) {
-  let policy = String(value || '')
-    .replace("script-src 'self' 'unsafe-inline'", "script-src 'self'")
-    .replace("style-src 'self' 'unsafe-inline'", "style-src 'self'");
+  let policy = String(value || '').replace("script-src 'self' 'unsafe-inline'", "script-src 'self'").replace("style-src 'self' 'unsafe-inline'", "style-src 'self'");
   if (!policy.includes('script-src-attr')) policy = policy.replace('; style-src', "; script-src-attr 'none'; style-src");
   if (!policy.includes('style-src-attr')) policy = policy.replace('; font-src', "; style-src-attr 'none'; font-src");
   return policy;
@@ -59,11 +81,27 @@ app.use((req, res, next) => {
   next();
 });
 
-/* Edge request context adds request IDs and bounded in-memory runtime telemetry without storing health data. */
+/* Hashed assets are immutable for a year. Stable compatibility aliases always
+ * revalidate, so old clients still work without pinning a stale release. */
+app.use('/dist', express.static(distDir, {
+  fallthrough: true,
+  etag: true,
+  maxAge: 0,
+  setHeaders(res, filePath) {
+    const name = path.basename(filePath);
+    if (/^pamet\.(?:bootstrap|features|styles)\.[a-f0-9]{12}\.(?:js|css)$/.test(name)) {
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    } else if (name === 'asset-manifest.json') {
+      res.setHeader('Cache-Control', 'no-store, max-age=0');
+    } else {
+      res.setHeader('Cache-Control', 'no-cache');
+    }
+  }
+}));
+
 app.use(platform.middleware);
 app.use(createPlatformRouter(platform));
 
-/* Private Admin bridge. It does not exist in production mode and never exposes METRICS_SECRET to browser code. */
 if (process.env.PAMET_ADMIN_MODE === 'true' && process.env.PAMET_ADMIN_DB_ACK === 'separate') {
   app.get('/api/admin/ops/runtime', (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
@@ -71,7 +109,6 @@ if (process.env.PAMET_ADMIN_MODE === 'true' && process.env.PAMET_ADMIN_DB_ACK ==
     res.json(platform.runtimeSnapshot());
   });
 }
-
 app.use('/api', (req, res, next) => {
   const authorization = String(req.headers.authorization || '');
   const bearer = authorization.startsWith('Bearer ') ? authorization.slice(7).trim() : '';
@@ -92,21 +129,9 @@ function authSecurityHeaders(req, res, next) {
   if (nodeEnv === 'production') res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   next();
 }
-
 function parseAuthJson(req, res, next) {
-  json(req, res, (error) => {
-    if (error) return res.status(400).json({ error: 'Invalid JSON request.' });
-    next();
-  });
+  json(req, res, (error) => { if (error) return res.status(400).json({ error: 'Invalid JSON request.' }); next(); });
 }
-
-/*
- * Password logins remain backwards compatible: clients that do not send the
- * preference keep the established 30-day cookie. The web login explicitly sends
- * rememberMe=false when the box is clear; for that case only, strip Max-Age so
- * the browser owns a session cookie that disappears when the browser session ends.
- * The password itself is never persisted by this middleware.
- */
 function applyLoginCookiePolicy(req, res, next) {
   if (!req.body || req.body.rememberMe !== false) return next();
   const setHeader = res.setHeader.bind(res);
@@ -121,57 +146,47 @@ function applyLoginCookiePolicy(req, res, next) {
   };
   next();
 }
-
 function renderVersionedIndex(req, res) {
+  res.setHeader('Link', `<${assets.bootstrapCss}>; rel=preload; as=style, <${assets.bootstrapJs}>; rel=preload; as=script`);
   res.type('html').set('Cache-Control', 'no-store').send(versionedIndex);
 }
 
-const accountLoginLimit = distributedRateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: 10,
-  name: 'login-account',
-  keyGenerator: (req) => `email:${sha(normalizedEmail(req) || 'missing')}`
-});
-
+const accountLoginLimit = distributedRateLimit({ windowMs: 60 * 60 * 1000, max: 10, name: 'login-account', keyGenerator: (req) => `email:${sha(normalizedEmail(req) || 'missing')}` });
 const passwordSafetyLimit = distributedRateLimit({ windowMs: 15 * 60 * 1000, max: 10, name: 'password-safety' });
-
 async function rejectBreachedPassword(req, res, next) {
   const password = String(req.body && (req.body.newPassword || req.body.password) || '');
   if (password.length < 12) return next();
   if (nodeEnv === 'test' && process.env.DISABLE_BREACHED_PASSWORD_CHECK === 'true') return next();
-  try {
-    if (await breachedPassword(password)) return res.status(400).json({ error: 'Choose a password that has not appeared in known data breaches.' });
-  } catch (error) {
-    console.warn('breached_password_check_failed', { message: error.message });
-  }
+  try { if (await breachedPassword(password)) return res.status(400).json({ error: 'Choose a password that has not appeared in known data breaches.' }); }
+  catch (error) { console.warn('breached_password_check_failed', { message: error.message }); }
   next();
 }
 
 app.use('/api/auth', authSecurityHeaders);
 app.get('/api/health', authSecurityHeaders, (req, res) => res.json({ ok: true, version: VERSION }));
-
-/* Service-worker scripts must bypass intermediary/browser HTTP caching so an old controller can discover a new release. */
+app.post('/api/performance', authSecurityHeaders, performanceJson, (req, res) => {
+  const metrics = Array.isArray(req.body?.metrics) ? req.body.metrics.slice(0, 8) : [];
+  let accepted = 0;
+  for (const metric of metrics) if (platform.recordWebVital(metric)) accepted += 1;
+  res.status(accepted ? 202 : 204).json(accepted ? { accepted } : {});
+});
 app.get('/sw.js', (req, res) => {
   res.setHeader('Service-Worker-Allowed', '/');
   res.setHeader('Cache-Control', 'no-store, max-age=0');
   res.type('application/javascript').sendFile(path.join(__dirname, 'sw.js'));
 });
-
 app.use('/api/ready', (req, res, next) => {
   const sendJson = res.json.bind(res);
   res.json = (body) => sendJson(body && typeof body === 'object' ? { ...body, version: VERSION } : body);
   next();
 });
-
 app.get(['/', '/index.html'], authSecurityHeaders, renderVersionedIndex);
-
 app.post('/api/auth/login', parseAuthJson, accountLoginLimit, applyLoginCookiePolicy);
 app.post('/api/auth/register', parseAuthJson, passwordSafetyLimit, rejectBreachedPassword);
 app.post('/api/auth/password', parseAuthJson, passwordSafetyLimit, rejectBreachedPassword);
 app.post('/api/auth/legacy-upgrade', parseAuthJson, passwordSafetyLimit, rejectBreachedPassword, legacyUpgrade);
 app.post('/api/auth/logout-all', parseAuthJson, logoutAll);
 app.post('/api/jobs/appointment-reminders', json, appointmentReminderJob);
-/* These routes intentionally precede server.js so legacy unbounded job handlers cannot run. */
 app.use(createOperationsJobsRouter({ appBaseUrl }));
 app.use(inner);
 app.use((error, req, res, next) => {
@@ -181,7 +196,5 @@ app.use((error, req, res, next) => {
   console.error('secure_edge_error', { requestId: req.pametRequestId || null, path: req.path, message: error.message });
   res.status(status).json({ error: status === 503 ? 'Service temporarily unavailable.' : 'Request failed.' });
 });
-
 if (require.main === module) app.listen(port, () => console.log(`Pamet v${VERSION} listening securely on ${port}`));
-
 module.exports = app;
