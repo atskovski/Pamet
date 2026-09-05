@@ -16,6 +16,7 @@ const { appointmentReminderJob } = require('./lib/appointment-reminders');
 const { createPlatformFoundation } = require('./lib/platform-foundation');
 const { createPlatformRouter } = require('./routes/platform');
 const { createOperationsJobsRouter } = require('./routes/operations-jobs');
+const { createVisitWorkflowRouter } = require('./routes/visit-workflow');
 
 const app = express();
 const port = Number(process.env.PORT || 8080);
@@ -188,6 +189,7 @@ app.post('/api/auth/legacy-upgrade', parseAuthJson, passwordSafetyLimit, rejectB
 app.post('/api/auth/logout-all', parseAuthJson, logoutAll);
 app.post('/api/jobs/appointment-reminders', json, appointmentReminderJob);
 app.use(createOperationsJobsRouter({ appBaseUrl }));
+app.use(createVisitWorkflowRouter({ appBaseUrl }));
 app.use(inner);
 app.use((error, req, res, next) => {
   if (res.headersSent) return next(error);
