@@ -3,6 +3,7 @@
   'use strict';
   if(window.PametVisitWorkflowLoader)return;
   let pending=null;
+
   function labelVisitSequence(){
     const prep=document.querySelector('[data-phase2="prep"]');
     const brief=document.querySelector('[data-phase2="brief"]');
@@ -11,6 +12,13 @@
     if(prepCopy)prepCopy.textContent='Step 1 · Add visit details, priorities, and questions';
     if(briefCopy)briefCopy.textContent='Step 2 · Create the clinician-ready summary from your visit plan and tracking';
   }
+
+  function closeSavedAppointmentWorkspace(){
+    if(!document.querySelector('#visitWorkflowModalRoot .visit-calendar-modal'))return;
+    const careRoot=document.querySelector('#careUxModalRoot');
+    if(careRoot?.children.length)careRoot.innerHTML='';
+  }
+
   function load(){
     if(window.PametVisitWorkflow)return Promise.resolve(window.PametVisitWorkflow);
     if(pending)return pending;
@@ -24,6 +32,7 @@
     }).catch(error=>{pending=null;throw error});
     return pending;
   }
+
   window.PametVisitWorkflowLoader={load,labelVisitSequence};
   document.addEventListener('pamet:settings-rendered',labelVisitSequence);
   document.addEventListener('click',event=>{
@@ -38,5 +47,9 @@
     }
     if(event.target.closest?.('[data-nav="report"],[data-phase2="prep"]'))load().catch(()=>{});
   },true);
+
+  const modalObserver=new MutationObserver(closeSavedAppointmentWorkspace);
+  modalObserver.observe(document.body,{childList:true,subtree:true});
   labelVisitSequence();
+  closeSavedAppointmentWorkspace();
 })();
