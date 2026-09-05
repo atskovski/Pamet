@@ -29,14 +29,17 @@
   text-overflow:ellipsis;
 }
 .insights-window .chip-btn.history-locked{
-  padding-right:1.85rem;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:.45rem;
+  padding-right:.55rem;
   border-style:dashed;
 }
 .insights-window-lock{
-  position:absolute;
-  top:.26rem;
-  right:.38rem;
+  position:static;
   display:inline-flex;
+  flex:0 0 auto;
   align-items:center;
   justify-content:center;
   min-width:1.55rem;
@@ -49,9 +52,6 @@
   font-weight:900;
   letter-spacing:.02em;
   line-height:1;
-}
-.insights-window-lock::before{
-  content:"\00a0";
 }
 .insights-window-note{
   margin:0;
