@@ -116,6 +116,57 @@
   height:1rem;
 }
 
+/* Data quality: distinguish days logged from how complete those logged entries are. */
+.completeness-card{
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  gap:1.25rem;
+  text-align:center;
+}
+.completeness-summary{
+  display:grid;
+  justify-items:center;
+  gap:.4rem;
+  width:min(100%,52rem);
+  margin:0 auto;
+}
+.completeness-summary .pamet-eyebrow{
+  text-align:center;
+}
+.completeness-summary h3{
+  margin:.1rem 0 0;
+  max-width:28ch;
+  color:var(--text-primary,var(--ink-primary));
+  font-size:clamp(1.35rem,2.2vw,1.8rem);
+  line-height:1.2;
+  text-align:center;
+}
+.completeness-context{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-wrap:wrap;
+  gap:.3rem .5rem;
+  margin:.15rem 0 0;
+  color:var(--text-secondary,var(--ink-secondary));
+  font-size:.82rem;
+  line-height:1.45;
+  text-align:center;
+}
+.completeness-context strong{
+  color:var(--text-primary,var(--ink-primary));
+}
+.completeness-definition{
+  max-width:68ch;
+  margin:.15rem auto 0;
+  text-align:center;
+}
+.completeness-grid{
+  width:100%;
+  text-align:left;
+}
+
 /* Make live plan feedback easier to scan without turning it into another large card. */
 .plan-limit-row{
   min-height:2.9rem;
@@ -157,6 +208,16 @@
   }
   .insights-window .chip-btn{
     width:100%;
+  }
+  .completeness-card{
+    gap:1rem;
+  }
+  .completeness-context{
+    flex-direction:column;
+    gap:.2rem;
+  }
+  .completeness-context > span[aria-hidden="true"]{
+    display:none;
   }
   #securityCard .security-note{
     margin-top:.75rem!important;

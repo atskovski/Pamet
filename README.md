@@ -1,6 +1,6 @@
 # Pamet — Personal Health Journal
 
-**Version 1.6.7**  
+**Version 1.6.8**  
 **Your health history, finally useful.**
 
 Pamet is a privacy-first personal health journal for recording symptoms, medications, mood, activity, lifestyle factors, notes, and other user-provided health information over time, then organizing those observations for personal review and healthcare conversations.
@@ -13,7 +13,7 @@ Pamet is not emergency monitoring, a diagnostic service, a clinical decision too
 
 Pamet is an actively developed web/PWA deployed from GitHub `main` to Wasmer. The production repository also owns the mobile API and entitlement contract used by the native iOS and Android clients.
 
-### Pamet 1.6.7
+### Pamet 1.6.8
 
 This release improves the daily logging experience and the quality of Pamet's observational history:
 

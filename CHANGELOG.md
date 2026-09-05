@@ -1,5 +1,15 @@
 # Pamet Change Log
 
+## [1.6.8] — 2026-09-04
+
+### Patterns data quality clarity
+
+- Replaced the ambiguous “100% complete” summary with explicit logged-entry completeness language.
+- Separated logging consistency (“X of Y days logged”) from how fully each logged entry was completed.
+- Centered the Data Quality summary across desktop and mobile while retaining the detailed field-coverage breakdown.
+- Kept Data Quality synchronized with the 7 / 30 / 60 / 90-day Patterns window.
+- Stabilized production feature smoke tests with isolated synthetic sessions so browser validation does not trip account-registration throttling.
+
 ## [1.6.7] — 2026-09-04
 
 ### Patterns interactions and UI alignment

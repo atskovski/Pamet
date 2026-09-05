@@ -1,6 +1,6 @@
 # Pamet browser-data threat model — v1.6.4
 
-Current reviewed application release: **v1.6.6**.
+Current application release: **v1.6.8**. Threat-model assurance remains inherited from the v1.6.6 review baseline; this patch does not claim a new independent review.
 
 Reviewed: 2026-09-04  
 Release baseline: Pamet v1.6.4

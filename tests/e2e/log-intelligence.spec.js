@@ -2,15 +2,21 @@
 
 const { test, expect } = require('@playwright/test');
 
-async function registerAccount(page, testInfo) {
+async function startSyntheticFreeSession(page, testInfo) {
   const unique = `${Date.now()}-${Math.random().toString(16).slice(2)}-${testInfo.project.name.replace(/\W+/g, '-')}`;
+  await page.addInitScript(({ id }) => {
+    const user = {
+      id: `log-${id}`,
+      firstName: 'Log',
+      lastName: 'Intelligence',
+      email: `log-${id}@pamet.test`,
+      plan: 'free',
+      createdAt: new Date().toISOString()
+    };
+    localStorage.setItem('pamet_user_v1', JSON.stringify(user));
+    localStorage.setItem('pamet_session_v2', JSON.stringify({ token: `log-session-${id}`, at: Date.now() }));
+  }, { id: unique });
   await page.goto('/', { waitUntil: 'domcontentloaded' });
-  await page.locator('#showRegister').click();
-  await page.locator('#regFirstName').fill('Log');
-  await page.locator('#regLastName').fill('Intelligence');
-  await page.locator('#regEmail').fill(`log-${unique}@example.com`);
-  await page.locator('#regPassword').fill(`Pamet-Log-${unique}-Password!`);
-  await page.locator('#registerForm button[type="submit"]').click();
   await expect(page.locator('#welcome')).toHaveClass(/hidden/);
   await expect(page.locator('#screen-home')).toHaveClass(/active/);
 }
@@ -24,8 +30,8 @@ async function addCustomSymptom(page, name) {
   await expect(page.locator('#symptomGrid .sym-btn', { hasText: name })).toBeVisible();
 }
 
-test('@production v1.6.7 Log a symptom explains the form, enforces Free limits, and auto-summarizes', async ({ page }, testInfo) => {
-  await registerAccount(page, testInfo);
+test('@production v1.6.8 Log a symptom explains the form, enforces Free limits, and auto-summarizes', async ({ page }, testInfo) => {
+  await startSyntheticFreeSession(page, testInfo);
   await page.locator('#openLog').click();
   await expect(page.locator('#logBackdrop')).toHaveClass(/open/);
 
@@ -76,8 +82,8 @@ test('@production v1.6.7 Log a symptom explains the form, enforces Free limits, 
   await expect(page.locator('#notesInput')).toHaveValue(/More caffeine/);
 });
 
-test('@production v1.6.7 logging milestones and Home observation toggle stay in sync', async ({ page }, testInfo) => {
-  await registerAccount(page, testInfo);
+test('@production v1.6.8 logging milestones and Home observation toggle stay in sync', async ({ page }, testInfo) => {
+  await startSyntheticFreeSession(page, testInfo);
   await expect(page.locator('#pametRewardDays')).toHaveText('0');
   await expect(page.locator('#pametTierRow .logging-tier')).toHaveCount(6);
   await expect(page.locator('[data-tier-key="bronze"]')).toContainText('Bronze');

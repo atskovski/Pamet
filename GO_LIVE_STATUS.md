@@ -1,4 +1,4 @@
-# Pamet 1.6.6 — Go-Live Status at a Glance
+# Pamet 1.6.8 — Go-Live Status at a Glance
 
 Last reviewed: 2026-09-04  
 Source of truth: Pamet 1.6.4 release branch plus exact-commit CI/environment evidence after merge.  
