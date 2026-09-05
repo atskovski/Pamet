@@ -18,6 +18,7 @@ import "./encrypted-sync.js";
 import "./qr-sharing.js";
 import "./product-clarity.js";
 import "./insights.js";
+import "./insights-charting.js";
 import "./interaction-controller.js";
 import "./experience.js";
 import "./care-ux.js";
