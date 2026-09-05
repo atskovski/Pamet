@@ -57,7 +57,7 @@ check(
   insightsController.includes('Tracking quality')&&
   insightsController.includes('data-pattern-count')&&
   insightsController.includes('Most useful next step')&&
-  insightsController.includes('[7, 14, 30, 60, 90, 180, 360]')&&
+  insightsController.includes('[7, 14, 30, 60, 90, 180, 365]')&&
   insightsCharting.includes('bucketWidthFor')&&
   insightsCharting.includes('three-period rolling trend'),
   'Insights must expose repeat-evidence analytics, evidence details, tracking quality, dynamic charting, archive actions, and all supported time windows.'
