@@ -1,5 +1,6 @@
 'use strict';
 
+const fs = require('node:fs');
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { runPushReminders, runWeeklyDigest, runStripeReconcile, subscriptionEntitled } = require('../lib/operations-jobs');
@@ -75,4 +76,10 @@ test('trial entitlement requires completed payment setup', () => {
   assert.equal(subscriptionEntitled({ status: 'trialing', pending_setup_intent: { status: 'succeeded' } }), true);
   assert.equal(subscriptionEntitled({ status: 'trialing', pending_setup_intent: { status: 'requires_payment_method' } }), false);
   assert.equal(subscriptionEntitled({ status: 'past_due' }), false);
+});
+
+test('new Stripe trials cancel instead of invoicing when checkout is abandoned', () => {
+  const source = fs.readFileSync('server.js', 'utf8');
+  assert.match(source, /trial_settings:\s*\{\s*end_behavior:\s*\{\s*missing_payment_method:\s*['"]cancel['"]\s*\}\s*\}/);
+  assert.doesNotMatch(source, /missing_payment_method:\s*['"]create_invoice['"]/);
 });
