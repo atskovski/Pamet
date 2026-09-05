@@ -2,15 +2,21 @@
 
 const { test, expect } = require('@playwright/test');
 
-async function registerAccount(page, testInfo) {
+async function startSyntheticFreeSession(page, testInfo) {
   const unique = `${Date.now()}-${Math.random().toString(16).slice(2)}-${testInfo.project.name.replace(/\W+/g, '-')}`;
+  await page.addInitScript(({ id }) => {
+    const user = {
+      id: `interaction-${id}`,
+      firstName: 'Interaction',
+      lastName: 'Fixes',
+      email: `interaction-${id}@pamet.test`,
+      plan: 'free',
+      createdAt: new Date().toISOString()
+    };
+    localStorage.setItem('pamet_user_v1', JSON.stringify(user));
+    localStorage.setItem('pamet_session_v2', JSON.stringify({ token: `interaction-session-${id}`, at: Date.now() }));
+  }, { id: unique });
   await page.goto('/', { waitUntil: 'domcontentloaded' });
-  await page.locator('#showRegister').click();
-  await page.locator('#regFirstName').fill('Interaction');
-  await page.locator('#regLastName').fill('Fixes');
-  await page.locator('#regEmail').fill(`interaction-${unique}@example.com`);
-  await page.locator('#regPassword').fill(`Pamet-Interaction-${unique}-Password!`);
-  await page.locator('#registerForm button[type="submit"]').click();
   await expect(page.locator('#welcome')).toHaveClass(/hidden/);
   await expect(page.locator('#screen-home')).toHaveClass(/active/);
 }
@@ -48,7 +54,7 @@ async function seedPatternHistory(page) {
 }
 
 test('@production Patterns windows, evidence, and archive actions are functional', async ({ page }, testInfo) => {
-  await registerAccount(page, testInfo);
+  await startSyntheticFreeSession(page, testInfo);
   await seedPatternHistory(page);
   await page.locator('[data-tab="patterns"]').click();
 
@@ -81,8 +87,54 @@ test('@production Patterns windows, evidence, and archive actions are functional
   await expect(page.locator('#screen-patterns .observation-card').first().locator('[data-observation-archive]')).toContainText('Restore');
 });
 
+test('@production Data quality separates entry completeness from days logged and stays centered', async ({ page }, testInfo) => {
+  await startSyntheticFreeSession(page, testInfo);
+  await page.evaluate(() => {
+    const store = window.PametStore;
+    store.addEntry({
+      id: `completeness-${Date.now()}`,
+      date: new Date().toISOString(),
+      symptoms: ['Headache'],
+      severity: 4,
+      sleepHours: 7,
+      stressLevel: 3,
+      waterGlasses: 7,
+      energyLevel: 6,
+      mood: 'Okay',
+      activity: 'Walk',
+      medications: [],
+      notes: 'Complete entry fixture'
+    });
+  });
+  await page.locator('[data-tab="patterns"]').click();
+
+  const summary = page.locator('#screen-patterns .completeness-summary');
+  await expect(summary).toBeVisible();
+  await expect(summary.locator('.pamet-eyebrow')).toHaveText('Data quality · last 7 days');
+  await expect(summary.locator('#completenessTitle')).toHaveText('100% of logged entries complete');
+  await expect(summary.locator('.completeness-context strong')).toHaveText('1 of 7 days logged');
+  await expect(summary.locator('.completeness-context')).toContainText('Your logged entries include all recommended tracking details.');
+  await expect(summary.locator('.completeness-definition')).toContainText('does not mean you logged every day');
+
+  const alignment = await summary.evaluate((element) => {
+    const card = element.closest('.completeness-card');
+    const summaryRect = element.getBoundingClientRect();
+    const cardRect = card.getBoundingClientRect();
+    return {
+      centerDelta: Math.abs((summaryRect.left + summaryRect.width / 2) - (cardRect.left + cardRect.width / 2)),
+      textAlign: getComputedStyle(element.querySelector('#completenessTitle')).textAlign
+    };
+  });
+  expect(alignment.centerDelta).toBeLessThanOrEqual(3);
+  expect(alignment.textAlign).toBe('center');
+
+  await page.locator('[data-insights-days="30"]').click();
+  await expect(summary.locator('.pamet-eyebrow')).toHaveText('Data quality · last 30 days');
+  await expect(summary.locator('.completeness-context strong')).toHaveText('1 of 30 days logged');
+});
+
 test('@production Log counters react to selections while preserving custom-field quotas', async ({ page }, testInfo) => {
-  await registerAccount(page, testInfo);
+  await startSyntheticFreeSession(page, testInfo);
   await page.locator('#openLog').click();
 
   const symptomHint = page.locator('[data-plan-limit="symptoms"]');
@@ -105,7 +157,7 @@ test('@production Log counters react to selections while preserving custom-field
 });
 
 test('@production Reward badge and Security note stay centered and aligned', async ({ page }, testInfo) => {
-  await registerAccount(page, testInfo);
+  await startSyntheticFreeSession(page, testInfo);
 
   const badge = page.locator('#pametCurrentTier .logging-current-badge');
   await expect(badge).toBeVisible();
