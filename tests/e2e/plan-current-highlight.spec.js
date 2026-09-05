@@ -80,7 +80,7 @@ test('@production Settings follows the server-verified plan after upgrade or pla
   await expect(free).toHaveClass(/active/);
   await expect(free.locator('.plan-current-badge')).toHaveText('Current plan');
   await expect(planLine).toHaveText('Free · Track');
-  await expect(planAction).toHaveText('Upgrade to Pro');
+  await expect(planAction).toHaveText('Upgrade to Pro or Ultra');
 
   verifiedPlan = 'pro';
   await page.evaluate(async () => {
