@@ -54,10 +54,6 @@ transformFile('billing-sharing.js', (input) => input
   .replace('class="data-btn" data-close style="margin-top:8px"', 'class="data-btn modal-secondary-action" data-close')
   .replace('id="includeNotes" type="checkbox" style="width:auto;margin-right:6px"', 'id="includeNotes" type="checkbox" class="share-notes-checkbox"')
   .replace("p.style.cssText='margin:18px 0 0;padding-top:12px;border-top:1px solid var(--border-color);font-size:11px;color:var(--text-tertiary)';", ''));
-transformFile('insights.js', (input) => replaceRequired(input,
-  '<div class="mini-meter" aria-hidden="true"><span style="width:${value}%"></span></div>',
-  '<div class="mini-meter" aria-hidden="true"><progress max="100" value="${value}"></progress></div>',
-  'insights completeness meter'));
 transformFile('product-clarity.js', (input) => replaceRequired(input,
   '<div class="pattern-readiness-meter" aria-label="Pattern baseline strength"><span style="width:${Math.min(100, strength)}%"></span></div>',
   '<div class="pattern-readiness-meter" aria-label="Pattern baseline strength"><progress max="100" value="${Math.min(100, strength)}"></progress></div>',
