@@ -68,8 +68,12 @@ test('@production paid Manage your plan opens account details without immediatel
   await expect(modal).toContainText('Plan Member');
   await expect(modal).toContainText('plan-member@pamet.test');
   await expect(modal).toContainText('42 days with Pamet');
-  await expect(modal).toContainText('3 journal entries');
-  await expect(modal).toContainText('2 distinct days logged');
+
+  const moments = modal.locator('.plan-account-moments > div');
+  await expect(moments.nth(0).locator('strong')).toHaveText('3');
+  await expect(moments.nth(0).locator('span')).toHaveText('journal entries');
+  await expect(moments.nth(1).locator('strong')).toHaveText('2');
+  await expect(moments.nth(1).locator('span')).toHaveText('distinct days logged');
   await expect(modal).toContainText('Subscription status: active');
   expect(portalCalls).toBe(0);
   await expect(page.locator('.pamet-toast.error')).toHaveCount(0);
@@ -83,7 +87,7 @@ test('@production paid Manage your plan opens account details without immediatel
 test('@production full comparison renders every canonical feature across Free Pro and Ultra', async ({page}) => {
   await installPro(page);
   await ready(page);
-  await page.getByRole('button',{name:'Compare all Pamet features',exact:true}).first().click();
+  await page.getByRole('button',{name:'Compare all plans',exact:true}).first().click();
 
   const dialog = page.locator('#pametPlanMatrixDialog');
   await expect(dialog).toBeVisible();
