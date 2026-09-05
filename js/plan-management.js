@@ -297,8 +297,7 @@
           <span>Ultra plan</span>
           <p>Your plan includes every feature currently listed in Pamet’s canonical plan catalog.</p>
         </section>`;
-    const billingState =
-      key === "free" ? "" : '<p class="plan-management-billing-state" data-billing-state>Refreshing billing status…</p>';
+    const billingState = key === "free" ? "" : '<p class="plan-management-billing-state" data-billing-state>Refreshing billing status…</p>';
     const primaryAction = nextKey
       ? `<button type="button" class="btn btn-primary" data-plan-management-upgrade>Upgrade to ${esc(planByKey(nextKey).name)}</button>`
       : '<button type="button" class="btn btn-primary" data-plan-management-billing>Manage billing</button>';
@@ -354,9 +353,7 @@
       global.PametPlanComparison?.open?.(key);
     });
     root.querySelector("[data-plan-management-upgrade]")?.addEventListener("click", () => openUpgrade(nextKey));
-    root
-      .querySelectorAll("[data-plan-management-billing]")
-      .forEach((button) => button.addEventListener("click", () => openBilling(root, button)));
+    root.querySelectorAll("[data-plan-management-billing]").forEach((button) => button.addEventListener("click", () => openBilling(root, button)));
     if (key !== "free") loadBillingStatus(root);
   }
 
