@@ -29,7 +29,7 @@ async function width(locator) {
   return box.width;
 }
 
-test('@production Settings plan actions, legal version, and upgrade chooser stay aligned', async ({ page }, testInfo) => {
+test('@production Settings plan actions, legal version, and next-tier Free upgrade stay aligned', async ({ page }, testInfo) => {
   await installSyntheticFreeSession(page);
   await openReadyApp(page);
   await page.locator('.tab[data-tab="settings"]').click();
@@ -46,7 +46,7 @@ test('@production Settings plan actions, legal version, and upgrade chooser stay
   await expect(safetyDialog).not.toBeVisible();
 
   const compare = page.getByRole('button', { name: 'Compare all plans', exact: true });
-  const upgrade = page.getByRole('button', { name: 'Upgrade your plan', exact: true });
+  const upgrade = page.getByRole('button', { name: 'Upgrade to Pro', exact: true });
   await expect(compare).toBeVisible();
   await expect(upgrade).toBeVisible();
 
@@ -64,14 +64,22 @@ test('@production Settings plan actions, legal version, and upgrade chooser stay
   expect(compareBox.x + compareBox.width).toBeLessThanOrEqual(cardBox.x + cardBox.width + 1);
 
   await upgrade.click();
-  const modal = page.locator('.plan-upgrade-modal');
+  const modal = page.locator('#pametPlanManagementRoot .plan-management-modal');
   await expect(modal).toBeVisible();
-  await expect(modal.getByRole('heading', { name: 'Compare Pamet plans' })).toBeVisible();
+  await expect(modal.getByRole('heading', { name: 'Manage your plan' })).toBeVisible();
+  await expect(modal).toContainText('Free · Track');
+  await expect(modal.getByRole('button', { name: 'Upgrade to Pro' })).toBeVisible();
+  await expect(modal.getByText('Open Stripe billing portal')).toHaveCount(0);
+
+  await modal.getByRole('button', { name: 'Upgrade to Pro' }).click();
+  await expect(modal.getByRole('heading', { name: 'Upgrade to Pro' })).toBeVisible();
   await expect(modal.getByRole('button', { name: 'Annual · Best value' })).toBeVisible();
   await expect(modal.getByRole('button', { name: 'Monthly' })).toBeVisible();
-  await expect(modal.getByRole('button', { name: 'Choose Pro' })).toBeVisible();
-  await expect(modal.getByRole('button', { name: 'Choose Ultra' })).toBeVisible();
-  await expect(modal.getByRole('button', { name: 'Compare all plan features' })).toBeVisible();
+  const upgradeCards = modal.locator('.plan-management-upgrade-card');
+  await expect(upgradeCards).toHaveCount(1);
+  await expect(upgradeCards).toContainText('Pro · Understand');
+  await expect(upgradeCards).not.toContainText('Ultra · Prepare');
+  await expect(modal.getByRole('button', { name: 'Continue to Pro' })).toBeVisible();
 
   const viewport = page.viewportSize();
   const modalBox = await modal.boundingBox();
@@ -82,22 +90,11 @@ test('@production Settings plan actions, legal version, and upgrade chooser stay
   expect(modalBox.x + modalBox.width).toBeLessThanOrEqual(viewport.width + 1);
   expect(modalBox.y + modalBox.height).toBeLessThanOrEqual(viewport.height + 1);
 
-  const pro = modal.locator('.pamet-compare-card').filter({ hasText: 'Pro · Understand' });
-  const ultra = modal.locator('.pamet-compare-card').filter({ hasText: 'Ultra · Prepare' });
-  const proBox = await pro.boundingBox();
-  const ultraBox = await ultra.boundingBox();
-  expect(proBox).not.toBeNull();
-  expect(ultraBox).not.toBeNull();
-
   if (testInfo.project.name.includes('mobile')) {
-    expect(ultraBox.y).toBeGreaterThan(proBox.y);
+    expect(await width(modal.getByRole('button', { name: 'Continue to Pro' }))).toBeGreaterThan(150);
   } else {
-    expect(Math.abs(proBox.y - ultraBox.y)).toBeLessThanOrEqual(3);
-    expect(Math.abs(proBox.width - ultraBox.width)).toBeLessThanOrEqual(4);
+    expect(await width(modal.getByRole('button', { name: 'Continue to Pro' }))).toBeGreaterThan(180);
   }
-
-  expect(await width(modal.getByRole('button', { name: 'Choose Pro' }))).toBeGreaterThan(180);
-  expect(await width(modal.getByRole('button', { name: 'Choose Ultra' }))).toBeGreaterThan(180);
 });
 
 test('@production Free paid feature entry points show the correct plan lock instead of opening paid workflows', async ({ page }) => {
