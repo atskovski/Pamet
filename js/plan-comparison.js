@@ -87,6 +87,8 @@
     if (line) { const item = plan(activePlan); line.textContent = `${item.name} · ${item.positioning}`; }
     const upgrade = document.querySelector("#upgradeBtn");
     if (upgrade) upgrade.textContent = activePlan === "free" ? "Upgrade to Pro" : activePlan === "pro" ? "Upgrade to Ultra" : "Manage your plan";
+    const weeklyHelp = document.querySelector("#setWeeklyDigest")?.closest(".setting-row")?.querySelector(".help");
+    if (weeklyHelp) weeklyHelp.dataset.help = "Pamet sends a privacy-minimized email when your weekly summary is ready. Symptoms, medications, sleep, mood, notes, and other health details stay inside Pamet.";
   }
 
   function observeSettings() {
