@@ -373,7 +373,8 @@
         : key === "pro"
           ? '<button type="button" class="btn btn-primary" data-plan-management-upgrade>Upgrade to Ultra</button>'
           : '<button type="button" class="btn btn-primary" data-plan-management-billing>Manage billing</button>';
-    const secondaryBilling = key === "pro" ? '<button type="button" class="data-btn plan-management-secondary-billing" data-plan-management-billing>Billing & invoices</button>' : "";
+    const secondaryBilling =
+      key === "pro" ? '<button type="button" class="data-btn plan-management-secondary-billing" data-plan-management-billing>Billing & invoices</button>' : "";
     root.innerHTML = `<div class="pamet-modal-backdrop plan-management-backdrop">
       <section class="pamet-modal plan-management-modal" role="dialog" aria-modal="true" aria-labelledby="planManagementTitle">
         <header class="plan-management-head plan-management-head-with-back">
