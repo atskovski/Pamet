@@ -65,8 +65,10 @@ test('@production Patterns windows, finding details, evidence, archive actions, 
   await expect(page.locator('#screen-patterns .insights-window-summary')).toContainText('last 7 days');
   await expect(page.locator('#screen-patterns .insights-findings-card .pamet-eyebrow')).toContainText('7-day window');
   await expect(page.locator('[data-insights-days="180"]')).toHaveClass(/history-locked/);
-  await expect(page.locator('[data-insights-days="365"]')).toHaveClass(/history-locked/);
+  await expect(page.locator('[data-insights-days="360"]')).toHaveClass(/history-locked/);
   await expect(page.locator('#screen-patterns [data-pattern-count]')).toHaveText('0');
+  await expect(page.locator('#screen-patterns .insights-chart-card')).toBeVisible();
+  await expect(page.locator('#screen-patterns [data-chart-mode="advanced"]')).toContainText('Pro+');
 
   for (const days of [14, 30, 60, 90, 7]) {
     await page.locator(`[data-insights-days="${days}"]`).click();
@@ -74,6 +76,7 @@ test('@production Patterns windows, finding details, evidence, archive actions, 
     await expect(page.locator('#screen-patterns .insights-window-summary')).toContainText(`last ${days} days`);
     await expect(page.locator('#screen-patterns .insights-findings-card .pamet-eyebrow')).toContainText(`${days}-day window`);
     await expect(page.locator('#screen-patterns .tracking-quality-card .pamet-eyebrow').first()).toContainText(`last ${days} days`);
+    await expect(page.locator('#screen-patterns .insights-chart-card')).toHaveAttribute('data-chart-window', String(days));
   }
 
   await page.locator('[data-insights-days="180"]').click();
