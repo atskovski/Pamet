@@ -6,7 +6,7 @@
   "main": "secure-server.js",
   "scripts": {
     "start": "node -r ./lib/performance-bootstrap.js secure-server.js",
-    "build": "node scripts/build-production.js && node scripts/build-insights-charting.js",
+    "build": "node scripts/build-production.js",
     "check:live": "node scripts/check-live-environment.js",
     "check:ui-contract": "node scripts/check-ui-contract.js",
     "format": "npx --yes prettier@3.6.2 --write js/plan-management.js js/plan-comparison.js js/visit-workflow-loader.js tests/e2e/plan-management.spec.js",
