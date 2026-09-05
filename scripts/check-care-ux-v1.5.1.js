@@ -18,8 +18,10 @@ check(care.includes('Secure invitation sent') && care.includes('setTimeout(() =>
 check(care.includes('caregiverSnapshot') && care.includes('providerSnapshot') && care.includes('recentContext') && care.includes('discussionPrompts'), 'Primary Care sharing must provide a richer clinician-oriented snapshot than caregiver sharing.');
 check(care.includes('refreshProfileBadge') && care.includes('S.profiles.length') && care.includes("button.hidden = count < 2"), 'Quick profile badge must react to profile additions/removals.');
 check(care.includes('Confirm this appointment date and time') && care.includes('careDateConfirmed'), 'Appointment date/time requires explicit confirmation.');
-check(care.includes('Draft saved only on this device') && care.includes('has not been added to Upcoming and saved visits'), 'Local draft save must explain exactly where data is stored.');
-check(care.includes('Appointment saved to Upcoming and saved visits') && care.includes('reminder setting is stored'), 'Secure appointment save must explain where the appointment/reminder is stored.');
-check(care.includes('Retry secure sync') && care.includes('You do not need to sign in again.') && !care.includes('await A.endSession()'), 'Appointment workspace must retry server sync before asking users to authenticate again.');
-check(css.includes('.care-ux-status.error') && css.includes('.care-appointment-grid'), 'Care confirmations and appointment layout must be styled inside the modal.');
-console.log(`Pamet ${expected} care UX checks passed with deferred authenticated loading.`);
+check(care.includes('Draft saved on this device for') && care.includes('data-care-save-status'), 'Local draft confirmation must render beside the Appointment Workspace save actions.');
+check(care.includes('Appointment saved to Upcoming and saved visits') && care.includes('Secure account sync will continue automatically'), 'Appointment save must succeed locally first and explain automatic secure synchronization.');
+check(care.includes("SAVED_PREFIX = 'pamet_saved_appointments_v160_'") && care.includes('syncPending') && care.includes('storeSaved(local)'), 'Appointment workspace must persist a local running list and reconcile it automatically.');
+check(!care.includes('Retry secure sync') && !care.includes('careRetrySync') && !care.includes('Secure appointment sync is still disconnected'), 'Appointment workspace must not require a manual re-sync workflow after saving.');
+check(care.includes('data-calendar-enhanced=\"true\"') && care.includes('Google Calendar') && care.includes('Apple Calendar'), 'Calendar choices must be offered on saved visit rows rather than before the appointment is saved.');
+check(css.includes('.care-ux-status.error') && css.includes('.care-appointment-grid') && css.includes('.care-appointment-running-list') && css.includes('.care-save-status'), 'Care confirmations, bounded saved-visit list, and appointment layout must be styled inside the modal.');
+console.log(`Pamet ${expected} care UX checks passed with offline-first appointment saving and automatic secure sync.`);
