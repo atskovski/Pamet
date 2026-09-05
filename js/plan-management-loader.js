@@ -4,7 +4,6 @@
 
   if (global.PametPlanManagementLoader) return;
   let pending = null;
-  const releaseToken = () => document.querySelector('meta[name="pamet-features-js"]')?.content?.match(/[a-f0-9]{12}/)?.[0] || "current";
 
   function load() {
     if (global.PametPlanManagement) return Promise.resolve(global.PametPlanManagement);
@@ -12,7 +11,7 @@
 
     pending = new Promise((resolve, reject) => {
       const script = document.createElement("script");
-      script.src = `/dist/pamet.plan-management.min.js?release=${releaseToken()}`;
+      script.src = "/dist/pamet.plan-management.min.js?v=1694";
       script.async = true;
       script.addEventListener(
         "load",
