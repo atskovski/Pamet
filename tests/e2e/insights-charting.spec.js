@@ -68,7 +68,27 @@ async function seedChartHistory(page) {
   });
 }
 
-test('@production Pro Patterns charting keeps exact daily windows, offers line/bar views, and preserves advanced comparisons', async ({ page }, testInfo) => {
+async function expectActiveControlVisible(locator) {
+  await expect(locator).toHaveClass(/active/);
+  const presentation = await locator.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return { color:style.color, backgroundColor:style.backgroundColor };
+  });
+  expect(presentation.backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
+  expect(presentation.backgroundColor).not.toBe('transparent');
+  expect(presentation.color).not.toBe(presentation.backgroundColor);
+}
+
+async function expectPrimarySeriesVisible(chart) {
+  const primary = chart.locator('.chart-series-primary');
+  await expect(primary).toHaveAttribute('d', /^M/);
+  const stroke = await primary.evaluate((element) => getComputedStyle(element).stroke);
+  expect(stroke).not.toBe('none');
+  expect(stroke).not.toBe('transparent');
+  expect(stroke).not.toBe('rgba(0, 0, 0, 0)');
+}
+
+test('@production Pro Patterns charting renders every selected daily window, offers visible line/bar controls, and preserves advanced comparisons', async ({ page }, testInfo) => {
   await installProSession(page, testInfo);
   await seedChartHistory(page);
   await page.locator('[data-tab="patterns"]').click();
@@ -86,35 +106,57 @@ test('@production Pro Patterns charting keeps exact daily windows, offers line/b
   await expect(chart.locator('.chart-method-note')).toContainText('rolling average never changes the Y-axis scale');
   await expect(chart.locator('.chart-axis-title-y')).toHaveText('Frequency (%)');
   await expect(chart.locator('.chart-axis-title-x')).toContainText('7 calendar days');
+  await expectPrimarySeriesVisible(chart);
+  await expectActiveControlVisible(chart.locator('[data-chart-mode="basic"]'));
+  await expectActiveControlVisible(chart.locator('[data-chart-type="line"]'));
 
   const symptomSelect = chart.locator('[data-chart-symptom]');
   await expect(symptomSelect.locator('option', { hasText:'Any symptom' })).toHaveCount(1);
   await expect(symptomSelect.locator('option', { hasText:'Headache' })).toHaveCount(1);
   await expect(symptomSelect.locator('option', { hasText:'Fatigue' })).toHaveCount(1);
 
-  await page.locator('[data-insights-days="30"]').click();
-  await expect(chart).toHaveAttribute('data-chart-window','30');
-  await expect(chart).toHaveAttribute('data-chart-bucket-days','1');
-  await expect(chart).toHaveAttribute('data-chart-point-count','30');
-  await expect(chart.locator('.chart-window-explain')).toContainText('30 calendar days · daily resolution');
-  await expect(chart.locator('.chart-window-explain')).not.toContainText('grouped view');
+  for (const days of [7,14,30,60,90,180,365]) {
+    if (days !== 7) await page.locator(`[data-insights-days="${days}"]`).click();
+    await expect(chart).toHaveAttribute('data-chart-window',String(days));
+    await expect(chart).toHaveAttribute('data-chart-bucket-days','1');
+    await expect(chart).toHaveAttribute('data-chart-point-count',String(days));
+    await expect(chart.locator('.chart-window-explain')).toContainText(`${days} calendar days · daily resolution`);
+    await expect(chart.locator('.chart-window-explain')).not.toContainText('grouped view');
+    await expect(chart.locator('.coverage-day')).toHaveCount(days);
+    await expectPrimarySeriesVisible(chart);
+  }
 
+  await page.locator('[data-insights-days="30"]').click();
   await chart.locator('[data-chart-type="bar"]').click();
   await expect(chart).toHaveAttribute('data-chart-type-current','bar');
+  await expectActiveControlVisible(chart.locator('[data-chart-type="bar"]'));
   expect(await chart.locator('.chart-bar').count()).toBeGreaterThan(0);
+  const barFill = await chart.locator('.chart-bar').first().evaluate((element) => getComputedStyle(element).fill);
+  expect(barFill).not.toBe('none');
+  expect(barFill).not.toBe('transparent');
   await expect(chart.locator('.chart-series-trend')).toHaveAttribute('d', /^M/);
+
   await chart.locator('[data-chart-type="line"]').click();
   await expect(chart).toHaveAttribute('data-chart-type-current','line');
-  await expect(chart.locator('.chart-series-primary')).toHaveAttribute('d', /^M/);
+  await expectActiveControlVisible(chart.locator('[data-chart-type="line"]'));
+  await expectPrimarySeriesVisible(chart);
 
   await chart.locator('[data-chart-mode="advanced"]').click();
   await expect(chart).toHaveAttribute('data-chart-mode-current','advanced');
   await expect(chart.locator('.advanced-chart-controls')).toBeVisible();
   await expect(chart.locator('.advanced-comparison-grid .advanced-comparison-card')).toHaveCount(3);
   await expect(chart.locator('.chart-metric-btn')).toHaveCount(5);
+  await expectActiveControlVisible(chart.locator('[data-chart-mode="advanced"]'));
+
+  await chart.locator('[data-chart-metric="severity"]').click();
+  await expect(chart.locator('#insightsChartTitle')).toHaveText('Recorded symptom severity');
+  await expectActiveControlVisible(chart.locator('[data-chart-metric="severity"]'));
+  await expectPrimarySeriesVisible(chart);
+  await expect(chart.locator('.chart-axis-title-y')).toHaveText('Severity (0–10)');
 
   await chart.locator('[data-chart-metric="sleep"]').click();
   await expect(chart.locator('#insightsChartTitle')).toHaveText('Recorded sleep');
+  await expectActiveControlVisible(chart.locator('[data-chart-metric="sleep"]'));
   await expect(chart.locator('.legend-secondary')).toContainText('Any symptom days');
   await expect(chart.locator('.chart-series-secondary')).toHaveAttribute('d', /^M/);
   await expect(chart.locator('.chart-series-trend')).toHaveAttribute('d', /^M/);
@@ -124,6 +166,13 @@ test('@production Pro Patterns charting keeps exact daily windows, offers line/b
   await expect(chart.locator('#insightsChartTitle')).toHaveText('Recorded sleep');
   await expect(chart.locator('.legend-secondary')).toContainText('Headache days');
   await expect(chart.locator('.advanced-comparison-head h4')).toContainText('Headache days compared with other logged days');
+  await expect(chart.locator('.chart-series-secondary')).toHaveAttribute('d', /^M/);
+
+  for (const metric of ['stress','hydration','frequency','severity']) {
+    await chart.locator(`[data-chart-metric="${metric}"]`).click();
+    await expectActiveControlVisible(chart.locator(`[data-chart-metric="${metric}"]`));
+    await expectPrimarySeriesVisible(chart);
+  }
 
   await page.locator('[data-insights-days="90"]').click();
   await expect(chart).toHaveAttribute('data-chart-window','90');
@@ -132,6 +181,7 @@ test('@production Pro Patterns charting keeps exact daily windows, offers line/b
   await expect(chart.locator('.advanced-chart-context')).toContainText('Daily resolution');
   await expect(chart.locator('.advanced-chart-context')).toContainText('14-day rolling average');
   await expect(chart.locator('.advanced-chart-context')).toContainText('Trend does not change Y-axis scale');
+  await expectPrimarySeriesVisible(chart);
 
   await page.locator('[data-insights-days="365"]').click();
   await expect(chart).toHaveAttribute('data-chart-window','365');
@@ -140,6 +190,7 @@ test('@production Pro Patterns charting keeps exact daily windows, offers line/b
   await expect(chart.locator('.advanced-chart-context')).toContainText('30-day rolling average');
   await expect(chart.locator('.coverage-day')).toHaveCount(365);
   await expect(chart.locator('.insights-chart-svg-wrap')).toHaveAttribute('data-chart-scrollable','true');
+  await expectPrimarySeriesVisible(chart);
 
   const layout = await chart.locator('.insights-chart-svg-wrap').evaluate((element) => ({
     clientWidth:element.clientWidth,
