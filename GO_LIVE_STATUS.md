@@ -1,4 +1,4 @@
-# Pamet 1.6.8 — Go-Live Status at a Glance
+# Pamet 1.6.9 — Go-Live Status at a Glance
 
 Last reviewed: 2026-09-05  
 Source of truth: current `main` plus exact-commit CI/environment evidence after merge.  
@@ -23,7 +23,7 @@ Rule: repository/self-review evidence is never presented as an independent certi
 | Frontend maintainability | **Feature-owned architecture** | Browser JS/CSS is organized by responsibility; release history belongs in Git/CHANGELOG. |
 | Server maintainability | **Incrementally decomposed** | Platform/ops routes and jobs are extracted. Broader `server.js` decomposition remains controlled engineering work (#10), not a reason to perform a risky monolithic rewrite. |
 | Background jobs | **Bounded** | Push/digest/reconciliation use cursor batching; appointment reminders have a per-run cap and overlap lock. Long-run duration must still be observed at production scale. |
-| Runtime observability | **Strong implementation; operator acceptance open** | Grafana OTLP/log/metrics/readiness/alerts exist. Human alert receipt/escalation remains #49. |
+| Runtime observability | **Grafana OTLP live; operator acceptance open** | A live 2026-09-05 capability check reports Grafana OTLP configured and protected metrics enabled, with no separate alert webhook configured. The hardening branch makes the protected synthetic alert route use Grafana OTLP when a webhook is absent. Human alert receipt/escalation remains #49. |
 | Performance regression control | **Blocking gate** | CI enforces raw + gzip budgets for production JS/CSS bundles in addition to functional tests. Provider-side Core Web Vitals/load evidence remains environment evidence. |
 | PWA release delivery | **Release-specific rotation required** | Every release must rotate worker registration, shell cache and static asset token together; version CI rejects drift. |
 | CI automation | **Active and blocking** | Build, strict-CSP/static/version checks, unit/security tests, plan drift, notification UX, DB capacity/index checks, performance budgets, MySQL lifecycle integration, backup→restore and dependency audit. |
@@ -42,7 +42,7 @@ These are **not hidden engineering defects**. They remain open because the evide
 
 1. **#46 — Production Stripe live-mode end-to-end acceptance.** Exercise controlled purchase/trial/portal/cancel/failure/retry/reconciliation without exposing payment data or secrets. Production webhook event coverage was corrected on 2026-09-05; the real lifecycle exercise is still required.
 2. **#47 — Provider backup/PITR restore.** Run an isolated provider-level restore and record achieved RPO/RTO, retention and encryption evidence.
-3. **#49 — Production alert receipt and escalation.** Emit a controlled non-health-data test alert and prove intended human/channel acknowledgement/escalation.
+3. **#49 — Production alert receipt and escalation.** Emit a controlled non-health-data test alert and prove intended human/channel acknowledgement/escalation. Production currently has Grafana OTLP but no separate alert webhook; the hardening branch removes that unnecessary dependency for the synthetic emission step.
 4. **#43 — Independent penetration test.** External adversarial testing, remediation and retest.
 5. **#44 — Independent WCAG 2.2 AA review.** External accessibility testing and remediation/retest.
 6. **#45 — Privacy/legal review.** Actual data-flow, HIPAA applicability, BAAs/DPAs, consumer-health laws, retention/deletion and store disclosures.
