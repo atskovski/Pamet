@@ -52,6 +52,7 @@ const relative = (value) => String(value).replace(/^\//, '');
 const featureMeta = `  <meta name="pamet-features-js" content="${assets.featuresJs}" />\n  <meta name="pamet-features-css" content="${assets.featuresCss}" />\n`;
 const versionedIndex = indexTemplate
   .replace(/Pamet v\d+\.\d+\.\d+ · Your health history, finally useful\./g, `Pamet v${VERSION} · Your health history, finally useful.`)
+  .replace(/id="upgradeBtn">Upgrade to Pro<\/button>/g, 'id="upgradeBtn">Upgrade to Pro or Ultra</button>')
   .replace(/dist\/pamet\.min\.css\?v=\d+/g, relative(assets.bootstrapCss))
   .replace(/dist\/pamet\.min\.js\?v=\d+/g, relative(assets.bootstrapJs))
   .replace(/\s*<meta name="pamet-features-js"[^>]*>\s*/g, '\n')
