@@ -28,9 +28,12 @@
   document.addEventListener('pamet:settings-rendered',labelVisitSequence);
   document.addEventListener('click',event=>{
     const email=event.target.closest?.('#emailReport');
-    if(email&&!window.PametVisitWorkflow){
-      event.preventDefault();event.stopImmediatePropagation();
-      load().then(workflow=>workflow.openEmailBrief()).catch(()=>{});
+    if(email){
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      const open=workflow=>workflow?.openEmailBrief?.();
+      if(window.PametVisitWorkflow)open(window.PametVisitWorkflow);
+      else load().then(open).catch(()=>{});
       return;
     }
     if(event.target.closest?.('[data-nav="report"],[data-phase2="prep"]'))load().catch(()=>{});
