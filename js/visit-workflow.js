@@ -8,10 +8,9 @@
   const PREF_KEY='pamet_calendar_preference_v1';
   let workflowConfig=null;
 
+  function authHeaders(extra={}){const credential=A.getBackendCredential?.(),headers={...extra};if(credential?.deviceKey)headers.Authorization=`Bearer ${credential.deviceKey}`;return headers}
   async function api(path,options={}){
-    const credential=A.getBackendCredential?.();
-    const headers={'Content-Type':'application/json',...(options.headers||{})};
-    if(credential?.deviceKey)headers.Authorization=`Bearer ${credential.deviceKey}`;
+    const headers=authHeaders({'Content-Type':'application/json',...(options.headers||{})});
     const response=await fetch(path,{credentials:'same-origin',cache:'no-store',...options,headers});
     const text=await response.text();let body={};try{body=text?JSON.parse(text):{}}catch{body={error:text}}
     if(!response.ok){const error=new Error(body.error||`Request failed (${response.status})`);error.status=response.status;throw error}
@@ -127,9 +126,22 @@
     if(choice==='apple')return addAppleCalendar(appointment.id);
     showCalendarChoice(appointment);
   }
-  function addGoogleCalendar(appointmentId){notice('Appointment saved in Pamet. Continuing to Google Calendar…','info');window.location.assign(`/api/calendar/google/start?appointmentId=${encodeURIComponent(appointmentId)}`)}
-  function addAppleCalendar(appointmentId){
-    const link=document.createElement('a');link.href=`/api/calendar/apple.ics?appointmentId=${encodeURIComponent(appointmentId)}`;link.download='pamet-appointment.ics';document.body.appendChild(link);link.click();link.remove();notice('Apple Calendar file created. Open the .ics file and confirm Add.');
+  async function addGoogleCalendar(appointmentId){
+    notice('Appointment saved in Pamet. Preparing Google Calendar…','info');
+    try{
+      const result=await api(`/api/calendar/google/start?appointmentId=${encodeURIComponent(appointmentId)}`,{headers:{Accept:'application/json'}});
+      if(!result?.url)throw new Error('Google Calendar could not be prepared.');
+      window.location.assign(result.url);
+    }catch(error){notice(error.message||'Appointment saved in Pamet, but Google Calendar could not be opened.','warning')}
+  }
+  async function addAppleCalendar(appointmentId){
+    notice('Appointment saved in Pamet. Preparing Apple Calendar…','info');
+    try{
+      const response=await fetch(`/api/calendar/apple.ics?appointmentId=${encodeURIComponent(appointmentId)}`,{credentials:'same-origin',cache:'no-store',headers:authHeaders({Accept:'text/calendar'})});
+      if(!response.ok){let message='Apple Calendar file could not be created.';try{message=(await response.json()).error||message}catch{}throw new Error(message)}
+      const blob=await response.blob(),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download='pamet-appointment.ics';document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
+      notice('Apple Calendar file created. Open the .ics file and confirm Add.');
+    }catch(error){notice(error.message||'Appointment saved in Pamet, but the Apple Calendar file could not be created.','warning')}
   }
   function showCalendarChoice(appointment){
     const when=Number.isNaN(+new Date(appointment.startsAt))?'the saved time':new Date(appointment.startsAt).toLocaleString();
