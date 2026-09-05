@@ -123,6 +123,17 @@
     const modal = root?.querySelector(".pamet-modal");
     if (!modal || modal.querySelector(".pamet-modal-title")?.textContent?.trim() !== "Compare Pamet plans") return;
     modal.classList.add("plan-upgrade-modal");
+    const head = modal.querySelector(".pamet-modal-head");
+    if (head && !head.querySelector("[data-plan-modal-back]")) {
+      const back = document.createElement("button");
+      back.type = "button";
+      back.className = "plan-flow-back";
+      back.dataset.planModalBack = "1";
+      back.setAttribute("aria-label", "Back to previous screen");
+      back.textContent = "←";
+      back.addEventListener("click", () => { root.innerHTML = ""; });
+      head.prepend(back);
+    }
     modal.querySelectorAll("[data-plan]").forEach((button) => {
       const key = button.dataset.plan;
       const item = plan(key);
