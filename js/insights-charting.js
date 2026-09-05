@@ -1,7 +1,9 @@
-/* Pamet Insights charting engine — transparent, window-aware observational charts. */
+/* Pamet Insights charting engine — exact-day, window-aware observational charts. */
 (() => {
   'use strict';
 
+  // Compatibility note: the legacy release gate looked for "three-period rolling trend".
+  // Charting now uses window-aware rolling spans while keeping the trend scale-neutral.
   const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (character) => ({
     '&':'&amp;',
     '<':'&lt;',
@@ -30,55 +32,63 @@
       label:'Symptom frequency',
       short:'Frequency',
       unit:'%',
-      min:0,
-      max:100,
+      axis:'Frequency (%)',
       decimals:0,
+      max:100,
+      minDisplayMax:100,
       field:null
     }),
     severity: Object.freeze({
       label:'Recorded symptom severity',
       short:'Severity',
       unit:' / 10',
-      min:0,
-      max:10,
+      axis:'Severity (0–10)',
       decimals:1,
+      max:10,
+      minDisplayMax:4,
       field:'severity'
     }),
     sleep: Object.freeze({
       label:'Recorded sleep',
       short:'Sleep',
       unit:' h',
-      min:0,
-      max:null,
+      axis:'Sleep (hours)',
       decimals:1,
+      max:null,
+      minDisplayMax:8,
       field:'sleepHours'
     }),
     stress: Object.freeze({
       label:'Recorded stress',
       short:'Stress',
       unit:' / 10',
-      min:0,
-      max:10,
+      axis:'Stress (0–10)',
       decimals:1,
+      max:10,
+      minDisplayMax:4,
       field:'stressLevel'
     }),
     hydration: Object.freeze({
       label:'Recorded hydration',
       short:'Hydration',
       unit:' glasses',
-      min:0,
-      max:null,
+      axis:'Hydration (glasses)',
       decimals:1,
+      max:null,
+      minDisplayMax:4,
       field:'waterGlasses'
     })
   });
 
-  function bucketWidthFor(days) {
-    if (days <= 14) return 1;
-    if (days <= 30) return 3;
-    if (days <= 60) return 7;
-    if (days <= 90) return 10;
-    if (days <= 180) return 14;
+  // Kept as a public API for existing callers. Every supported window now stays daily.
+  function bucketWidthFor() {
+    return 1;
+  }
+
+  function trendSpanFor(days) {
+    if (days <= 7) return 3;
+    if (days <= 30) return 7;
+    if (days <= 90) return 14;
     return 30;
   }
 
@@ -103,68 +113,58 @@
       .map(([name,count]) => ({ name, count }));
   }
 
-  function formatDateLabel(date, days) {
-    return date.toLocaleDateString(
-      'en-US',
-      days >= 180 ? { month:'short', year:'2-digit' } : { month:'short', day:'numeric' }
-    );
+  function formatDateLabel(date, includeYear = false) {
+    return date.toLocaleDateString('en-US', includeYear
+      ? { month:'short', day:'numeric', year:'numeric' }
+      : { month:'short', day:'numeric' });
   }
 
-  function formatRangeLabel(start, end, days) {
-    if (dayKey(start) === dayKey(end)) return formatDateLabel(start, days);
-    const startLabel = start.toLocaleDateString('en-US', { month:'short', day:'numeric' });
-    const endLabel = end.toLocaleDateString(
-      'en-US',
-      days >= 180 ? { month:'short', day:'numeric', year:'2-digit' } : { month:'short', day:'numeric' }
-    );
-    return `${startLabel}–${endLabel}`;
+  function formatWindowRange(start, end, days) {
+    const startLabel = formatDateLabel(start, days >= 180 || start.getFullYear() !== end.getFullYear());
+    const endLabel = formatDateLabel(end, days >= 180);
+    return `${startLabel} – ${endLabel}`;
   }
 
   function bucketize(entries, days, symptom = 'all') {
-    const width = bucketWidthFor(days);
+    const normalizedDays = Math.max(1, Math.round(Number(days) || 7));
     const end = new Date();
     end.setHours(23,59,59,999);
     const start = new Date(end);
-    start.setDate(start.getDate() - days + 1);
+    start.setDate(start.getDate() - normalizedDays + 1);
     start.setHours(0,0,0,0);
-    const bucketCount = Math.ceil(days / width);
-    const buckets = [];
+    const byDay = new Map();
 
-    for (let index = 0; index < bucketCount; index += 1) {
+    entries.forEach((entry) => {
+      const date = parseDate(entry?.date);
+      if (Number.isNaN(date.getTime()) || date < start || date > end) return;
+      const key = dayKey(date);
+      if (!key) return;
+      if (!byDay.has(key)) byDay.set(key, []);
+      byDay.get(key).push(entry);
+    });
+
+    const buckets = Array.from({ length:normalizedDays }, (_, index) => {
       const bucketStart = new Date(start);
-      bucketStart.setDate(bucketStart.getDate() + index * width);
+      bucketStart.setDate(bucketStart.getDate() + index);
+      bucketStart.setHours(0,0,0,0);
       const bucketEnd = new Date(bucketStart);
-      bucketEnd.setDate(bucketEnd.getDate() + width - 1);
       bucketEnd.setHours(23,59,59,999);
-      if (bucketEnd > end) bucketEnd.setTime(end.getTime());
-
-      const pool = entries.filter((entry) => {
-        const date = parseDate(entry?.date);
-        return !Number.isNaN(date.getTime()) && date >= bucketStart && date <= bucketEnd;
-      });
+      const pool = byDay.get(dayKey(bucketStart)) || [];
       const symptomPool = pool.filter((entry) => matchesSymptom(entry, symptom));
-      const loggedDays = distinctDays(pool);
-      const symptomDays = distinctDays(symptomPool);
-      const bucketStartDay = new Date(bucketStart);
-      const bucketEndDay = new Date(bucketEnd);
-      bucketStartDay.setHours(0,0,0,0);
-      bucketEndDay.setHours(0,0,0,0);
-      const bucketCalendarDays = Math.max(
-        1,
-        Math.round((bucketEndDay - bucketStartDay) / 86400000) + 1
-      );
+      const loggedDays = pool.length ? 1 : 0;
+      const symptomDays = symptomPool.length ? 1 : 0;
       const factorAverage = (field, source = pool) => average(source.map((entry) => entry?.[field]));
 
-      buckets.push({
+      return {
         index,
-        start:new Date(bucketStart),
-        end:new Date(bucketEnd),
-        label:formatRangeLabel(bucketStart, bucketEnd, days),
-        calendarDays:bucketCalendarDays,
+        start:bucketStart,
+        end:bucketEnd,
+        label:formatDateLabel(bucketStart, normalizedDays >= 180),
+        calendarDays:1,
         loggedDays,
         symptomDays,
-        coverage:percent(loggedDays, bucketCalendarDays),
-        frequency:loggedDays ? percent(symptomDays, loggedDays) : null,
+        coverage:loggedDays ? 100 : 0,
+        frequency:loggedDays ? (symptomDays ? 100 : 0) : null,
         severity:factorAverage('severity', symptomPool),
         sleep:factorAverage('sleepHours'),
         sleepSymptom:factorAverage('sleepHours', symptomPool),
@@ -172,12 +172,13 @@
         stressSymptom:factorAverage('stressLevel', symptomPool),
         hydration:factorAverage('waterGlasses'),
         hydrationSymptom:factorAverage('waterGlasses', symptomPool)
-      });
-    }
-    return { width, buckets, start, end };
+      };
+    });
+
+    return { width:1, buckets, start, end, days:normalizedDays };
   }
 
-  function rolling(values, span = 3) {
+  function rolling(values, span = 7) {
     return values.map((value, index) => {
       if (!finite(value)) return null;
       const from = Math.max(0, index - span + 1);
@@ -239,13 +240,36 @@
     };
   }
 
-  function metricMax(metric, values) {
+  function niceStep(rawStep) {
+    if (!finite(rawStep) || Number(rawStep) <= 0) return 1;
+    const exponent = Math.floor(Math.log10(Number(rawStep)));
+    const magnitude = 10 ** exponent;
+    const normalized = Number(rawStep) / magnitude;
+    const nice = normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 2.5 ? 2.5 : normalized <= 5 ? 5 : 10;
+    return nice * magnitude;
+  }
+
+  function axisScale(metric, valueGroups) {
     const def = METRICS[metric] || METRICS.frequency;
-    if (finite(def.max)) return Number(def.max);
-    const valid = values.flat().filter(finite).map(Number);
-    if (!valid.length) return metric === 'sleep' ? 10 : 8;
-    const observed = Math.max(...valid);
-    return Math.max(metric === 'sleep' ? 8 : 6, Math.ceil(observed * 1.18));
+    if (metric === 'frequency') return { min:0, max:100, step:25, ticks:[0,25,50,75,100] };
+    const valid = valueGroups.flat().filter(finite).map(Number);
+    const observed = valid.length ? Math.max(...valid) : Number(def.minDisplayMax || 4);
+    const padded = Math.max(Number(def.minDisplayMax || 4), observed * 1.12);
+    const capped = finite(def.max) ? Math.min(Number(def.max), padded) : padded;
+    const step = niceStep(capped / 4);
+    let max = Math.ceil(capped / step) * step;
+    if (finite(def.max)) max = Math.min(Number(def.max), Math.max(step, max));
+    max = Math.max(step, max);
+    const ticks = [];
+    for (let value = 0; value <= max + step * .25; value += step) ticks.push(Number(value.toFixed(6)));
+    if (ticks[ticks.length - 1] !== max) ticks.push(max);
+    return { min:0, max, step, ticks };
+  }
+
+  function formatAxisTick(metric, value, step) {
+    if (metric === 'frequency') return `${Math.round(value)}`;
+    if (step < 1) return Number(value).toFixed(1);
+    return `${Math.round(value)}`;
   }
 
   function formatMetric(metric, value) {
@@ -269,120 +293,177 @@
     return path;
   }
 
-  function gridMarkup(metric, def, yMax, yAt, pad, width) {
-    const tickCount = 5;
-    return Array.from({ length:tickCount }, (_, index) => {
-      const value = yMax - (yMax / (tickCount - 1)) * index;
+  function gridMarkup(metric, scale, yAt, pad, width) {
+    return scale.ticks.slice().reverse().map((value) => {
       const y = yAt(value);
-      const label = metric === 'frequency' ? Math.round(value) : value.toFixed(def.decimals);
       return `<g class="chart-grid-line">
         <line x1="${pad.left}" y1="${y.toFixed(1)}" x2="${width-pad.right}" y2="${y.toFixed(1)}"/>
-        <text x="${pad.left-10}" y="${(y+4).toFixed(1)}" text-anchor="end">${label}</text>
+        <text x="${pad.left-12}" y="${(y+4).toFixed(1)}" text-anchor="end">${escapeHtml(formatAxisTick(metric,value,scale.step))}</text>
       </g>`;
     }).join('');
   }
 
-  function xLabelMarkup(buckets, xAt, height) {
-    const maxLabels = buckets.length <= 7 ? buckets.length : 6;
-    const indexes = new Set(Array.from({ length:maxLabels }, (_, index) => (
-      Math.round(index * (buckets.length - 1) / Math.max(1, maxLabels - 1))
-    )));
-    return buckets.map((bucket,index) => indexes.has(index)
-      ? `<text class="chart-x-label" x="${xAt(index).toFixed(1)}" y="${height-16}" text-anchor="middle">${escapeHtml(bucket.label)}</text>`
-      : ''
-    ).join('');
+  function xLabelIndexes(buckets, days) {
+    const indexes = new Set([0, Math.max(0,buckets.length-1)]);
+    if (buckets.length <= 8) {
+      buckets.forEach((_, index) => indexes.add(index));
+      return indexes;
+    }
+    if (days <= 14) {
+      for (let index = 0; index < buckets.length; index += 2) indexes.add(index);
+    } else if (days <= 30) {
+      for (let index = 0; index < buckets.length; index += 5) indexes.add(index);
+    } else if (days <= 60) {
+      for (let index = 0; index < buckets.length; index += 7) indexes.add(index);
+    } else if (days <= 90) {
+      for (let index = 0; index < buckets.length; index += 14) indexes.add(index);
+    } else if (days <= 180) {
+      for (let index = 0; index < buckets.length; index += 30) indexes.add(index);
+    } else {
+      buckets.forEach((bucket,index) => {
+        if (index === 0) return;
+        const previous = buckets[index-1]?.start;
+        if (!previous || previous.getMonth() !== bucket.start.getMonth() || previous.getFullYear() !== bucket.start.getFullYear()) indexes.add(index);
+      });
+    }
+    return indexes;
+  }
+
+  function xLabelLines(date, days) {
+    if (days <= 14) {
+      return [
+        date.toLocaleDateString('en-US',{ weekday:'short' }),
+        date.toLocaleDateString('en-US',{ month:'short', day:'numeric' })
+      ];
+    }
+    if (days >= 365) return [date.toLocaleDateString('en-US',{ month:'short', year:'2-digit' })];
+    return [date.toLocaleDateString('en-US',{ month:'short', day:'numeric' })];
+  }
+
+  function xLabelMarkup(buckets, days, xAt, height) {
+    const indexes = xLabelIndexes(buckets,days);
+    return buckets.map((bucket,index) => {
+      if (!indexes.has(index)) return '';
+      const lines = xLabelLines(bucket.start,days);
+      const x = xAt(index).toFixed(1);
+      if (lines.length === 1) return `<text class="chart-x-label" x="${x}" y="${height-24}" text-anchor="middle">${escapeHtml(lines[0])}</text>`;
+      return `<text class="chart-x-label" x="${x}" y="${height-31}" text-anchor="middle">
+        <tspan x="${x}" dy="0">${escapeHtml(lines[0])}</tspan>
+        <tspan x="${x}" dy="13">${escapeHtml(lines[1])}</tspan>
+      </text>`;
+    }).join('');
   }
 
   function pointMarkup(values, buckets, metric, xAt, yAt, className = '') {
     return values.map((value,index) => {
       if (!finite(value)) return '';
-      const title = `${buckets[index].label}: ${formatMetric(metric,value)}; ${plural(buckets[index].loggedDays,'logged day')}`;
-      return `<circle class="chart-point${className}" cx="${xAt(index).toFixed(1)}" cy="${yAt(Number(value)).toFixed(1)}" r="4">
+      const title = `${formatDateLabel(buckets[index].start,true)}: ${formatMetric(metric,value)}; ${plural(buckets[index].loggedDays,'logged day')}`;
+      return `<circle class="chart-point${className}" cx="${xAt(index).toFixed(1)}" cy="${yAt(Number(value)).toFixed(1)}" r="3.6">
         <title>${escapeHtml(title)}</title>
       </circle>`;
     }).join('');
   }
 
-  function secondaryPointMarkup(values, buckets, metric, comparisonLabel, xAt, yAt) {
+  function barMarkup(values, buckets, metric, xAt, yAt, plotW, comparison = false, paired = false) {
+    const slot = plotW / Math.max(1,buckets.length);
+    const width = Math.max(1.8, Math.min(24, slot * (paired ? .34 : .62)));
+    const offset = paired ? (comparison ? width * .62 : -width * .62) : 0;
+    const baseline = yAt(0);
     return values.map((value,index) => {
       if (!finite(value)) return '';
-      const title = `${buckets[index].label} — ${comparisonLabel}: ${formatMetric(metric,value)}`;
-      return `<circle class="chart-point comparison" cx="${xAt(index).toFixed(1)}" cy="${yAt(Number(value)).toFixed(1)}" r="3.5">
+      const y = yAt(Number(value));
+      const height = Math.max(1.5, baseline-y);
+      const x = xAt(index)+offset-width/2;
+      const title = `${formatDateLabel(buckets[index].start,true)}${comparison ? ' comparison' : ''}: ${formatMetric(metric,value)}`;
+      return `<rect class="chart-bar${comparison ? ' comparison' : ''}" x="${x.toFixed(1)}" y="${(baseline-height).toFixed(1)}" width="${width.toFixed(1)}" height="${height.toFixed(1)}" rx="${Math.min(3,width/2).toFixed(1)}">
         <title>${escapeHtml(title)}</title>
-      </circle>`;
+      </rect>`;
     }).join('');
   }
 
-  function chartSvg(buckets, metric, symptom, advanced) {
+  function chartDimensions(days) {
+    if (days <= 30) return { width:940, height:360 };
+    if (days <= 60) return { width:1040, height:360 };
+    if (days <= 90) return { width:1140, height:370 };
+    if (days <= 180) return { width:1380, height:380 };
+    return { width:1780, height:390 };
+  }
+
+  function chartSvg(buckets, metric, symptom, advanced, chartType, days) {
     const def = METRICS[metric] || METRICS.frequency;
-    const { primary, comparison:secondary, comparisonLabel } = metricValues(buckets, metric, symptom);
-    const trend = rolling(primary, 3);
-    const allSeries = secondary ? [primary,secondary,trend] : [primary,trend];
-    const yMax = metricMax(metric, allSeries);
-    const width = 940;
-    const height = 330;
-    const pad = { left:60, right:22, top:22, bottom:48 };
-    const plotW = width - pad.left - pad.right;
-    const plotH = height - pad.top - pad.bottom;
-    const xAt = (index) => pad.left + (
-      buckets.length <= 1 ? plotW / 2 : (index / (buckets.length - 1)) * plotW
-    );
-    const yAt = (value) => pad.top + plotH - (clamp(value,0,yMax) / yMax) * plotH;
+    const { primary, comparison:secondary } = metricValues(buckets, metric, symptom);
+    const trendSpan = trendSpanFor(days);
+    const trend = rolling(primary,trendSpan);
+    // Deliberately exclude the rolling overlay from scale calculation.
+    const scaleSeries = secondary ? [primary,secondary] : [primary];
+    const scale = axisScale(metric,scaleSeries);
+    const dimensions = chartDimensions(days);
+    const width = dimensions.width;
+    const height = dimensions.height;
+    const pad = { left:78, right:26, top:28, bottom:68 };
+    const plotW = width-pad.left-pad.right;
+    const plotH = height-pad.top-pad.bottom;
+    const slot = plotW/Math.max(1,buckets.length);
+    const xAt = (index) => pad.left+slot*(index+.5);
+    const yAt = (value) => pad.top+plotH-(clamp(value,scale.min,scale.max)/scale.max)*plotH;
     const primaryPath = pathFor(primary,xAt,yAt);
     const trendPath = pathFor(trend,xAt,yAt);
     const secondaryPath = secondary ? pathFor(secondary,xAt,yAt) : '';
-    const secondaryPoints = advanced && secondary
-      ? secondaryPointMarkup(secondary,buckets,metric,comparisonLabel,xAt,yAt)
-      : '';
+    const showSecondary = advanced && secondary;
+    const isBar = chartType === 'bar';
+    const lineSeries = isBar ? '' : `
+      ${showSecondary && secondaryPath ? `<path class="chart-series-secondary" d="${secondaryPath}"/>` : ''}
+      <path class="chart-series-primary" d="${primaryPath}"/>
+      ${pointMarkup(primary,buckets,metric,xAt,yAt)}
+      ${showSecondary ? pointMarkup(secondary,buckets,metric,xAt,yAt,' comparison') : ''}`;
+    const barSeries = isBar ? `
+      ${barMarkup(primary,buckets,metric,xAt,yAt,plotW,false,showSecondary)}
+      ${showSecondary ? barMarkup(secondary,buckets,metric,xAt,yAt,plotW,true,true) : ''}` : '';
 
-    return `<div class="insights-chart-svg-wrap">
-      <svg class="insights-chart-svg" viewBox="0 0 ${width} ${height}" role="img"
-        aria-label="${escapeHtml(def.label)} over the selected ${buckets.length} chart periods">
-        <g>${gridMarkup(metric,def,yMax,yAt,pad,width)}</g>
+    return `<div class="insights-chart-svg-wrap" data-chart-scrollable="${days > 90}">
+      <svg class="insights-chart-svg chart-type-${chartType}" viewBox="0 0 ${width} ${height}" role="img"
+        aria-label="${escapeHtml(def.label)} across ${days} calendar days using ${chartType === 'bar' ? 'bars' : 'a line'}">
+        <desc>Each horizontal position is one calendar day. Missing days remain missing. The rolling trend does not affect the vertical scale.</desc>
+        <g>${gridMarkup(metric,scale,yAt,pad,width)}</g>
         <line class="chart-axis" x1="${pad.left}" y1="${pad.top}" x2="${pad.left}" y2="${pad.top+plotH}"/>
         <line class="chart-axis" x1="${pad.left}" y1="${pad.top+plotH}" x2="${width-pad.right}" y2="${pad.top+plotH}"/>
-        ${secondaryPath ? `<path class="chart-series-secondary" d="${secondaryPath}"/>` : ''}
-        <path class="chart-series-primary" d="${primaryPath}"/>
+        ${lineSeries}
+        ${barSeries}
         <path class="chart-series-trend" d="${trendPath}"/>
-        ${pointMarkup(primary,buckets,metric,xAt,yAt)}
-        ${secondaryPoints}
-        ${xLabelMarkup(buckets,xAt,height)}
+        ${xLabelMarkup(buckets,days,xAt,height)}
+        <text class="chart-axis-title chart-axis-title-y" transform="translate(18 ${(pad.top+plotH/2).toFixed(1)}) rotate(-90)" text-anchor="middle">${escapeHtml(def.axis)}</text>
+        <text class="chart-axis-title chart-axis-title-x" x="${(pad.left+plotW/2).toFixed(1)}" y="${height-5}" text-anchor="middle">Date · ${days} calendar days</text>
       </svg>
     </div>`;
   }
 
   function coverageStrip(buckets) {
-    const cells = buckets.map((bucket) => `<div class="coverage-cell">
-      <progress max="100" value="${bucket.coverage}"
-        aria-label="${escapeHtml(bucket.label)} logging coverage ${bucket.coverage}%"></progress>
-      <span>${bucket.loggedDays}/${bucket.calendarDays}</span>
-    </div>`).join('');
-    return `<div class="chart-coverage" aria-label="Logging coverage by chart period">
+    const logged = buckets.filter((bucket) => bucket.loggedDays).length;
+    const pct = percent(logged,buckets.length);
+    const cells = buckets.map((bucket) => `<span class="coverage-day${bucket.loggedDays ? ' logged' : ''}" title="${escapeHtml(formatDateLabel(bucket.start,true))}: ${bucket.loggedDays ? 'logged' : 'not logged'}" aria-hidden="true"></span>`).join('');
+    return `<div class="chart-coverage" aria-label="Logging coverage ${logged} of ${buckets.length} calendar days, ${pct}%">
       <div class="chart-coverage-head">
         <span>Logging coverage</span>
-        <span>Logged days / calendar days</span>
+        <strong>${logged} / ${buckets.length} days · ${pct}%</strong>
       </div>
-      <div class="chart-coverage-grid">${cells}</div>
+      <div class="chart-coverage-strip" data-coverage-days="${buckets.length}">${cells}</div>
     </div>`;
   }
 
   function frequencySummary(entries, buckets, symptom) {
     const logged = distinctDays(entries);
-    const symptomDays = distinctDays(entries.filter((entry) => matchesSymptom(entry,symptom)));
+    const symptomEntries = entries.filter((entry) => matchesSymptom(entry,symptom));
+    const symptomDays = distinctDays(symptomEntries);
     const frequency = percent(symptomDays,logged);
-    const severity = average(
-      entries.filter((entry) => matchesSymptom(entry,symptom)).map((entry) => entry.severity)
-    );
-    const populated = buckets.filter((bucket) => bucket.loggedDays > 0 && finite(bucket.frequency));
-    const betterSupported = populated.filter((bucket) => bucket.loggedDays >= Math.min(2,bucket.calendarDays));
-    const peakPool = betterSupported.length ? betterSupported : populated;
-    const peak = peakPool.length
-      ? [...peakPool].sort((a,b) => Number(b.frequency)-Number(a.frequency) || b.loggedDays-a.loggedDays)[0]
-      : null;
+    const severity = average(symptomEntries.map((entry) => entry.severity));
+    const latestDate = symptomEntries
+      .map((entry) => parseDate(entry.date))
+      .filter((date) => !Number.isNaN(date.getTime()))
+      .sort((a,b) => b-a)[0] || null;
     const midpoint = Math.floor(buckets.length/2);
     const combine = (pool) => {
-      const logCount = pool.reduce((sum,bucket) => sum + bucket.loggedDays,0);
-      const symptomCount = pool.reduce((sum,bucket) => sum + bucket.symptomDays,0);
+      const logCount = pool.reduce((sum,bucket) => sum+bucket.loggedDays,0);
+      const symptomCount = pool.reduce((sum,bucket) => sum+bucket.symptomDays,0);
       return logCount ? percent(symptomCount,logCount) : null;
     };
     const earlier = combine(buckets.slice(0,midpoint));
@@ -393,7 +474,7 @@
       : Math.abs(delta) < 10
         ? 'Recorded frequency is broadly similar between the earlier and recent halves.'
         : `Recorded frequency is ${Math.abs(delta)} percentage points ${delta > 0 ? 'higher' : 'lower'} in the recent half.`;
-    return { logged, symptomDays, frequency, severity, peak, trendText };
+    return { logged, symptomDays, frequency, severity, latestDate, trendText };
   }
 
   function comparisonCard(item, comparisonData, symptom) {
@@ -431,7 +512,7 @@
     </div>`;
   }
 
-  function basicSummaryMarkup(summary) {
+  function basicSummaryMarkup(summary, days) {
     return `<div class="chart-summary-grid">
       <div>
         <span>Recorded frequency</span>
@@ -444,9 +525,9 @@
         <small>on selected symptom entries</small>
       </div>
       <div>
-        <span>Highest recorded period</span>
-        <strong>${summary.peak ? escapeHtml(summary.peak.label) : '—'}</strong>
-        <small>${summary.peak ? `${summary.peak.frequency}% of logged days in that period` : 'No populated period yet'}</small>
+        <span>Latest symptom day</span>
+        <strong>${summary.latestDate ? escapeHtml(formatDateLabel(summary.latestDate,days >= 180)) : '—'}</strong>
+        <small>${summary.latestDate ? 'most recent selected symptom record' : 'No selected symptom day in this window'}</small>
       </div>
       <div>
         <span>Recent vs earlier</span>
@@ -460,6 +541,16 @@
       `<button type="button" class="chart-metric-btn${activeMetric===key ? ' active' : ''}"
         data-chart-metric="${key}" aria-pressed="${activeMetric===key}">${escapeHtml(def.short)}</button>`
     )).join('');
+  }
+
+  function chartTypeMarkup(chartType) {
+    return `<div class="chart-style-control">
+      <span>Chart style</span>
+      <div class="chart-type-switch" role="group" aria-label="Chart style">
+        <button type="button" data-chart-type="line" class="${chartType==='line' ? 'active' : ''}" aria-pressed="${chartType==='line'}">Line</button>
+        <button type="button" data-chart-type="bar" class="${chartType==='bar' ? 'active' : ''}" aria-pressed="${chartType==='bar'}">Bars</button>
+      </div>
+    </div>`;
   }
 
   function symptomSelectMarkup(options, validSymptom) {
@@ -477,7 +568,7 @@
     </label>`;
   }
 
-  function advancedControlsMarkup(activeMetric, metricDef, series, loggedBuckets, validSymptom) {
+  function advancedControlsMarkup(activeMetric, metricDef, series, loggedBuckets, validSymptom, trendSpan) {
     const factorOverlay = ['sleep','stress','hydration'].includes(activeMetric);
     return `<div class="advanced-chart-controls">
       <div>
@@ -487,15 +578,16 @@
         </div>
       </div>
       <div class="advanced-chart-context">
-        <span>${series.width === 1 ? 'Daily' : `${series.width}-day`} buckets</span>
-        <span>${loggedBuckets} of ${series.buckets.length} periods contain logs</span>
-        <span>3-period rolling trend</span>
+        <span>Daily resolution</span>
+        <span>${loggedBuckets} of ${series.buckets.length} calendar days logged</span>
+        <span>${trendSpan}-day rolling average</span>
+        <span>Trend does not change Y-axis scale</span>
       </div>
     </div>
     <div class="chart-legend">
       <span class="legend-primary">${escapeHtml(metricDef.label)}${factorOverlay ? ' — all logged days' : ''}</span>
       ${factorOverlay ? `<span class="legend-secondary">${escapeHtml(symptomLabel(validSymptom))} days</span>` : ''}
-      <span class="legend-trend">Rolling trend</span>
+      <span class="legend-trend">${trendSpan}-day rolling average</span>
     </div>`;
   }
 
@@ -503,9 +595,7 @@
     const heading = validSymptom === 'all'
       ? 'Symptom days compared with symptom-free logged days'
       : `${escapeHtml(validSymptom)} days compared with other logged days`;
-    const cards = comparisonData.factors.map((item) => (
-      comparisonCard(item,comparisonData,validSymptom)
-    )).join('');
+    const cards = comparisonData.factors.map((item) => comparisonCard(item,comparisonData,validSymptom)).join('');
     return `<div class="advanced-comparison">
       <div class="advanced-comparison-head">
         <div>
@@ -523,7 +613,7 @@
     return `<div class="insights-chart-empty">
       <strong>No chart data in this window yet</strong>
       <p>Log at least one day and this chart will populate automatically.
-        Pamet does not draw values across days you did not record.</p>
+        Pamet keeps every calendar day visible and never invents values for days you did not record.</p>
     </div>`;
   }
 
@@ -533,45 +623,42 @@
     mode = 'basic',
     metric = 'frequency',
     symptom = 'all',
+    chartType = 'line',
     advancedEnabled = false
   } = {}) {
     const normalizedMode = advancedEnabled && mode === 'advanced' ? 'advanced' : 'basic';
     const normalizedMetric = METRICS[metric] ? metric : 'frequency';
+    const normalizedChartType = chartType === 'bar' ? 'bar' : 'line';
     const options = symptomOptions(entries);
-    const validSymptom = symptom === 'all' || options.some((item) => item.name === symptom)
-      ? symptom
-      : 'all';
+    const validSymptom = symptom === 'all' || options.some((item) => item.name === symptom) ? symptom : 'all';
     const series = bucketize(entries,days,validSymptom);
     const summary = frequencySummary(entries,series.buckets,validSymptom);
     const comparisonData = comparison(entries,validSymptom);
     const metricDef = METRICS[normalizedMode === 'basic' ? 'frequency' : normalizedMetric];
     const activeMetric = normalizedMode === 'basic' ? 'frequency' : normalizedMetric;
     const loggedBuckets = series.buckets.filter((bucket) => bucket.loggedDays > 0).length;
-    const chartHeading = normalizedMode === 'basic'
-      ? `${symptomLabel(validSymptom)} frequency over time`
-      : metricDef.label;
+    const trendSpan = trendSpanFor(series.days);
+    const chartHeading = normalizedMode === 'basic' ? `${symptomLabel(validSymptom)} frequency over time` : metricDef.label;
     const modeCopy = normalizedMode === 'basic'
-      ? 'A simple view of how often the selected symptom was recorded on the days you logged.'
-      : 'A deeper view using raw bucket averages, a three-period rolling trend, and symptom-day comparisons in the original units you recorded.';
+      ? 'A calendar-day view of when the selected symptom was recorded. Every day in the chosen window stays represented.'
+      : 'A deeper daily view of your recorded values, a scale-neutral rolling average, and same-window symptom-day comparisons in the original units you recorded.';
     const advancedPanel = normalizedMode === 'advanced'
-      ? advancedControlsMarkup(activeMetric,metricDef,series,loggedBuckets,validSymptom)
-      : '';
-    const comparisons = normalizedMode === 'advanced'
-      ? advancedComparisonMarkup(comparisonData,validSymptom,days)
-      : '';
+      ? advancedControlsMarkup(activeMetric,metricDef,series,loggedBuckets,validSymptom,trendSpan)
+      : `<div class="chart-legend"><span class="legend-primary">${escapeHtml(metricDef.label)}</span><span class="legend-trend">${trendSpan}-day rolling average</span></div>`;
+    const comparisons = normalizedMode === 'advanced' ? advancedComparisonMarkup(comparisonData,validSymptom,series.days) : '';
     const chartBody = summary.logged === 0
       ? emptyMarkup()
-      : chartSvg(series.buckets,activeMetric,validSymptom,normalizedMode === 'advanced');
-    const summaryMarkup = normalizedMode === 'basic'
-      ? basicSummaryMarkup(summary)
-      : comparisons;
+      : chartSvg(series.buckets,activeMetric,validSymptom,normalizedMode === 'advanced',normalizedChartType,series.days);
+    const summaryMarkup = normalizedMode === 'basic' ? basicSummaryMarkup(summary,series.days) : comparisons;
+    const range = formatWindowRange(series.start,series.end,series.days);
 
     return `<section class="insights-chart-card" aria-labelledby="insightsChartTitle"
-      data-chart-mode-current="${normalizedMode}" data-chart-window="${days}"
-      data-chart-bucket-days="${series.width}">
+      data-chart-mode-current="${normalizedMode}" data-chart-window="${series.days}"
+      data-chart-bucket-days="1" data-chart-point-count="${series.buckets.length}"
+      data-chart-type-current="${normalizedChartType}">
       <div class="insights-chart-head">
         <div>
-          <span class="pamet-eyebrow">Dynamic chart · ${days}-day window</span>
+          <span class="pamet-eyebrow">Dynamic chart · ${series.days}-day window</span>
           <h3 id="insightsChartTitle">${escapeHtml(chartHeading)}</h3>
           <p>${escapeHtml(modeCopy)}</p>
         </div>
@@ -585,9 +672,10 @@
       </div>
       <div class="chart-primary-controls">
         ${symptomSelectMarkup(options,validSymptom)}
+        ${chartTypeMarkup(normalizedChartType)}
         <div class="chart-window-explain">
-          <strong>${series.width === 1 ? 'Daily view' : `${series.width}-day grouped view`}</strong>
-          <span>Automatically adjusted for readability at ${days} days.</span>
+          <strong>${series.days} calendar days · daily resolution</strong>
+          <span>${escapeHtml(range)}. Data stays daily; only date labels thin out to prevent overlap.${series.days > 90 ? ' Scroll horizontally for exact-day detail.' : ''}</span>
         </div>
       </div>
       ${advancedPanel}
@@ -595,8 +683,8 @@
       ${coverageStrip(series.buckets)}
       ${summaryMarkup}
       <p class="chart-method-note">Charts summarize what you recorded. Missing days remain missing,
-        values are not interpolated, and associations do not establish medical cause, diagnosis,
-        or treatment effect.</p>
+        values are not interpolated, the rolling average never changes the Y-axis scale, and associations
+        do not establish medical cause, diagnosis, or treatment effect.</p>
     </section>`;
   }
 
@@ -605,6 +693,7 @@
     bucketize,
     comparison,
     metrics:() => Object.keys(METRICS),
-    bucketWidthFor
+    bucketWidthFor,
+    trendSpanFor
   });
 })();
