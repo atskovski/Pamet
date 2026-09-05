@@ -1,4 +1,4 @@
-# Pamet v1.6.6 Production Readiness Review
+# Pamet v1.6.8 Production Readiness Review
 
 Updated for the 1.6.4 production-hardening release. This is an engineering readiness record, not a compliance certification.
 

@@ -3,7 +3,7 @@
 This document records evidence required from the deployed Pamet environment. CI proves code behavior against disposable infrastructure; this record proves what the actual provider is serving.
 
 Production target: `https://pamet.wasmer.app`  
-Expected repository release: **1.6.6**
+Expected repository release: **1.6.8**
 
 ## Automated public checks
 
