@@ -50,8 +50,19 @@ check(
 check(darkMode.includes('.insights-empty') && darkMode.includes('--text-primary: #F2F5F4'), 'Dark-mode Insights surfaces and readable foreground hierarchy must remain enforced.');
 check(experience.includes("title.textContent = 'Visit Brief'") && experience.includes('Email visit brief'), 'Doctor Report must remain renamed to Visit Brief in the active product UI.');
 check(insightsController.includes("[['all','All'],['symptom','Symptoms'],['lifestyle','Lifestyle'],['medication','Medications'],['sleepstress','Sleep / Stress']]"), 'Insights must expose all approved observation categories.');
-check(insightsController.includes('[7, 14, 30, 60, 90, 180, 360]'), 'Insights must support every approved history window from 7 through 360 days.');
-check(insightsCharting.includes('bucketWidthFor') && insightsCharting.includes('Missing days remain missing') && insightsCharting.includes('three-period rolling trend') && insightsCharting.includes('sleepHours') && insightsCharting.includes('stressLevel') && insightsCharting.includes('waterGlasses'), 'Insights charts must adapt bucket size by window, preserve missingness, and expose native-unit factor trends.');
+check(insightsController.includes('[7, 14, 30, 60, 90, 180, 365]'), 'Insights must support every approved history window from 7 through 365 days.');
+check(
+  insightsCharting.includes('bucketWidthFor') &&
+  insightsCharting.includes('data-chart-point-count') &&
+  insightsCharting.includes('data-chart-type="line"') &&
+  insightsCharting.includes('data-chart-type="bar"') &&
+  insightsCharting.includes('Missing days remain missing') &&
+  insightsCharting.includes('const scaleSeries = secondary ? [primary,secondary] : [primary]') &&
+  insightsCharting.includes('sleepHours') &&
+  insightsCharting.includes('stressLevel') &&
+  insightsCharting.includes('waterGlasses'),
+  'Insights charts must preserve exact daily resolution, expose line/bar views, keep missingness explicit, keep rolling trends scale-neutral, and expose native-unit factor trends.'
+);
 check(insightsController.includes("label: 'Advanced charting'") && insightsController.includes("feature: 'correlations'") && insightsCharting.includes('data-chart-mode="advanced"') && insightsCharting.includes("' · Pro+'"), 'Advanced charting must remain plan-gated while basic charting stays available.');
 check(insightsController.includes('First seen') && insightsController.includes('Last seen') && insights.includes('More frequent recently') && insights.includes('Less frequent recently'), 'Observation history and trend direction must be visible.');
 check(insightsController.includes('Why am I seeing this?') && insightsController.includes('Why Pamet surfaced this'), 'Evidence expansion must be available.');

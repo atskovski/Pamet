@@ -22,7 +22,7 @@ async function startSyntheticFreeSession(page, testInfo) {
   await expect(page.locator('#screen-home')).toHaveClass(/active/);
 }
 
-for (const days of [180, 360]) {
+for (const days of [180, 365]) {
   test(`@production locked ${days}-day Insights control visibly separates Pro+`, async ({ page }, testInfo) => {
     await startSyntheticFreeSession(page, testInfo);
     await page.locator('[data-tab="patterns"]').click();

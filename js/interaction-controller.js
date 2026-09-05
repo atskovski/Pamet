@@ -10,7 +10,7 @@
 
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
-  const WINDOWS = Object.freeze([7, 14, 30, 60, 90, 180, 360]);
+  const WINDOWS = Object.freeze([7, 14, 30, 60, 90, 180, 365]);
   const FREE_HISTORY_DAYS = 90;
   const categoryLabel = Object.freeze({ symptom: 'Symptoms', lifestyle: 'Lifestyle', medication: 'Medications', sleepstress: 'Sleep / Stress' });
   const planCategories = Object.freeze({
@@ -20,7 +20,17 @@
     meds: Object.freeze({ selector: '#medFlow .chip.selected', plural: 'medications' })
   });
 
-  const state = { days: 7, category: 'all', showArchived: false, expanded: new Set(), status: '', chartMode: 'basic', chartMetric: 'frequency', chartSymptom: 'all' };
+  const state = {
+    days: 7,
+    category: 'all',
+    showArchived: false,
+    expanded: new Set(),
+    status: '',
+    chartMode: 'basic',
+    chartMetric: 'frequency',
+    chartSymptom: 'all',
+    chartType: 'line'
+  };
   const profileId = () => String(S.activeProfile?.id || 'primary');
   const archiveKey = () => `pamet_archived_observations_v1_${profileId()}`;
   const paidComparisons = () => E?.has?.('correlations') === true;
@@ -124,10 +134,20 @@
     const info = insightSummary(entries, active);
     const categories = paidComparisons() ? [['all','All'],['symptom','Symptoms'],['lifestyle','Lifestyle'],['medication','Medications'],['sleepstress','Sleep / Stress']] : [['all','All'],['symptom','Symptoms']];
     const helper = paidComparisons() ? 'Pamet summarizes repeat relationships in what you record. It does not diagnose conditions or determine what caused a symptom.' : 'Free Insights summarizes symptom frequency and trend. Recorded-factor comparisons and medication observations unlock with Pro.';
-    const historyNote = longHistory() ? 'Choose a window from 7 through 360 days. Longer windows group the chart automatically so slow changes stay readable.' : 'Free includes up to 90 days of history. Pro and Ultra unlock 180-day and 360-day views plus advanced charting.';
+    const historyNote = longHistory()
+      ? 'Choose a window from 7 through 365 days. Charts keep one calendar-day slot per day and thin only the date labels as the window grows.'
+      : 'Free includes up to 90 days of history. Pro and Ultra unlock 180-day and 365-day views plus advanced charting.';
     const findings = active.length ? `<div class="findings-preview-grid">${active.slice(0,4).map((item) => `<div class="finding-preview"><span class="finding-preview-category">${escapeHtml(categoryLabel[item.category] || 'Observation')}</span><strong>${escapeHtml(item.title)}</strong><span class="finding-preview-meta">${Number(item.matchCount || 0)} supporting entr${Number(item.matchCount || 0) === 1 ? 'y' : 'ies'} · ${escapeHtml(item.trend?.label || 'Developing')}</span></div>`).join('')}</div>${active.length > 4 ? `<p class="findings-more">+${active.length-4} more in the detailed list below.</p>` : ''}` : `<div class="findings-empty"><span data-pamet-icon="insights"></span><div><strong>Nothing specific to review yet</strong><p>Keep tracking; Pamet will not manufacture a pattern from weak evidence.</p></div></div>`;
     const fields = info.fields.map(([label,key,value]) => `<div class="quality-field" data-quality-field="${key}"><div class="quality-field-head"><span>${label}</span><strong>${value}%</strong></div><div class="quality-field-meter"><progress max="100" value="${value}" aria-label="${label} coverage ${value}%"></progress></div><span class="quality-field-count">${Math.round(value * entries.length / 100)} of ${entries.length} logged entr${entries.length === 1 ? 'y' : 'ies'}</span></div>`).join('');
-    const chart = Charts.render({ entries, days:state.days, mode:state.chartMode, metric:state.chartMetric, symptom:state.chartSymptom, advancedEnabled:paidComparisons() });
+    const chart = Charts.render({
+      entries,
+      days:state.days,
+      mode:state.chartMode,
+      metric:state.chartMetric,
+      symptom:state.chartSymptom,
+      chartType:state.chartType,
+      advancedEnabled:paidComparisons()
+    });
 
     column.innerHTML = `<div class="insights-page-head" data-insights-controller><div><span class="pamet-eyebrow">Observational history</span><h2 class="screen-title">Insights</h2><p class="pamet-helper">${escapeHtml(helper)}</p><p class="insights-window-summary" aria-live="polite">Showing the last <strong>${state.days} days</strong>.</p></div><div class="insights-window-wrap"><div class="insights-window" role="group" aria-label="Observation window">${WINDOWS.map(renderWindowButton).join('')}</div><p class="insights-window-note">${escapeHtml(historyNote)}</p></div></div>
       ${state.status ? `<div class="insights-action-status" role="status">${escapeHtml(state.status)}</div>` : ''}
@@ -178,6 +198,15 @@
         return;
       }
       state.chartMode = mode === 'advanced' ? 'advanced' : 'basic';
+      state.status = '';
+      renderInsights();
+      return;
+    }
+
+    const chartTypeButton = event.target.closest('[data-chart-type]');
+    if (chartTypeButton) {
+      event.preventDefault();
+      state.chartType = chartTypeButton.dataset.chartType === 'bar' ? 'bar' : 'line';
       state.status = '';
       renderInsights();
       return;
@@ -314,7 +343,16 @@
     window.addEventListener('pamet:entitlements', () => { schedulePlanHintRefresh(); scheduleInsightsRender(); });
     window.addEventListener('pamet:login', () => { schedulePlanHintRefresh(); scheduleInsightsRender(); });
     window.addEventListener('pamet:registered', () => { schedulePlanHintRefresh(); scheduleInsightsRender(); });
-    window.addEventListener('pamet:profile-updated', () => { state.expanded.clear(); state.showArchived = false; state.chartMode = 'basic'; state.chartMetric = 'frequency'; state.chartSymptom = 'all'; schedulePlanHintRefresh(); scheduleInsightsRender(); });
+    window.addEventListener('pamet:profile-updated', () => {
+      state.expanded.clear();
+      state.showArchived = false;
+      state.chartMode = 'basic';
+      state.chartMetric = 'frequency';
+      state.chartSymptom = 'all';
+      state.chartType = 'line';
+      schedulePlanHintRefresh();
+      scheduleInsightsRender();
+    });
     document.addEventListener('pamet:settings-rendered', schedulePlanHintRefresh);
 
     schedulePlanHintRefresh();
@@ -323,7 +361,15 @@
 
   window.PametInsightsController = Object.freeze({
     render: renderInsights,
-    getState: () => ({ days: state.days, category: state.category, showArchived: state.showArchived, chartMode: state.chartMode, chartMetric: state.chartMetric, chartSymptom: state.chartSymptom }),
+    getState: () => ({
+      days: state.days,
+      category: state.category,
+      showArchived: state.showArchived,
+      chartMode: state.chartMode,
+      chartMetric: state.chartMetric,
+      chartSymptom: state.chartSymptom,
+      chartType: state.chartType
+    }),
     windows: () => [...WINDOWS]
   });
 
