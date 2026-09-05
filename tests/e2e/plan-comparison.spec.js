@@ -17,6 +17,12 @@ async function installSyntheticFreeSession(page) {
   });
 }
 
+async function openReadyApp(page) {
+  await page.goto('/', { waitUntil: 'commit' });
+  await page.waitForFunction(() => typeof window.PametLoadAuthenticatedFeatures === 'function');
+  await expect(page.locator('#welcome')).toHaveClass(/hidden/);
+}
+
 async function width(locator) {
   const box = await locator.boundingBox();
   expect(box).not.toBeNull();
@@ -25,8 +31,7 @@ async function width(locator) {
 
 test('@production Settings plan actions, legal version, and upgrade chooser stay aligned', async ({ page }, testInfo) => {
   await installSyntheticFreeSession(page);
-  await page.goto('/', { waitUntil: 'domcontentloaded' });
-  await expect(page.locator('#welcome')).toHaveClass(/hidden/);
+  await openReadyApp(page);
   await page.locator('.tab[data-tab="settings"]').click();
 
   const legalFooter = page.locator('.pamet-legal-footer .footer-line');
@@ -97,8 +102,7 @@ test('@production Settings plan actions, legal version, and upgrade chooser stay
 
 test('@production Free paid feature entry points show the correct plan lock instead of opening paid workflows', async ({ page }) => {
   await installSyntheticFreeSession(page);
-  await page.goto('/', { waitUntil: 'domcontentloaded' });
-  await expect(page.locator('#welcome')).toHaveClass(/hidden/);
+  await openReadyApp(page);
   await page.locator('.tab[data-tab="settings"]').click();
 
   const tools = page.locator('#phase2UltraTools');

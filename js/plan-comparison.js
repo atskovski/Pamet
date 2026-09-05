@@ -142,6 +142,7 @@
 
   document.addEventListener("DOMContentLoaded", observeSettings, { once: true });
   document.addEventListener("pamet:settings-rendered", () => queueMicrotask(() => { observeSettings(); refreshSettings(); }));
+  global.addEventListener("pamet:entitlements", () => queueMicrotask(refreshSettings));
   document.querySelectorAll(".tab[data-tab]").forEach((tab) => tab.addEventListener("click", () => requestAnimationFrame(refreshSettings)));
   if (document.body) installModalObserver();
   else document.addEventListener("DOMContentLoaded", installModalObserver, { once: true });

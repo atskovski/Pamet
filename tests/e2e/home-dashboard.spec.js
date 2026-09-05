@@ -2,6 +2,10 @@
 
 const { test, expect } = require('@playwright/test');
 
+async function waitForBootstrap(page) {
+  await page.waitForFunction(() => typeof window.PametLoadAuthenticatedFeatures === 'function');
+}
+
 async function startSyntheticFreeSession(page, testInfo) {
   const unique = `${Date.now()}-${Math.random().toString(16).slice(2)}-${testInfo.project.name.replace(/\W+/g, '-')}`;
   await page.addInitScript(({ id }) => {
@@ -16,7 +20,8 @@ async function startSyntheticFreeSession(page, testInfo) {
     localStorage.setItem('pamet_user_v1', JSON.stringify(user));
     localStorage.setItem('pamet_session_v2', JSON.stringify({ token: `home-session-${id}`, at: Date.now() }));
   }, { id: unique });
-  await page.goto('/', { waitUntil: 'domcontentloaded' });
+  await page.goto('/', { waitUntil: 'commit' });
+  await waitForBootstrap(page);
   await expect(page.locator('#welcome')).toHaveClass(/hidden/);
   await expect(page.locator('#screen-home')).toHaveClass(/active/);
 }
@@ -62,7 +67,8 @@ async function addRecentHistory(page) {
       notes: index === 0 ? 'Dashboard fixture' : ''
     }));
   });
-  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.reload({ waitUntil: 'commit' });
+  await waitForBootstrap(page);
   await expect(page.locator('#welcome')).toHaveClass(/hidden/);
   await expect(page.locator('#screen-home')).toHaveClass(/active/);
 }

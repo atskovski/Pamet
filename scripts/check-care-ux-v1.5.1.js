@@ -4,12 +4,14 @@ const pkg = JSON.parse(fs.readFileSync('package.json','utf8'));
 const expected = pkg.version;
 const check = (condition, message) => { if (!condition) throw new Error(message); };
 const main = fs.readFileSync('js/main.js','utf8');
+const authenticated = fs.readFileSync('js/authenticated-features.js','utf8');
 const care = fs.readFileSync('js/care-ux.js','utf8');
 const css = fs.readFileSync('css/care-ux.css','utf8');
 const cssMain = fs.readFileSync('css/main.css','utf8');
+const authenticatedCss = fs.readFileSync('css/authenticated.css','utf8');
 
-check(main.includes(`const PAMET_VERSION = '${expected}'`) && main.includes('./care-ux.js'), `Pamet ${expected} care UX module must ship.`);
-check(cssMain.includes('@import "./care-ux.css";') && cssMain.trim().endsWith('@import "./dark-mode.css";'), 'Care UX must load before the unified dark-mode override layer.');
+check(main.includes(`const PAMET_VERSION = '${expected}'`) && authenticated.includes('./care-ux.js') && !main.includes('import "./care-ux.js"'), `Pamet ${expected} care UX module must ship in the deferred authenticated bundle.`);
+check(cssMain.includes('@import "./care-ux.css";') && cssMain.trim().endsWith('@import "./dark-mode.css";') && authenticatedCss.includes('@import "./care-ux.css";') && authenticatedCss.trim().endsWith('@import "./dark-mode.css";'), 'Care UX must load before the unified dark-mode override in both full and deferred style contracts.');
 check(care.includes("data-care-share=\"caregiver\"") && care.includes("data-care-share=\"provider\""), 'Caregiver and Primary Care settings must use explicit actions instead of toggles.');
 check(care.includes('All progress, errors, and confirmation will stay in this window.'), 'Sharing status must remain inside the active modal.');
 check(care.includes('Secure invitation sent') && care.includes('setTimeout(() => closeModal(root), 2200)'), 'Successful sharing must confirm in-modal before returning to Settings.');
@@ -20,4 +22,4 @@ check(care.includes('Draft saved only on this device') && care.includes('has not
 check(care.includes('Appointment saved to Upcoming and saved visits') && care.includes('reminder setting is stored'), 'Secure appointment save must explain where the appointment/reminder is stored.');
 check(care.includes('Retry secure sync') && care.includes('You do not need to sign in again.') && !care.includes('await A.endSession()'), 'Appointment workspace must retry server sync before asking users to authenticate again.');
 check(css.includes('.care-ux-status.error') && css.includes('.care-appointment-grid'), 'Care confirmations and appointment layout must be styled inside the modal.');
-console.log(`Pamet ${expected} care UX checks passed.`);
+console.log(`Pamet ${expected} care UX checks passed with deferred authenticated loading.`);

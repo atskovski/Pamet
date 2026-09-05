@@ -4,7 +4,8 @@ const { test, expect } = require('@playwright/test');
 
 async function registerFreeAccount(page, testInfo) {
   const unique = `${Date.now()}-${Math.random().toString(16).slice(2)}-${testInfo.project.name.replace(/\W+/g, '-')}`;
-  await page.goto('/', { waitUntil:'domcontentloaded' });
+  await page.goto('/', { waitUntil:'commit' });
+  await page.waitForFunction(() => typeof window.PametLoadAuthenticatedFeatures === 'function');
   await page.locator('#showRegister').click();
   await page.locator('#regFirstName').fill('Plan');
   await page.locator('#regLastName').fill('Boundary');

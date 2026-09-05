@@ -1,111 +1,121 @@
-# Pamet Performance Audit — current `main`
+# Pamet Performance Architecture — v1.6.9
 
 Date: 2026-09-04  
-Baseline reviewed: `atskovski/pamet@1f0ffa503819fd3c893b17979d4fc62adba6cd07` (Pamet 1.6.9)
+Architecture branch: `perf/best-in-class-architecture`  
+Baseline: `atskovski/pamet@ba2a08f213bf9f7a7d12e03b2de055d3735bbf56`
 
-## Scope
+## Outcome
 
-Reviewed the complete repository tree and the production-critical execution paths across the browser entrypoint and production bundles, authentication/session lifecycle, service worker and static delivery, Express edge/application servers, database/session access patterns, telemetry, build pipeline, performance budgets, tests, and CI release gates.
+The high-impact architecture work identified in the repository-wide performance review has been implemented and is enforced by CI. The release now optimizes the signed-out/login critical path separately from authenticated feature code, serves immutable content-hashed production assets, memoizes repeated journal derivations, bounds authentication activity writes and telemetry amplification, and records privacy-preserving real-user performance measurements.
 
-The review intentionally prioritizes changes that affect startup cost, interaction latency, request amplification, database write volume, repeat-load behavior, and production operability. It does not treat a static source review as a substitute for deployed Lighthouse/Web Vitals or production load testing.
+The previous production shell required approximately **339.9 KiB raw JavaScript + CSS** before the application could use the monolithic browser bundle. The performance-first build currently measures:
 
-## Current production footprint
+- Signed-out critical path: **184.1 KiB raw / 48.1 KiB gzip**
+- Total split application payload: **431.9 KiB raw / 115.3 KiB gzip**
+- Bootstrap JavaScript: **100.5 KiB raw**
+- Authenticated feature JavaScript: **189.8 KiB raw**
 
-The committed production bundles on the reviewed `main` tree are:
+That is approximately a **45.8% reduction in raw JavaScript/CSS on the signed-out critical path** versus the prior monolithic shell. Total code is intentionally larger than the old single bundle because the new architecture adds real-user measurement, store memoization, split-release infrastructure, and a repeated final dark-mode safety layer while moving non-critical work off the first-load path.
 
-- `dist/pamet.min.js`: **228,282 bytes** (~222.9 KiB raw)
-- `dist/pamet.min.css`: **119,827 bytes** (~117.0 KiB raw)
-- Combined raw CSS + JavaScript: **348,109 bytes** (~339.9 KiB)
+## Implemented architecture
 
-The existing CI budget remains useful and currently allows:
+### 1. Split the signed-out critical path from authenticated features
 
-- JavaScript: 300 KiB raw / 90 KiB gzip
-- CSS: 160 KiB raw / 45 KiB gzip
-- Combined: 450 KiB raw / 125 KiB gzip
+`js/main.js` is now the small security/login/bootstrap entrypoint. It eagerly loads only the code required for authentication, account isolation, entitlement enforcement, local store integrity, security/recovery, login presentation, version handling, and the shared shell.
 
-The current bundle is still within the configured raw ceiling, but the login/startup path now pays for substantially more application code than it did during the earlier v1.5.1 audit.
+Authenticated/heavy modules are owned by `js/authenticated-features.js` and load only after a valid Pamet session. The feature payload includes Insights, care/appointment workspaces, sharing, encrypted sync, QR sharing, billing, notifications, advanced UI, and other authenticated product surfaces.
 
-## Findings and recommendations
+The browser also prefetches the authenticated payload after the user starts interacting with sign-in, but skips speculative prefetch on Save-Data or constrained 2G connections.
 
-### P0 — No performance blocker found in the Remember me change
+### 2. Split critical and authenticated CSS
 
-The Remember me implementation adds no dependency and only a small UI/control layer. It uses the existing secure server session model rather than storing a plain-text password in browser storage. When selected, the existing persistent cookie/session behavior is retained for 30 days; when cleared, the server cookie and local browser marker become session-only.
+`css/bootstrap.css` contains the shell, login, design system, security/recovery, accessibility, release update, mobile, contrast, and dark-mode rules required before authentication.
 
-This is preferable to saving a username/password pair in local storage and keeps the feature compatible with browser password managers through the existing `autocomplete="username"` and `autocomplete="current-password"` fields.
+`css/authenticated.css` contains feature-specific styles and is loaded with the authenticated JavaScript bundle. The unified dark-mode layer remains last in both style contracts so lazily loaded feature CSS cannot regress dark-surface readability.
 
-### P1 — Split the monolithic browser bundle after authentication
+### 3. Content-hashed immutable release assets
 
-`js/main.js` eagerly imports nearly the entire application into one browser bundle, including billing/sharing, entitlement UI, care planning/workspace, notifications, encrypted sync, QR sharing, security, insights, advanced UX, and legal/version surfaces. A signed-out user on the login screen therefore downloads and parses code that cannot be used until after authentication, and many authenticated users download feature modules they may never open.
+The production build now emits both stable compatibility aliases and content-hashed immutable files:
 
-**Recommended implementation:** keep a minimal bootstrap bundle for performance guard, authentication, login presentation, brand shell, account switching, and release/update handling. Lazy-load the authenticated application after a valid session is established, then lazy-load infrequent feature groups on first navigation (billing/sharing, appointment/care workspace, QR/security, encrypted sync, advanced reports). Preserve the current fail-closed entitlement boundary server-side.
+- `pamet.bootstrap.<hash>.js`
+- `pamet.features.<hash>.js`
+- `pamet.styles.<hash>.css`
+- `pamet.features.<hash>.css`
 
-**Target:** reduce initial signed-out JavaScript transfer/parse cost materially without weakening CSP or entitlement checks.
+`dist/asset-manifest.json` is generated on every production build. The secure edge reads that manifest, injects the exact release assets into the server-rendered shell, preloads critical CSS/JavaScript, and serves hashed files with `Cache-Control: public, max-age=31536000, immutable`.
 
-### P1 — Reduce authentication database write amplification
+HTML, the service worker, and the asset manifest remain revalidated/no-store so releases cannot be pinned by stale shell metadata.
 
-The session authentication path updates `pamet_sessions.last_used_at` on every authenticated request. The legacy/device credential path similarly updates `pamet_devices.last_used_at` whenever a device credential is used. At higher request volume this converts otherwise read-heavy authenticated traffic into continuous writes and can increase row/index churn and database contention.
+### 4. Manifest-driven service worker
 
-**Recommended implementation:** include `last_used_at` in the authentication read and only refresh it when stale by a coarse interval such as five minutes. A conditional update (`... WHERE last_used_at < NOW() - INTERVAL 5 MINUTE`) also works and keeps correctness simple. Device activity timestamps can use the same policy.
+The service worker no longer relies on manually coordinated query tokens for production bundles. At install time it reads the generated asset manifest and caches the exact hashed release assets. Static assets remain cache-first, navigation remains network-first with an offline shell fallback, and `/api/` plus `/share` traffic bypasses the PWA cache.
 
-### P1 — Batch request telemetry instead of exporting on every API completion
+### 5. Memoized journal analytics
 
-The application currently records request metrics and can send OTLP metric/log requests for each API response, with an additional optional log-drain request. This is operationally useful but can multiply outbound requests under load and make telemetry transport part of the application's resource profile.
+Repeated local derivations are memoized by store revision without changing Pamet's data contract. The cache covers:
 
-**Recommended implementation:** enqueue bounded in-memory telemetry records and flush in batches on a short interval or size threshold, with backpressure/drop accounting. Security/availability alerts that require immediate delivery can remain on the direct path. Flush best-effort during graceful shutdown.
+- pattern calculations
+- dashboard metrics
+- Visit Brief/report derivations
+- total logged-day calculations
+- calendar date lookup
 
-### P1 — Move release assets to content-hashed immutable URLs
+Caches invalidate after journal, settings, or profile persistence changes. This prevents repeated full-history scans when the underlying health journal has not changed.
 
-The service worker correctly uses release-specific cache names and bypasses API/share caching. However, the inner Express static layer intentionally serves `/assets` and `/dist` with ETags and `maxAge: 0` because filenames are not content-hashed. Outside the service-worker cache, browsers and intermediaries must revalidate assets rather than safely treating them as immutable.
+### 6. Bounded authentication activity writes
 
-**Recommended implementation:** emit content-hashed bundle names (for example `pamet.<hash>.js` / `.css`) plus a generated asset manifest consumed by the server-rendered shell and service worker. Serve hashed files with `Cache-Control: public, max-age=31536000, immutable`; keep HTML and `sw.js` no-store. This also removes the need to coordinate multiple manual `?v=` release tokens.
+The production database bootstrap throttles `pamet_sessions.last_used_at` and `pamet_devices.last_used_at` activity updates. Repeated authenticated requests inside the five-minute activity window do not perform redundant database writes, while stale activity timestamps use a conditional database update.
 
-### P2 — Cache derived journal computations by entry revision
+This turns a formerly write-amplified authenticated read path back into a predominantly read-oriented workload and reduces index/row churn as traffic grows.
 
-Pattern, dashboard, and report surfaces repeatedly derive summaries from the local journal. As history grows, repeated full-history scans can dominate render cost even when the underlying entry set has not changed.
+### 7. Batched telemetry transport
 
-**Recommended implementation:** maintain an entry revision/hash in the store and memoize derived metrics, pattern candidates, and summary inputs against that revision plus relevant time-window/filter arguments. Invalidate only on entry mutation/import/profile switch.
+Grafana OTLP logs and metrics are now queued into small bounded batches before leaving the process instead of creating an outbound transport request for every API completion. Repetitive successful request log-drain records are coalesced briefly because exact request counts already exist in metrics; failures and alert-oriented traffic stay on the immediate path.
 
-### P2 — Continue replacing broad DOM observation with lifecycle events
+This reduces telemetry connection/request amplification without removing operational visibility.
 
-The existing `js/performance.js` guard coalesces page-wide MutationObserver callbacks to one animation-frame batch, which is a useful defensive measure. The longer-term architecture should continue moving feature refreshes to explicit Pamet lifecycle/navigation/store events so modules do not scan the document in response to unrelated DOM work.
+### 8. Privacy-preserving Web Vitals
 
-### P2 — Add measured performance gates, not only bundle-size gates
+The browser now records LCP, INP, CLS, FCP, and TTFB through `PerformanceObserver` and sends a bounded payload to `/api/performance`.
 
-The existing bundle budget prevents unbounded artifact growth but cannot catch long tasks, render churn, layout shift, slow API requests, or database contention.
+The payload contains only performance timings/ratings and a coarse Pamet screen name. It does **not** include symptom entries, medications, notes, journal text, form values, email addresses, account identifiers, or other health-journal content.
 
-**Recommended implementation:** add deployed-preview performance collection for desktop and mobile, plus a small authenticated navigation benchmark. Track at minimum LCP, INP, CLS, TBT/long tasks, API p50/p95 latency, and DB pool saturation. Keep performance thresholds visible in CI artifacts and trend them across releases rather than treating one Lighthouse run as a release guarantee.
+The platform runtime snapshot aggregates these measurements so actual deployed-user performance can guide further optimization instead of relying only on synthetic bundle size.
 
-## Existing strengths retained
+### 9. Performance-specific release gates
 
-- The broad MutationObserver guard coalesces expensive page-wide callbacks.
-- Service-worker registration is centralized and explicitly checks for updates.
-- Static PWA shell assets are cache-first inside the service worker while API and share routes bypass that cache.
-- Production JavaScript/CSS already have blocking raw/gzip bundle budgets.
-- MySQL uses a connection pool and recent schema/migration work includes scale-oriented indexes.
-- CI runs build, static/release checks, unit/security tests, MySQL lifecycle integration, backup/restore, and multi-browser UI integrity.
+CI now blocks regressions using separate budgets for bootstrap and authenticated bundles as well as aggregate raw/gzip limits. Current ceilings are:
 
-## Recommended optimization sequence
+- Bootstrap JS: 170 KiB raw / 55 KiB gzip
+- Authenticated JS: 190 KiB raw / 65 KiB gzip
+- Bootstrap CSS: 115 KiB raw / 38 KiB gzip
+- Authenticated CSS: 90 KiB raw / 30 KiB gzip
+- Signed-out initial path: 260 KiB raw / 88 KiB gzip
+- Total application payload: 500 KiB raw / 175 KiB gzip
 
-1. Land the Remember me session-control change independently and validate login/logout/session expiry behavior.
-2. Split signed-out/bootstrap code from the authenticated application bundle.
-3. Throttle session/device `last_used_at` writes.
-4. Batch OTLP/log-drain request telemetry.
-5. Introduce content-hashed immutable release assets.
-6. Memoize derived journal analytics by entry revision.
-7. Add deployed-preview Web Vitals and authenticated navigation measurements.
+CI also uploads the generated manifest and performance bundles as build evidence, validates content hashing/immutable delivery, runs architecture-specific tests, executes MySQL lifecycle + backup/restore integration, and retains the Chromium/Firefox/mobile UI-integrity gate.
 
-This ordering targets measurable startup and backend amplification gains while avoiding a risky all-at-once rewrite of the health-journal application.
+## Performance principles now enforced
 
-## Validation targets after deployment
+1. Do not make signed-out users download code they cannot use.
+2. Do not make returning browsers re-download unchanged versioned assets.
+3. Do not recompute journal analytics when the journal revision has not changed.
+4. Do not turn every authenticated read into a database activity write.
+5. Do not create one observability network request per application request when batching is safe.
+6. Do not trade performance for weaker entitlement, CSP, account-isolation, or health-data boundaries.
+7. Measure real deployed performance and optimize the slowest actual paths rather than guessing.
 
-Collect desktop and mobile measurements against the deployed preview and production release:
+## Remaining optimization policy
+
+The architecture is now prepared for finer route/feature-group splitting if real-user Web Vitals and authenticated navigation measurements show that the authenticated feature bundle is still a meaningful interaction bottleneck. That next split should be evidence-driven because many existing Pamet feature modules initialize through side effects; converting them into route-level lifecycle modules without measurements would add complexity and regression risk while providing uncertain user-visible benefit.
+
+The immediate production targets remain:
 
 - LCP < 2.5 s
 - INP < 200 ms
 - CLS < 0.1
-- TBT < 200 ms for the synthetic desktop/mobile smoke path
-- authenticated API p95 tracked per release and alert threshold
-- repeat navigation should visibly respond in the same frame or next animation frame for local-data screens
-- no regression in auth, entitlement, local-data isolation, CSP, or offline shell behavior
+- synthetic TBT < 200 ms
+- authenticated API p95 tracked per release
+- no regression in auth, entitlements, account isolation, strict CSP, offline shell behavior, or health-journal privacy
 
-Production timing and load numbers must be collected in a real deployed environment; this repository review does not invent those measurements.
+The new RUM path makes those targets observable after deployment and gives future optimization work a concrete performance baseline.
