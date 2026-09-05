@@ -1,4 +1,4 @@
-/* Expanded Insights history windows: 7 / 14 / 30 / 60 / 90 / 180 / 365 days. */
+/* Expanded Insights history windows: 7 / 14 / 30 / 60 / 90 / 180 / 360 days. */
 .insights-page-head[data-insights-controller]{
   grid-template-columns:minmax(0,1fr) minmax(35rem,44rem);
   align-items:end;
