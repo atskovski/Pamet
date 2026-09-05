@@ -35,7 +35,7 @@
     if (!el) return;
     el.hidden = false;
     el.className = `care-ux-status ${kind}`;
-    el.textContent = message;
+    if (el.textContent !== message) el.textContent = message;
   }
 
   function openLocalCaregiverPdf(root) {
@@ -97,14 +97,13 @@
 
     const ultra = isUltra();
     pdfButton.hidden = !ultra;
-    if (ultra) pdfButton.textContent = 'Download caregiver PDF';
+    if (ultra && pdfButton.textContent !== 'Download caregiver PDF') pdfButton.textContent = 'Download caregiver PDF';
 
     const help = form.querySelector('.phase2-form-help');
-    if (help) {
-      help.textContent = ultra
-        ? 'The caregiver PDF is created locally from the selected summary. Secure links are expiring and revocable.'
-        : 'Secure links are expiring and revocable. Local caregiver PDF fallback is available with Ultra.';
-    }
+    const helpText = ultra
+      ? 'The caregiver PDF is created locally from the selected summary. Secure links are expiring and revocable.'
+      : 'Secure links are expiring and revocable. Local caregiver PDF fallback is available with Ultra.';
+    if (help && help.textContent !== helpText) help.textContent = helpText;
 
     const status = root.querySelector('[data-enhanced-status]');
     if (!ultra && status?.textContent?.includes('use Create PDF instead')) {
@@ -124,7 +123,7 @@
   window.addEventListener('pamet:entitlements', refresh);
 
   const observer = new MutationObserver(refresh);
-  observer.observe(document.documentElement, { childList:true, subtree:true, characterData:true });
+  observer.observe(document.documentElement, { childList:true, subtree:true });
   refresh();
 
   window.PametCaregiverPdfFallback = Object.freeze({ refresh });
