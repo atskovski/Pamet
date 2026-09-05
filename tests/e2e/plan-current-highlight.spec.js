@@ -59,7 +59,8 @@ test('@production Settings follows the server-verified plan after upgrade or pla
     });
   });
 
-  await page.goto('/', { waitUntil: 'domcontentloaded' });
+  await page.goto('/', { waitUntil: 'commit' });
+  await page.waitForFunction(() => typeof window.PametLoadAuthenticatedFeatures === 'function');
   await expect(page.locator('#welcome')).toHaveClass(/hidden/);
   await page.locator('.tab[data-tab="settings"]').click();
 
