@@ -75,7 +75,7 @@ test('@production Patterns windows, evidence, archive actions, and Free long-his
   }
 
   await page.locator('[data-insights-days="180"]').click();
-  await expect(page.locator('#pametEntitlementLockTitle')).toContainText('Long-term Insights is included with Pro and Ultra');
+  await expect(page.locator('#pametEntitlementLockTitle')).toContainText('Long-term insights is included with Pro and Ultra');
   await expect(page.locator('[data-insights-days="7"]')).toHaveClass(/active/);
   await page.locator('[data-entitlement-close]').click();
 
