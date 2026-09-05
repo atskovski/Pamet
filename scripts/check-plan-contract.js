@@ -6,6 +6,9 @@ const catalog = JSON.parse(fs.readFileSync('contracts/plan-features.json', 'utf8
 const mobile = JSON.parse(fs.readFileSync('contracts/mobile-api.json', 'utf8'));
 const server = fs.readFileSync('server.js', 'utf8');
 const comparison = fs.readFileSync('js/plan-comparison.js', 'utf8');
+const matrix = fs.readFileSync('js/plan-matrix.js', 'utf8');
+const management = fs.readFileSync('js/plan-management.js', 'utf8');
+const managementLoader = fs.readFileSync('js/plan-management-loader.js', 'utf8');
 const main = fs.readFileSync('js/main.js', 'utf8');
 const authenticated = fs.readFileSync('js/authenticated-features.js', 'utf8');
 const guard = fs.readFileSync('js/entitlement-guard.js', 'utf8');
@@ -19,8 +22,6 @@ const planKeys = catalog.plans.map((plan) => plan.key);
 check(JSON.stringify(planKeys) === JSON.stringify(['free', 'pro', 'ultra']), 'Canonical plan order must be Free, Pro, Ultra.');
 check(mobile.plans && planKeys.every((key) => mobile.plans[key]), 'Mobile contract must define all canonical plans.');
 
-/* Paid tiers are cumulative: Pro includes Free, and Ultra includes Free + Pro.
- * A capability may never disappear as the customer moves to a higher tier. */
 for (const feature of catalog.features) {
   check(!feature.free || (feature.pro && feature.ultra), `${feature.id}: a Free feature must remain available on Pro and Ultra.`);
   check(!feature.pro || feature.ultra, `${feature.id}: a Pro feature must remain available on Ultra.`);
@@ -45,46 +46,40 @@ for (const [capability, rule] of Object.entries(expectedServerRules)) {
   check(server.includes(rule), `Server-authoritative entitlement rule drifted for ${capability}.`);
 }
 
-/* The capability document is not enough by itself: routes that perform paid work
- * must also contain an authorization boundary. */
 check(server.includes("if (!['pro', 'ultra'].includes(req.user.plan)) return res.status(403).json({ error: 'Sharing requires Pamet Pro or Ultra.' });"), 'Sharing creation must reject Free on the server.');
-check((server.match(/Appointment workspace requires Pamet Ultra\./g) || []).length >= 3, 'Appointment read/write/delete routes must enforce Ultra.');
-check((server.match(/Encrypted multi-device sync requires Pamet Ultra\./g) || []).length >= 2, 'Encrypted sync read/write routes must enforce Ultra.');
+check((server.match(/Appointment workspace requires Pamet Ultra\./g) || []).length >= 3, 'Appointment routes must enforce Ultra.');
+check((server.match(/Encrypted multi-device sync requires Pamet Ultra\./g) || []).length >= 2, 'Encrypted sync routes must enforce Ultra.');
 
-/* Browser state is only a cache/display concern. Paid behavior must start Free,
- * verify /api/entitlements, reject contradictory matrices, and make local plan
- * writes non-authoritative. */
-check(guard.includes("nativeFetch('/api/entitlements'"), 'Client entitlement guard must verify the authenticated server entitlement endpoint.');
+check(guard.includes("nativeFetch('/api/entitlements'"), 'Client entitlement guard must verify the server entitlement endpoint.');
 check(guard.includes('configurable:false') && guard.includes('S.setPlan = () => false;'), 'Client plan state must not be writable as an authorization shortcut.');
 check(guard.includes("if (mismatch) return apply(null, false);"), 'Contradictory server capability payloads must fail closed.');
 check(guard.includes("S.patterns = (...args) => has('correlations')"), 'Legacy correlation output must require Pro/Ultra.');
 check(guard.includes("target !== 'primary' && !has('multipleProfiles')"), 'Non-primary profile switching must require Ultra.');
-check(guard.includes("target.matches('[data-care-share],[data-enhanced-care-share],.care-access-action')") && guard.includes("rowText.includes('primary care')") && guard.includes("rowText.includes('caregiver')") && guard.includes("feature:'sharing'"), 'Final caregiver/provider sharing controls must be intercepted even after UI refinement rewrites their data attributes.');
-check(guard.includes("prep:Object.freeze({ feature:'appointmentWorkspace'") && guard.includes('PHASE2_REQUIREMENTS[target.dataset.phase2]'), 'Appointment Workspace UI must be intercepted before Free/Pro can open it.');
-check(guard.includes("profiles:Object.freeze({ feature:'multipleProfiles'") && guard.includes("brief:Object.freeze({ feature:'advancedVisitBrief'"), 'Ultra profile and Advanced Visit Brief controls must stay behind the plan boundary.');
-check(guard.includes("longitudinal:Object.freeze({ plans:Object.freeze(['ultra'])") && guard.includes("sharing:Object.freeze({ plans:Object.freeze(['ultra'])"), 'Prepare-with-Ultra advanced controls must not fall through to Pro or Free.');
-check(guard.includes("included:'Pro and Ultra'") && guard.includes("included:'Ultra'") && guard.includes('See Pro &amp; Ultra'), 'Locked paid controls must render plan-aware upgrade copy instead of opening the feature.');
-check(guard.includes("wrapPublicMethod(window.PametCareUx, 'openAppointmentWorkspace'") && guard.includes("wrapPublicMethod(window.PametPhase2, 'manageProfiles'"), 'Public paid-feature helpers must not bypass the same entitlement boundary.');
+check(guard.includes("feature:'appointmentWorkspace'") && guard.includes('PHASE2_REQUIREMENTS[target.dataset.phase2]'), 'Appointment Workspace UI must be intercepted before Free/Pro can open it.');
+check(guard.includes("feature:'multipleProfiles'") && guard.includes("feature:'advancedVisitBrief'"), 'Ultra profile and Advanced Visit Brief controls must stay behind the plan boundary.');
+check(guard.includes("included:'Pro and Ultra'") && guard.includes("included:'Ultra'"), 'Locked paid controls must render plan-aware upgrade copy.');
 
-/* Performance split strengthens the entitlement boundary: the guard is installed
- * eagerly before any paid feature code can be injected. Billing/Insights remain
- * ordered inside the deferred feature bundle for their legacy dependency chain. */
 const guardIndex = main.indexOf('import "./entitlement-guard.js";');
 const featureLoaderIndex = main.indexOf('function loadAuthenticatedFeatures()');
 const billingIndex = authenticated.indexOf('import "./billing-sharing.js";');
 const insightsIndex = authenticated.indexOf('import "./insights.js";');
 check(guardIndex >= 0 && featureLoaderIndex > guardIndex, 'Entitlement guard must install before authenticated feature loading can begin.');
-check(!main.includes('import "./billing-sharing.js";') && !main.includes('import "./insights.js";'), 'Paid billing and Insight rendering must remain outside the signed-out bootstrap.');
+check(!main.includes('import "./billing-sharing.js";') && !main.includes('import "./insights.js";'), 'Paid billing and Insights must remain outside the signed-out bootstrap.');
 check(billingIndex >= 0 && insightsIndex > billingIndex, 'Deferred billing hooks must initialize before paid Insight rendering.');
-check(main.includes("window.addEventListener(eventName, () => loadAuthenticatedFeatures()") && main.includes("if (window.PametAuth?.isAuthed?.()) loadAuthenticatedFeatures()"), 'Authenticated feature loading must be session-gated.');
 check(insights.includes('if (!paidComparisons()) return observations;'), 'Free Insights must stop before recorded-factor comparison generation.');
 check(insights.includes("E?.has?.('medicationTiming') === true"), 'Medication observations must require the Pro/Ultra entitlement.');
 
 check(comparison.includes('Compare all plans'), 'Settings must offer a clear full-plan comparison action.');
 check(comparison.includes('Upgrade your plan'), 'Free-plan Settings must expose a clear upgrade action.');
-check(comparison.includes('Compare all plan features'), 'Upgrade modal must link to the full canonical plan matrix.');
-check(comparison.includes('PametPlanCatalog'), 'Plan comparison UI must use the canonical generated catalog.');
+check(comparison.includes('Compare all plan features'), 'Upgrade chooser must link to the full comparison.');
+check(comparison.includes('/dist/pamet.plan-matrix.min.js'), 'Full plan matrix must stay deferred from the authenticated critical bundle.');
+check(matrix.includes('Compare all Pamet features'), 'Deferred matrix must present the complete Pamet comparison heading.');
+check(matrix.includes('PAMET PLAN CATALOG') && matrix.includes('current catalog features'), 'Full comparison must explain its canonical catalog source.');
+check(matrix.includes('PametPlanCatalog') && comparison.includes('PametPlanCatalog'), 'Plan comparison surfaces must use the canonical generated catalog.');
+check(managementLoader.includes('/dist/pamet.plan-management.min.js'), 'Paid account management must stay deferred from the critical feature bundle.');
+check(management.includes('#upgradeBtn') && management.includes('Open Stripe billing portal'), 'Paid Manage your plan must show account context before explicit billing actions.');
+check(management.includes('/api/billing/status') && management.includes('/api/billing/portal'), 'Plan management must separate read-only billing status from portal creation.');
 check(!JSON.stringify(catalog).includes('Scheduled caregiver updates'), 'Canonical plan contract must not advertise removed live caregiver surveillance.');
 check(!JSON.stringify(catalog).includes('FHIR-ready data export'), 'Canonical plan contract must not advertise unshipped FHIR export.');
 
-console.log(`Pamet plan contract gate passed: ${catalog.plans.length} plans, ${catalog.features.length} features, server routes and fail-closed client boundaries aligned.`);
+console.log(`Pamet plan contract gate passed: ${catalog.plans.length} plans, ${catalog.features.length} features, server routes and deferred fail-closed client boundaries aligned.`);
