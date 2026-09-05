@@ -29,7 +29,7 @@ async function width(locator) {
   return box.width;
 }
 
-test('@production Settings plan actions, legal version, and next-tier Free upgrade stay aligned', async ({ page }, testInfo) => {
+test('@production Settings plan actions, legal version, and Free Pro-or-Ultra upgrade stay aligned', async ({ page }, testInfo) => {
   await installSyntheticFreeSession(page);
   await openReadyApp(page);
   await page.locator('.tab[data-tab="settings"]').click();
@@ -46,7 +46,7 @@ test('@production Settings plan actions, legal version, and next-tier Free upgra
   await expect(safetyDialog).not.toBeVisible();
 
   const compare = page.getByRole('button', { name: 'Compare all plans', exact: true });
-  const upgrade = page.getByRole('button', { name: 'Upgrade to Pro', exact: true });
+  const upgrade = page.getByRole('button', { name: 'Upgrade to Pro or Ultra', exact: true });
   await expect(compare).toBeVisible();
   await expect(upgrade).toBeVisible();
 
@@ -68,18 +68,24 @@ test('@production Settings plan actions, legal version, and next-tier Free upgra
   await expect(modal).toBeVisible();
   await expect(modal.getByRole('heading', { name: 'Manage your plan' })).toBeVisible();
   await expect(modal).toContainText('Free · Track');
-  await expect(modal.getByRole('button', { name: 'Upgrade to Pro' })).toBeVisible();
+  await expect(modal.getByRole('button', { name: 'Upgrade to Pro or Ultra' })).toBeVisible();
+  await expect(modal.getByRole('button', { name: 'Back to Settings' })).toBeVisible();
   await expect(modal.getByText('Open Stripe billing portal')).toHaveCount(0);
 
-  await modal.getByRole('button', { name: 'Upgrade to Pro' }).click();
-  await expect(modal.getByRole('heading', { name: 'Upgrade to Pro' })).toBeVisible();
+  await modal.getByRole('button', { name: 'Upgrade to Pro or Ultra' }).click();
+  await expect(modal.getByRole('heading', { name: 'Upgrade to Pro or Ultra' })).toBeVisible();
+  await expect(modal.getByRole('button', { name: 'Back to Manage your plan' })).toBeVisible();
   await expect(modal.getByRole('button', { name: 'Annual · Best value' })).toBeVisible();
   await expect(modal.getByRole('button', { name: 'Monthly' })).toBeVisible();
+  await expect(modal.locator('.plan-management-plan-detail.current')).toContainText('Free · Track');
   const upgradeCards = modal.locator('.plan-management-upgrade-card');
-  await expect(upgradeCards).toHaveCount(1);
-  await expect(upgradeCards).toContainText('Pro · Understand');
-  await expect(upgradeCards).not.toContainText('Ultra · Prepare');
-  await expect(modal.getByRole('button', { name: 'Continue to Pro' })).toBeVisible();
+  await expect(upgradeCards).toHaveCount(2);
+  await expect(upgradeCards.nth(0)).toContainText('Pro · Understand');
+  await expect(upgradeCards.nth(1)).toContainText('Ultra · Prepare');
+  await expect(upgradeCards.nth(0).locator('li')).toHaveCount(14);
+  await expect(upgradeCards.nth(1).locator('li')).toHaveCount(18);
+  await expect(modal.getByRole('button', { name: 'Upgrade to Pro', exact: true })).toBeVisible();
+  await expect(modal.getByRole('button', { name: 'Upgrade to Ultra', exact: true })).toBeVisible();
 
   const viewport = page.viewportSize();
   const modalBox = await modal.boundingBox();
@@ -90,10 +96,23 @@ test('@production Settings plan actions, legal version, and next-tier Free upgra
   expect(modalBox.x + modalBox.width).toBeLessThanOrEqual(viewport.width + 1);
   expect(modalBox.y + modalBox.height).toBeLessThanOrEqual(viewport.height + 1);
 
+  await modal.getByRole('button', { name: 'Back to Manage your plan' }).click();
+  await expect(modal.getByRole('heading', { name: 'Manage your plan' })).toBeVisible();
+
+  await modal.getByRole('button', { name: 'Compare all Pamet features' }).click();
+  const matrix = page.locator('#pametPlanMatrixDialog');
+  await expect(matrix).toBeVisible();
+  await expect(matrix.getByRole('button', { name: 'Back to Manage your plan' })).toBeVisible();
+  await expect(matrix.getByRole('button', { name: 'Upgrade to Pro', exact: true })).toBeVisible();
+  await expect(matrix.getByRole('button', { name: 'Upgrade to Ultra', exact: true })).toBeVisible();
+  await matrix.getByRole('button', { name: 'Back to Manage your plan' }).click();
+  await expect(modal).toBeVisible();
+  await expect(modal.getByRole('heading', { name: 'Manage your plan' })).toBeVisible();
+
   if (testInfo.project.name.includes('mobile')) {
-    expect(await width(modal.getByRole('button', { name: 'Continue to Pro' }))).toBeGreaterThan(150);
+    expect(await width(modal.getByRole('button', { name: 'Upgrade to Pro or Ultra' }))).toBeGreaterThan(150);
   } else {
-    expect(await width(modal.getByRole('button', { name: 'Continue to Pro' }))).toBeGreaterThan(180);
+    expect(await width(modal.getByRole('button', { name: 'Upgrade to Pro or Ultra' }))).toBeGreaterThan(180);
   }
 });
 

@@ -1,4 +1,4 @@
-/* Pamet plan management — account context, current entitlements, and upgrade/billing actions. */
+/* Pamet plan management — account context, plan comparison, and upgrade/billing actions. */
 (function (global) {
   "use strict";
 
@@ -10,7 +10,7 @@
   const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
   const planByKey = (key) => catalog.plans.find((item) => item.key === key) || catalog.plans[0];
   const currentPlanKey = () => global.PametPlanComparison?.currentPlan?.() || "free";
-  const nextPlanKey = (key) => (key === "free" ? "pro" : key === "pro" ? "ultra" : null);
+  const upgradeKeys = (key) => (key === "free" ? ["pro", "ultra"] : key === "pro" ? ["ultra"] : []);
 
   function accountStats() {
     const user = Auth.getUser?.() || {};
@@ -24,7 +24,15 @@
       const timestamp = +new Date(entry.date);
       return Number.isFinite(timestamp) && (!value || timestamp < value) ? timestamp : value;
     }, 0);
-    return { user, entries: entries.length, loggedDays, profiles, createdAt: validCreated, accountDays, oldestEntry: oldest ? new Date(oldest) : null };
+    return {
+      user,
+      entries: entries.length,
+      loggedDays,
+      profiles,
+      createdAt: validCreated,
+      accountDays,
+      oldestEntry: oldest ? new Date(oldest) : null
+    };
   }
 
   function formatDate(value) {
@@ -34,9 +42,8 @@
   function planFeatures(key) {
     return catalog.features.filter((feature) => feature[key]);
   }
-  function uniqueNextFeatures(key) {
-    const next = nextPlanKey(key);
-    return next ? catalog.features.filter((feature) => feature[next] && !feature[key]) : [];
+  function addedFeatures(fromKey, targetKey) {
+    return catalog.features.filter((feature) => feature[targetKey] && !feature[fromKey]);
   }
   function modalRoot() {
     let root = document.querySelector("#pametPlanManagementRoot");
@@ -106,12 +113,41 @@
     </section>`;
   }
 
+  function featureSection(key, options = {}) {
+    const item = planByKey(key);
+    const included = planFeatures(key);
+    const current = options.current === true;
+    const action = options.action === true;
+    const preferred = options.preferred === true;
+    return `<section class="plan-management-features plan-management-plan-detail${action ? " plan-management-upgrade-card" : ""}${current ? " current" : ""}${preferred ? " preferred" : ""}" data-plan-detail="${esc(key)}">
+      <div class="plan-management-section-head">
+        <div>
+          <span>${current ? "Included now" : "Upgrade option"}</span>
+          <h3>${esc(item.name)} · ${esc(item.positioning)}</h3>
+        </div>
+        <div class="plan-management-plan-meta">
+          <strong>${esc(item.monthly)}${key === "free" ? "" : "/mo"}</strong>
+          ${key === "free" ? "" : `<small>${esc(item.annual)}/yr</small>`}
+        </div>
+      </div>
+      <p class="plan-management-plan-summary">${esc(item.summary)}</p>
+      <ul>${renderIncluded(included)}</ul>
+      ${
+        action
+          ? `<button type="button" class="btn btn-primary plan-management-plan-action" data-upgrade-target="${esc(key)}">${esc(options.actionLabel || `Upgrade to ${item.name}`)}</button>`
+          : ""
+      }
+    </section>`;
+  }
+
   async function loadBillingStatus(root) {
     try {
       const response = await api("/api/billing/status", { headers: { Accept: "application/json" } });
       const subscription = response.user?.subscriptionStatus || "none";
       const node = root.querySelector("[data-billing-state]");
-      if (node) node.textContent = subscription === "none" ? "No paid subscription is active on this account." : `Subscription status: ${subscription}`;
+      if (node) {
+        node.textContent = subscription === "none" ? "No paid subscription is active on this account." : `Subscription status: ${subscription}`;
+      }
     } catch {
       const node = root.querySelector("[data-billing-state]");
       if (node) node.textContent = "Billing status could not be refreshed right now. Your verified in-app plan is shown above.";
@@ -137,21 +173,6 @@
     }
   }
 
-  function upgradeCard(targetKey) {
-    const target = planByKey(targetKey);
-    const from = currentPlanKey();
-    const added = catalog.features.filter((feature) => feature[targetKey] && !feature[from]).slice(0, 7);
-    const label = targetKey === "pro" ? "Next step" : "Advanced care preparation";
-    const labelClass = targetKey === "ultra" ? " advanced" : "";
-    return `<article class="pamet-compare-card recommended plan-management-upgrade-card">
-      <div class="pamet-plan-label${labelClass}">${label}</div>
-      <h3>${esc(target.name)} · ${esc(target.positioning)}</h3>
-      <p>${esc(target.summary)}</p>
-      <div class="price">${esc(target.monthly)}/mo · ${esc(target.annual)}/yr</div>
-      <ul>${added.map((feature) => `<li>${esc(feature.label)}</li>`).join("")}</ul>
-    </article>`;
-  }
-
   async function ensureStripe(config) {
     if (!config.publishableKey) throw new Error("Secure checkout is not configured yet.");
     if (global.Stripe) return global.Stripe;
@@ -165,35 +186,47 @@
     return global.Stripe;
   }
 
-  async function checkoutFreeToPro(root, interval) {
-    const submit = root.querySelector("[data-confirm-upgrade]");
-    submit.disabled = true;
-    status(root, "Preparing secure Pro checkout…", "info");
+  async function checkoutFreeToPlan(root, targetKey, interval, trigger) {
+    const target = planByKey(targetKey);
+    trigger.disabled = true;
+    status(root, `Preparing secure ${target.name} checkout…`, "info");
     try {
       const config = await api("/api/billing/config", { headers: { Accept: "application/json" } });
-      if (!config.proEnabled) throw new Error("Pro checkout is temporarily unavailable.");
+      const enabledKey = `${targetKey}Enabled`;
+      if (!config[enabledKey]) throw new Error(`${target.name} checkout is temporarily unavailable.`);
       const StripeCtor = await ensureStripe(config);
       const attempt = global.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
       const out = await api("/api/billing/create-subscription", {
         method: "POST",
-        body: JSON.stringify({ plan: "pro", interval, checkoutAttemptId: attempt })
+        body: JSON.stringify({ plan: targetKey, interval, checkoutAttemptId: attempt })
       });
-      root.querySelector(".plan-management-modal").innerHTML = `<header class="plan-management-head">
+      root.querySelector(".plan-management-modal").innerHTML = `<header class="plan-management-head plan-management-head-with-back">
+        <button type="button" class="plan-flow-back" data-plan-management-checkout-back aria-label="Back to plan choices">←</button>
         <div>
-          <span class="plan-management-kicker">UPGRADE TO PRO</span>
+          <span class="plan-management-kicker">UPGRADE TO ${esc(target.name.toUpperCase())}</span>
           <h2>Secure checkout</h2>
           <p>Payment fields are provided by Stripe. Pamet does not store your card number.</p>
         </div>
         <button type="button" class="pamet-close" data-plan-management-close aria-label="Close">×</button>
       </header>
+      <section class="plan-management-checkout-summary">
+        <strong>${esc(target.name)} · ${esc(target.positioning)}</strong>
+        <span>${esc(target.monthly)}/mo · ${esc(target.annual)}/yr</span>
+      </section>
       <div id="planPaymentElement" class="pamet-payment-box"></div>
       <div data-plan-management-status class="plan-management-status info" role="status" aria-live="polite"></div>
-      <button type="button" class="btn btn-primary btn-block" id="planConfirmPayment">Confirm Pro</button>`;
+      <div class="plan-management-checkout-actions">
+        <button type="button" class="btn btn-primary btn-block" id="planConfirmPayment">Confirm ${esc(target.name)}</button>
+      </div>`;
       root.querySelector("[data-plan-management-close]")?.addEventListener("click", close);
+      root.querySelector("[data-plan-management-checkout-back]")?.addEventListener("click", () => openUpgrade(targetKey));
       const stripe = StripeCtor(config.publishableKey);
       const elements = stripe.elements({
         clientSecret: out.clientSecret,
-        appearance: { theme: "stripe", variables: { colorPrimary: "#4CAF7A", colorText: "#263638", colorDanger: "#8E3B4F", borderRadius: "10px" } }
+        appearance: {
+          theme: "stripe",
+          variables: { colorPrimary: "#4CAF7A", colorText: "#263638", colorDanger: "#8E3B4F", borderRadius: "10px" }
+        }
       });
       const payment = elements.create("payment");
       payment.mount("#planPaymentElement");
@@ -209,7 +242,7 @@
         if (result.error) {
           status(root, result.error.message || "Payment could not be confirmed.", "error");
           button.disabled = false;
-          button.textContent = "Confirm Pro";
+          button.textContent = `Confirm ${target.name}`;
           return;
         }
         await api("/api/billing/sync", { method: "POST", body: "{}" });
@@ -219,47 +252,61 @@
       });
     } catch (error) {
       status(root, error.message || "Upgrade could not be started.", "error");
-      submit.disabled = false;
+      trigger.disabled = false;
     }
   }
 
-  function openUpgrade(targetKey) {
+  function openUpgrade(preferredKey = null) {
     const root = modalRoot();
     const from = currentPlanKey();
-    const target = planByKey(targetKey);
+    const targets = upgradeKeys(from);
+    if (!targets.length) {
+      open();
+      return;
+    }
+    const title = from === "free" ? "Upgrade to Pro or Ultra" : "Upgrade to Ultra";
+    const intro =
+      from === "free"
+        ? "Compare both paid plans, choose monthly or annual billing, then continue with the plan that fits you."
+        : "Compare what Pro includes now with everything Ultra adds before continuing to secure billing.";
     const billingInterval =
       from === "free"
-        ? `<div class="pamet-billing-toggle" aria-label="Billing interval">
+        ? `<div class="pamet-billing-toggle plan-management-billing-toggle" aria-label="Billing interval">
             <button class="active" data-upgrade-interval="annual">Annual · Best value</button>
             <button data-upgrade-interval="monthly">Monthly</button>
           </div>`
         : "";
-    const intro =
-      from === "free"
-        ? "Choose a billing interval, then complete secure checkout."
-        : "Review Ultra, then continue to secure billing to change your existing Pro subscription.";
-    const footnote =
-      from === "free"
-        ? "Includes the current Pamet trial offer. Cancel anytime from Manage billing."
-        : "Stripe handles the subscription change and any billing adjustment for the existing Pro subscription.";
+    const targetSections = targets
+      .map((key) =>
+        featureSection(key, {
+          action: true,
+          preferred: preferredKey === key,
+          actionLabel: from === "pro" ? "Continue to Ultra" : `Upgrade to ${planByKey(key).name}`
+        })
+      )
+      .join("");
     root.innerHTML = `<div class="pamet-modal-backdrop plan-management-backdrop">
-      <section class="pamet-modal plan-management-modal" role="dialog" aria-modal="true" aria-labelledby="planUpgradeTitle">
-        <header class="plan-management-head">
+      <section class="pamet-modal plan-management-modal plan-management-upgrade-modal" role="dialog" aria-modal="true" aria-labelledby="planUpgradeTitle">
+        <header class="plan-management-head plan-management-head-with-back">
+          <button type="button" class="plan-flow-back" data-plan-management-back aria-label="Back to Manage your plan">←</button>
           <div>
             <span class="plan-management-kicker">UPGRADE YOUR PLAN</span>
-            <h2 id="planUpgradeTitle">Upgrade to ${esc(target.name)}</h2>
+            <h2 id="planUpgradeTitle">${title}</h2>
             <p>${intro}</p>
           </div>
           <button type="button" class="pamet-close" data-plan-management-close aria-label="Close">×</button>
         </header>
-        ${upgradeCard(targetKey)}
-        ${billingInterval}
-        <div data-plan-management-status class="plan-management-status info" hidden role="status" aria-live="polite"></div>
-        <div class="plan-management-actions">
-          <button type="button" class="btn btn-ghost" data-plan-management-back>Back</button>
-          <button type="button" class="btn btn-primary" data-confirm-upgrade>Continue to ${esc(target.name)}</button>
+        <div class="plan-management-upgrade-body">
+          ${featureSection(from, { current: true })}
+          ${billingInterval}
+          <div class="plan-management-upgrade-grid">${targetSections}</div>
         </div>
-        <p class="plan-management-footnote">${footnote}</p>
+        <div data-plan-management-status class="plan-management-status info" hidden role="status" aria-live="polite"></div>
+        <p class="plan-management-footnote">${
+          from === "free"
+            ? "Choose either Pro or Ultra. You can review plan details here before secure checkout."
+            : "Your existing Pro subscription is changed through secure billing only after you choose Upgrade to Ultra."
+        }</p>
       </section>
     </div>`;
     root.querySelector("[data-plan-management-close]")?.addEventListener("click", close);
@@ -271,10 +318,46 @@
         root.querySelectorAll("[data-upgrade-interval]").forEach((item) => item.classList.toggle("active", item === button));
       })
     );
-    const confirm = root.querySelector("[data-confirm-upgrade]");
-    confirm?.addEventListener("click", () =>
-      from === "free" ? checkoutFreeToPro(root, interval) : openBilling(root, confirm, "Opening secure Ultra upgrade…")
+    root.querySelectorAll("[data-upgrade-target]").forEach((button) =>
+      button.addEventListener("click", () => {
+        const targetKey = button.dataset.upgradeTarget;
+        if (from === "free") checkoutFreeToPlan(root, targetKey, interval, button);
+        else openBilling(root, button, "Opening secure Ultra upgrade…");
+      })
     );
+    if (preferredKey) {
+      requestAnimationFrame(() => root.querySelector(`[data-plan-detail="${preferredKey}"]`)?.scrollIntoView({ block: "nearest" }));
+    }
+  }
+
+  function upgradeSummary(key) {
+    if (key === "free") {
+      const pro = addedFeatures("free", "pro")
+        .slice(0, 4)
+        .map((feature) => esc(feature.label))
+        .join(" · ");
+      const ultra = addedFeatures("free", "ultra")
+        .filter((feature) => !feature.pro)
+        .slice(0, 4)
+        .map((feature) => esc(feature.label))
+        .join(" · ");
+      return `<section class="plan-management-next">
+        <span>Upgrade options</span>
+        <p><strong>Pro:</strong> ${pro}</p>
+        <p><strong>Ultra:</strong> ${ultra}</p>
+      </section>`;
+    }
+    if (key === "pro") {
+      const ultra = addedFeatures("pro", "ultra");
+      return `<section class="plan-management-next">
+        <span>What Ultra adds</span>
+        <p>${ultra.map((feature) => esc(feature.label)).join(" · ")}</p>
+      </section>`;
+    }
+    return `<section class="plan-management-next complete">
+      <span>Ultra plan</span>
+      <p>Your plan includes every feature currently listed for Pamet.</p>
+    </section>`;
   }
 
   function open() {
@@ -282,34 +365,24 @@
     const plan = planByKey(key);
     const stats = accountStats();
     const included = planFeatures(key);
-    const next = uniqueNextFeatures(key);
-    const nextKey = nextPlanKey(key);
     const root = modalRoot();
-    const nextSection = next.length
-      ? `<section class="plan-management-next">
-          <span>What ${esc(planByKey(nextKey).name)} adds</span>
-          <p>${next
-            .slice(0, 4)
-            .map((feature) => esc(feature.label))
-            .join(" · ")}</p>
-        </section>`
-      : `<section class="plan-management-next complete">
-          <span>Ultra plan</span>
-          <p>Your plan includes every feature currently listed in Pamet’s canonical plan catalog.</p>
-        </section>`;
     const billingState = key === "free" ? "" : '<p class="plan-management-billing-state" data-billing-state>Refreshing billing status…</p>';
-    const primaryAction = nextKey
-      ? `<button type="button" class="btn btn-primary" data-plan-management-upgrade>Upgrade to ${esc(planByKey(nextKey).name)}</button>`
-      : '<button type="button" class="btn btn-primary" data-plan-management-billing>Manage billing</button>';
+    const primaryAction =
+      key === "free"
+        ? '<button type="button" class="btn btn-primary" data-plan-management-upgrade>Upgrade to Pro or Ultra</button>'
+        : key === "pro"
+          ? '<button type="button" class="btn btn-primary" data-plan-management-upgrade>Upgrade to Ultra</button>'
+          : '<button type="button" class="btn btn-primary" data-plan-management-billing>Manage billing</button>';
     const secondaryBilling =
       key === "pro" ? '<button type="button" class="data-btn plan-management-secondary-billing" data-plan-management-billing>Billing & invoices</button>' : "";
     root.innerHTML = `<div class="pamet-modal-backdrop plan-management-backdrop">
       <section class="pamet-modal plan-management-modal" role="dialog" aria-modal="true" aria-labelledby="planManagementTitle">
-        <header class="plan-management-head">
+        <header class="plan-management-head plan-management-head-with-back">
+          <button type="button" class="plan-flow-back" data-plan-management-back-settings aria-label="Back to Settings">←</button>
           <div>
             <span class="plan-management-kicker">YOUR PAMET ACCOUNT</span>
             <h2 id="planManagementTitle">Manage your plan</h2>
-            <p>Review your account and what ${esc(plan.name)} includes.</p>
+            <p>Review your account, compare plan features, and choose an upgrade when you are ready.</p>
           </div>
           <button type="button" class="pamet-close" data-plan-management-close aria-label="Close">×</button>
         </header>
@@ -333,7 +406,7 @@
           </div>
           <ul>${renderIncluded(included)}</ul>
         </section>
-        ${nextSection}
+        ${upgradeSummary(key)}
         <div data-plan-management-status class="plan-management-status info" hidden role="status" aria-live="polite"></div>
         ${billingState}
         <div class="plan-management-actions">
@@ -341,10 +414,11 @@
           ${primaryAction}
         </div>
         ${secondaryBilling}
-        <p class="plan-management-footnote">Plan access is verified by Pamet’s server-side entitlements. Billing opens only when you choose an upgrade or billing action.</p>
+        <p class="plan-management-footnote">Review plans in Pamet first. Secure billing opens only after you choose a purchase or billing action.</p>
       </section>
     </div>`;
     root.querySelectorAll("[data-plan-management-close]").forEach((button) => button.addEventListener("click", close));
+    root.querySelector("[data-plan-management-back-settings]")?.addEventListener("click", close);
     root.querySelector(".plan-management-backdrop")?.addEventListener("click", (event) => {
       if (event.target === event.currentTarget) close();
     });
@@ -352,7 +426,7 @@
       close();
       global.PametPlanComparison?.open?.(key);
     });
-    root.querySelector("[data-plan-management-upgrade]")?.addEventListener("click", () => openUpgrade(nextKey));
+    root.querySelector("[data-plan-management-upgrade]")?.addEventListener("click", () => openUpgrade());
     root.querySelectorAll("[data-plan-management-billing]").forEach((button) => button.addEventListener("click", () => openBilling(root, button)));
     if (key !== "free") loadBillingStatus(root);
   }

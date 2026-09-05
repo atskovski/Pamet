@@ -79,9 +79,15 @@ test('@production Pro Manage your plan is upgrade-first and does not open billin
 
   await modal.getByRole('button',{name:'Upgrade to Ultra'}).click();
   await expect(modal.getByRole('heading',{name:'Upgrade to Ultra'})).toBeVisible();
-  await expect(modal.locator('.plan-management-upgrade-card')).toHaveCount(1);
-  await expect(modal.locator('.plan-management-upgrade-card')).toContainText('Ultra · Prepare');
-  await expect(modal.locator('.plan-management-upgrade-card')).not.toContainText('Pro · Understand');
+  const currentPlan = modal.locator('.plan-management-plan-detail.current');
+  const ultraPlan = modal.locator('.plan-management-upgrade-card');
+  await expect(currentPlan).toContainText('Pro · Understand');
+  await expect(currentPlan.locator('li')).toHaveCount(14);
+  await expect(ultraPlan).toHaveCount(1);
+  await expect(ultraPlan).toContainText('Ultra · Prepare');
+  await expect(ultraPlan).not.toContainText('Pro · Understand');
+  await expect(ultraPlan.locator('li')).toHaveCount(18);
+  await expect(modal.getByRole('button',{name:'Back to Manage your plan'})).toBeVisible();
   expect(portalCalls).toBe(0);
 
   await modal.getByRole('button',{name:'Continue to Ultra'}).click();
@@ -100,6 +106,13 @@ test('@production full comparison renders every canonical feature across Free Pr
   await expect(dialog.locator('thead th')).toContainText(['Feature','Free','Pro','Ultra']);
   await expect(dialog.locator('tbody [data-plan-feature]')).toHaveCount(18);
   await expect(dialog.locator('.plan-matrix-group')).toHaveCount(4);
-  await expect(dialog.locator('.plan-matrix-foot > span')).toBeHidden();
+  await expect(dialog.getByRole('button',{name:'Back to Manage your plan'})).toBeVisible();
   await expect(dialog.getByRole('button',{name:'Manage your current plan'})).toBeVisible();
+  await expect(dialog.getByRole('button',{name:'Upgrade to Ultra'})).toBeVisible();
+
+  await dialog.getByRole('button',{name:'Back to Manage your plan'}).click();
+  const modal = page.locator('#pametPlanManagementRoot .plan-management-modal');
+  await expect(modal).toBeVisible();
+  await expect(modal.getByRole('heading',{name:'Manage your plan'})).toBeVisible();
+  await expect(modal).toContainText('Pro · Understand');
 });

@@ -1,0 +1,102 @@
+/* Pamet plan-flow navigation and multi-tier upgrade presentation. */
+.plan-flow-back{
+  flex:0 0 auto;
+  display:grid;
+  place-items:center;
+  width:40px;
+  height:40px;
+  border:1px solid var(--border-color);
+  border-radius:50%;
+  background:var(--card-bg);
+  color:var(--text-primary);
+  font-size:22px;
+  line-height:1;
+  cursor:pointer;
+}
+.plan-flow-back:hover{background:var(--surface-muted,rgba(15,61,62,.05))}
+.plan-management-head-with-back>div,.plan-matrix-head-with-back>div{flex:1;min-width:0}
+.plan-management-upgrade-modal{width:min(1040px,calc(100vw - 28px))!important}
+.plan-management-upgrade-body{padding:20px 24px 0}
+.plan-management-upgrade-body>.plan-management-features{margin:0 0 16px}
+.plan-management-upgrade-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
+  gap:14px;
+  align-items:start;
+}
+.plan-management-upgrade-grid .plan-management-features{margin:0}
+.plan-management-plan-detail.current{
+  background:color-mix(in srgb,var(--sage-light) 35%,var(--card-bg));
+  border-color:color-mix(in srgb,var(--pamet-sage) 55%,var(--border-color));
+}
+.plan-management-plan-detail.preferred{box-shadow:inset 0 0 0 1px var(--pamet-sage)}
+.plan-management-plan-meta{text-align:right}
+.plan-management-plan-meta strong{display:block;color:var(--text-primary);font-size:13px}
+.plan-management-plan-meta small{display:block;margin-top:2px;color:var(--text-tertiary);font-size:10px}
+.plan-management-plan-summary{margin:0 0 12px;color:var(--text-secondary);font-size:12px;line-height:1.45}
+.plan-management-upgrade-grid .plan-management-features ul{grid-template-columns:1fr}
+.plan-management-plan-action{width:100%;min-height:46px;margin-top:16px;justify-content:center}
+.plan-management-billing-toggle{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+  margin:0 0 16px;
+}
+.plan-management-billing-toggle button{
+  min-height:46px;
+  padding:10px 14px;
+  border:1px solid var(--border-color);
+  border-radius:12px;
+  background:var(--card-bg);
+  color:var(--text-primary);
+  font-weight:750;
+  cursor:pointer;
+}
+.plan-management-billing-toggle button.active{
+  border-color:var(--pamet-sage);
+  background:color-mix(in srgb,var(--sage-light) 60%,var(--card-bg));
+  color:var(--pamet-sage-dark);
+}
+.plan-management-checkout-summary{
+  display:flex;
+  justify-content:space-between;
+  gap:16px;
+  margin:18px 24px 14px;
+  padding:14px 16px;
+  border:1px solid var(--border-color);
+  border-radius:12px;
+  background:var(--surface-muted,rgba(15,61,62,.035));
+  font-size:12px;
+}
+.plan-management-checkout-summary span{color:var(--text-secondary)}
+.plan-management-checkout-actions{margin:0 24px 22px}
+.plan-management-checkout-actions .btn{min-height:48px}
+.plan-matrix-delta-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px;
+  margin-bottom:16px;
+}
+.plan-matrix-delta-grid .plan-matrix-delta{margin-bottom:0}
+.plan-matrix-foot{justify-content:flex-end}
+.plan-matrix-actions{
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+  width:100%;
+}
+.plan-matrix-actions .btn{min-width:160px;justify-content:center}
+
+@media(max-width:760px){
+  .plan-management-head-with-back,.plan-matrix-head-with-back{gap:10px}
+  .plan-flow-back{width:36px;height:36px;font-size:20px}
+  .plan-management-upgrade-modal{width:calc(100vw - 16px)!important}
+  .plan-management-upgrade-body{padding:16px 18px 0}
+  .plan-management-upgrade-grid{grid-template-columns:1fr}
+  .plan-management-billing-toggle{grid-template-columns:1fr}
+  .plan-management-checkout-summary{margin-left:18px;margin-right:18px;flex-direction:column;gap:4px}
+  .plan-management-checkout-actions{margin-left:18px;margin-right:18px}
+  .plan-matrix-delta-grid{grid-template-columns:1fr}
+  .plan-matrix-actions{flex-direction:column}
+  .plan-matrix-actions .btn{width:100%;min-width:0}
+}
