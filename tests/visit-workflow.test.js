@@ -3,7 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { createVisitBriefPdf } = require('../lib/visit-brief-pdf');
-const { buildIcs, googleEvent, signedCalendarState, readCalendarState, sendVisitBriefEmail, calendarConfig } = require('../routes/visit-workflow');
+const { buildIcs, googleEvent, signedCalendarState, readCalendarState, sendVisitBriefEmail, calendarConfig, visitBriefEmailStatus } = require('../routes/visit-workflow');
 
 const appointment = {
   id:'123e4567-e89b-12d3-a456-426614174000',
@@ -85,11 +85,58 @@ test('Google Calendar OAuth state is signed and tamper-evident', () => {
   assert.throws(() => readCalendarState(state + 'x', secret), /Invalid calendar authorization state/);
 });
 
+test('Visit Brief email fails closed until explicitly approved', async () => {
+  const previous = {
+    key:process.env.RESEND_API_KEY,
+    from:process.env.EMAIL_FROM,
+    flag:process.env.PAMET_FEATURE_VISIT_BRIEF_EMAIL
+  };
+  let attempted = false;
+  try {
+    process.env.RESEND_API_KEY = 're_test';
+    process.env.EMAIL_FROM = 'Pamet Test <test@example.com>';
+    delete process.env.PAMET_FEATURE_VISIT_BRIEF_EMAIL;
+    assert.deepEqual(visitBriefEmailStatus(), { providerConfigured:true, approved:false, enabled:false, reason:'privacy-review' });
+    await assert.rejects(
+      sendVisitBriefEmail({
+        to:'recipient@example.com',subject:'Pamet Visit Brief',pdf:Buffer.from('%PDF-1.4'),filename:'visit-brief.pdf',
+        fetchImpl:async () => { attempted=true; return {ok:true,status:200}; }
+      }),
+      (error) => error?.status === 503 && /temporarily unavailable/i.test(error.message)
+    );
+    assert.equal(attempted, false);
+  } finally {
+    if(previous.key===undefined)delete process.env.RESEND_API_KEY;else process.env.RESEND_API_KEY=previous.key;
+    if(previous.from===undefined)delete process.env.EMAIL_FROM;else process.env.EMAIL_FROM=previous.from;
+    if(previous.flag===undefined)delete process.env.PAMET_FEATURE_VISIT_BRIEF_EMAIL;else process.env.PAMET_FEATURE_VISIT_BRIEF_EMAIL=previous.flag;
+  }
+});
+
+test('Visit Brief email reports provider-unconfigured after approval when Resend is missing', () => {
+  const previous = {
+    key:process.env.RESEND_API_KEY,
+    from:process.env.EMAIL_FROM,
+    flag:process.env.PAMET_FEATURE_VISIT_BRIEF_EMAIL
+  };
+  try {
+    delete process.env.RESEND_API_KEY;
+    delete process.env.EMAIL_FROM;
+    process.env.PAMET_FEATURE_VISIT_BRIEF_EMAIL='true';
+    assert.deepEqual(visitBriefEmailStatus(), { providerConfigured:false, approved:true, enabled:false, reason:'provider-unconfigured' });
+  } finally {
+    if(previous.key===undefined)delete process.env.RESEND_API_KEY;else process.env.RESEND_API_KEY=previous.key;
+    if(previous.from===undefined)delete process.env.EMAIL_FROM;else process.env.EMAIL_FROM=previous.from;
+    if(previous.flag===undefined)delete process.env.PAMET_FEATURE_VISIT_BRIEF_EMAIL;else process.env.PAMET_FEATURE_VISIT_BRIEF_EMAIL=previous.flag;
+  }
+});
+
 test('Resend email carries the Visit Brief as a PDF attachment and keeps health details out of the email body', async () => {
   const oldKey = process.env.RESEND_API_KEY;
   const oldFrom = process.env.EMAIL_FROM;
+  const oldFlag = process.env.PAMET_FEATURE_VISIT_BRIEF_EMAIL;
   process.env.RESEND_API_KEY = 're_test';
   process.env.EMAIL_FROM = 'Pamet Test <test@example.com>';
+  process.env.PAMET_FEATURE_VISIT_BRIEF_EMAIL = 'true';
   const pdf = createVisitBriefPdf({profileName:'Secret Patient',rangeLabel:'90 days',overview:[['Sensitive symptom','Private detail sentinel']]}, 'standard');
   let request;
   try {
@@ -100,6 +147,7 @@ test('Resend email carries the Visit Brief as a PDF attachment and keeps health 
   } finally {
     if (oldKey === undefined) delete process.env.RESEND_API_KEY; else process.env.RESEND_API_KEY = oldKey;
     if (oldFrom === undefined) delete process.env.EMAIL_FROM; else process.env.EMAIL_FROM = oldFrom;
+    if (oldFlag === undefined) delete process.env.PAMET_FEATURE_VISIT_BRIEF_EMAIL; else process.env.PAMET_FEATURE_VISIT_BRIEF_EMAIL = oldFlag;
   }
   assert.equal(request.url, 'https://api.resend.com/emails');
   const body = JSON.parse(request.options.body);
