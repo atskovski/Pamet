@@ -1,6 +1,6 @@
-/* Pamet v1.6.8 service worker: release-specific shell caching plus user-approved Web Push; API/share data is never cached. */
-const CACHE="pamet-shell-v168-1";
-const SHELL=["/","/index.html","/dist/pamet.min.css?v=168","/dist/pamet.min.js?v=168","/manifest.webmanifest","/assets/pamet-mark.svg?v=168","/assets/icon-192.png","/assets/icon-512.png","/assets/icon-maskable-512.png","/assets/login-sunrise.jpg"];
+/* Pamet v1.6.9 service worker: release-specific shell caching plus user-approved Web Push; API/share data is never cached. */
+const CACHE="pamet-shell-v169-1";
+const SHELL=["/","/index.html","/dist/pamet.min.css?v=169","/dist/pamet.min.js?v=169","/manifest.webmanifest","/assets/pamet-mark.svg?v=169","/assets/icon-192.png","/assets/icon-512.png","/assets/icon-maskable-512.png","/assets/login-sunrise.jpg"];
 const PATHS=new Set(SHELL.map(path=>new URL(path,self.location.origin).pathname));
 const STATIC_PREFIXES=["/dist/","/assets/"];
 const isStaticPath=(pathname)=>STATIC_PREFIXES.some(prefix=>pathname.startsWith(prefix))||pathname==="/manifest.webmanifest";

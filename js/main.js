@@ -1,5 +1,5 @@
-/* Pamet v1.6.8 production entrypoint. Keep dependency order explicit here. */
-const PAMET_VERSION = '1.6.8';
+/* Pamet v1.6.9 production entrypoint. Keep dependency order explicit here. */
+const PAMET_VERSION = '1.6.9';
 window.PametVersion = PAMET_VERSION;
 window.PametLoadedVersion = PAMET_VERSION;
 
@@ -125,7 +125,7 @@ window.addEventListener('load', () => {
 /* Release-specific worker URL + updateViaCache:none prevents old PWA shells from masking a new release. */
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js?v=1680', { updateViaCache: 'none' })
+    navigator.serviceWorker.register('sw.js?v=1690', { updateViaCache: 'none' })
       .then((registration) => registration.update().catch(() => {}))
       .catch(() => {});
   }, { once: true });

@@ -1,5 +1,14 @@
 # Pamet Change Log
 
+## [1.6.9] — 2026-09-04
+
+### Data Quality layout polish
+
+- Fixed the legacy flex-layout cascade that split the Data Quality summary into narrow columns.
+- Reworked the summary into one centered reading order with a clearer completeness headline and logging-consistency badge.
+- Improved spacing, typography, and responsive coverage-detail layout across desktop, Firefox, and mobile.
+- Added browser regression coverage for the one-column summary and 4 / 2 / 1-column detail grid.
+
 ## [1.6.8] — 2026-09-04
 
 ### Patterns data quality clarity

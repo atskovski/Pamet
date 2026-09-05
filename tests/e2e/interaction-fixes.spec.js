@@ -116,17 +116,44 @@ test('@production Data quality separates entry completeness from days logged and
   await expect(summary.locator('.completeness-context')).toContainText('Your logged entries include all recommended tracking details.');
   await expect(summary.locator('.completeness-definition')).toContainText('does not mean you logged every day');
 
-  const alignment = await summary.evaluate((element) => {
+  const layout = await summary.evaluate((element) => {
     const card = element.closest('.completeness-card');
-    const summaryRect = element.getBoundingClientRect();
+    const title = element.querySelector('#completenessTitle');
+    const eyebrow = element.querySelector('.pamet-eyebrow');
+    const context = element.querySelector('.completeness-context');
+    const definition = element.querySelector('.completeness-definition');
+    const grid = card.querySelector('.completeness-grid');
     const cardRect = card.getBoundingClientRect();
+    const summaryRect = element.getBoundingClientRect();
+    const titleRect = title.getBoundingClientRect();
+    const center = (rect) => rect.left + rect.width / 2;
     return {
-      centerDelta: Math.abs((summaryRect.left + summaryRect.width / 2) - (cardRect.left + cardRect.width / 2)),
-      textAlign: getComputedStyle(element.querySelector('#completenessTitle')).textAlign
+      summaryTracks: getComputedStyle(element).gridTemplateColumns.trim().split(/\s+/).filter(Boolean).length,
+      detailTracks: getComputedStyle(grid).gridTemplateColumns.trim().split(/\s+/).filter(Boolean).length,
+      centerDelta: Math.abs(center(summaryRect) - center(cardRect)),
+      titleCenterDelta: Math.abs(center(titleRect) - center(summaryRect)),
+      eyebrowCenterDelta: Math.abs(center(eyebrow.getBoundingClientRect()) - center(summaryRect)),
+      contextCenterDelta: Math.abs(center(context.getBoundingClientRect()) - center(summaryRect)),
+      definitionCenterDelta: Math.abs(center(definition.getBoundingClientRect()) - center(summaryRect)),
+      titleTextAlign: getComputedStyle(title).textAlign,
+      titleLineHeight: Number.parseFloat(getComputedStyle(title).lineHeight),
+      titleFontSize: Number.parseFloat(getComputedStyle(title).fontSize),
+      viewportWidth: window.innerWidth
     };
   });
-  expect(alignment.centerDelta).toBeLessThanOrEqual(3);
-  expect(alignment.textAlign).toBe('center');
+
+  expect(layout.summaryTracks).toBe(1);
+  expect(layout.centerDelta).toBeLessThanOrEqual(3);
+  expect(layout.titleCenterDelta).toBeLessThanOrEqual(3);
+  expect(layout.eyebrowCenterDelta).toBeLessThanOrEqual(3);
+  expect(layout.contextCenterDelta).toBeLessThanOrEqual(3);
+  expect(layout.definitionCenterDelta).toBeLessThanOrEqual(3);
+  expect(layout.titleTextAlign).toBe('center');
+  expect(layout.titleFontSize).toBeGreaterThan(20);
+  expect(layout.titleLineHeight).toBeGreaterThan(layout.titleFontSize);
+  if (layout.viewportWidth > 980) expect(layout.detailTracks).toBe(4);
+  else if (layout.viewportWidth > 620) expect(layout.detailTracks).toBe(2);
+  else expect(layout.detailTracks).toBe(1);
 
   await page.locator('[data-insights-days="30"]').click();
   await expect(summary.locator('.pamet-eyebrow')).toHaveText('Data quality · last 30 days');
