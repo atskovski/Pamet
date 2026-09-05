@@ -22,6 +22,7 @@ import "./experience.js";
 import "./care-ux.js";
 import "./ui-ux.js";
 import "./care-sharing-enhancements.js";
+import "./caregiver-pdf-fallback.js";
 
 window.PametAuthenticatedFeaturesLoaded = true;
 window.dispatchEvent(new CustomEvent("pamet:authenticated-features-ready"));
