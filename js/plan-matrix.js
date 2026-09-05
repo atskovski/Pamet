@@ -5,19 +5,25 @@
   const catalog = global.PametPlanCatalog;
   if (!catalog || !Array.isArray(catalog.plans) || !Array.isArray(catalog.features)) return;
 
-  const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#39;"
-  }[char]));
+  const esc = (value) =>
+    String(value ?? "").replace(
+      /[&<>"']/g,
+      (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]
+    );
   const plan = (key) => catalog.plans.find((item) => item.key === key) || catalog.plans[0];
 
   const GROUPS = [
     { key: "tracking", label: "Track and review", ids: ["logging", "calendar", "visitBrief"] },
-    { key: "insights", label: "Understand patterns", ids: ["insights", "unlimitedHistory", "correlations", "whatChanged", "medicationTiming"] },
-    { key: "sharing", label: "Share and coordinate", ids: ["sharing", "appointmentWorkspace", "multipleProfiles", "advancedVisitBrief", "encryptedSync"] },
+    {
+      key: "insights",
+      label: "Understand patterns",
+      ids: ["insights", "unlimitedHistory", "correlations", "whatChanged", "medicationTiming"]
+    },
+    {
+      key: "sharing",
+      label: "Share and coordinate",
+      ids: ["sharing", "appointmentWorkspace", "multipleProfiles", "advancedVisitBrief", "encryptedSync"]
+    },
     { key: "account", label: "Account and experience", ids: ["themeAccessibility", "accountSecurity", "push", "weeklyDigest", "noAds"] }
   ];
 
@@ -85,20 +91,53 @@
       })
       .join("");
 
-    return `<div class="plan-matrix-legend"><span><strong>✓</strong> Included</span><span><strong>—</strong> Not included</span><span>${catalog.features.length} current catalog features</span></div>
+    return `<div class="plan-matrix-legend"><span><strong>✓</strong> Included</span><span><strong>—</strong> Not included</span><span>${catalog.features.length} current plan features</span></div>
       <table class="plan-matrix-table">
         <thead><tr><th scope="col">Feature</th>${header}</tr></thead>
         <tbody>${rows}</tbody>
       </table>`;
   }
 
+  function deltaCard(fromKey, targetKey) {
+    const extras = catalog.features.filter((feature) => feature[targetKey] && !feature[fromKey]);
+    return `<div class="plan-matrix-delta">
+      <strong>What ${esc(plan(targetKey).name)} adds</strong>
+      <span>${extras.length ? extras.map((feature) => esc(feature.label)).join(" · ") : "No additional plan features."}</span>
+    </div>`;
+  }
+
   function changeSummary(activePlan) {
-    const nextKey = activePlan === "free" ? "pro" : activePlan === "pro" ? "ultra" : null;
-    if (!nextKey) {
-      return `<div class="plan-matrix-delta complete"><strong>Ultra includes the full current catalog</strong><span>Every feature currently listed in Pamet’s plan contract is included with Ultra.</span></div>`;
+    if (activePlan === "free") {
+      return `<div class="plan-matrix-delta-grid">${deltaCard("free", "pro")}${deltaCard("free", "ultra")}</div>`;
     }
-    const extras = catalog.features.filter((feature) => feature[nextKey] && !feature[activePlan]);
-    return `<div class="plan-matrix-delta"><strong>What ${esc(plan(nextKey).name)} adds</strong><span>${extras.length ? extras.map((feature) => esc(feature.label)).join(" · ") : "No additional catalog features."}</span></div>`;
+    if (activePlan === "pro") return deltaCard("pro", "ultra");
+    return `<div class="plan-matrix-delta complete"><strong>Ultra includes the full current plan set</strong><span>Every feature currently listed for Pamet is included with Ultra.</span></div>`;
+  }
+
+  function actionMarkup(activePlan) {
+    if (activePlan === "free") {
+      return `<div class="plan-matrix-actions">
+        <button type="button" class="btn btn-primary" data-plan-matrix-upgrade="pro">Upgrade to Pro</button>
+        <button type="button" class="btn btn-primary" data-plan-matrix-upgrade="ultra">Upgrade to Ultra</button>
+      </div>`;
+    }
+    if (activePlan === "pro") {
+      return `<div class="plan-matrix-actions">
+        <button type="button" class="btn btn-ghost" data-plan-matrix-manage>Manage your current plan</button>
+        <button type="button" class="btn btn-primary" data-plan-matrix-upgrade="ultra">Upgrade to Ultra</button>
+      </div>`;
+    }
+    return `<div class="plan-matrix-actions">
+      <button type="button" class="btn btn-primary" data-plan-matrix-manage>Manage your plan</button>
+    </div>`;
+  }
+
+  function withManagement(callback) {
+    if (global.PametPlanManagement) {
+      callback(global.PametPlanManagement);
+      return;
+    }
+    global.PametPlanManagementLoader?.load?.().then(callback).catch(() => {});
   }
 
   function ensureDialog(activePlan) {
@@ -115,11 +154,12 @@
 
     const active = plan(activePlan).key;
     dialog.innerHTML = `<div class="plan-matrix-shell">
-      <header class="plan-matrix-head">
+      <header class="plan-matrix-head plan-matrix-head-with-back">
+        <button type="button" class="plan-flow-back" data-plan-matrix-back aria-label="Back to Manage your plan">←</button>
         <div>
-          <span class="plan-matrix-kicker">PAMET PLAN CATALOG</span>
+          <span class="plan-matrix-kicker">PAMET PLANS</span>
           <h2>Compare all Pamet features</h2>
-          <p>See Free, Pro, and Ultra side by side. This list is generated from the same canonical plan catalog Pamet uses for product copy and entitlement checks.</p>
+          <p>Compare what is included with Free, Pro, and Ultra, then choose the plan that fits you.</p>
         </div>
         <button type="button" class="plan-matrix-close" data-plan-matrix-close aria-label="Close plan comparison">×</button>
       </header>
@@ -129,16 +169,25 @@
         ${matrixMarkup(active)}
       </div>
       <footer class="plan-matrix-foot">
-        <span><strong>Always current by design.</strong> Plan and feature changes must update Pamet’s canonical catalog; CI rejects generated-catalog drift.</span>
-        ${active === "free" ? "" : '<button type="button" class="btn btn-primary" data-plan-matrix-manage>Manage your current plan</button>'}
+        ${actionMarkup(active)}
       </footer>
     </div>`;
 
     dialog.querySelector("[data-plan-matrix-close]")?.addEventListener("click", () => dialog.close());
+    dialog.querySelector("[data-plan-matrix-back]")?.addEventListener("click", () => {
+      dialog.close();
+      withManagement((management) => management.open());
+    });
+    dialog.querySelectorAll("[data-plan-matrix-upgrade]").forEach((button) =>
+      button.addEventListener("click", () => {
+        const targetKey = button.dataset.planMatrixUpgrade;
+        dialog.close();
+        withManagement((management) => management.openUpgrade(targetKey));
+      })
+    );
     dialog.querySelector("[data-plan-matrix-manage]")?.addEventListener("click", () => {
       dialog.close();
-      if (global.PametPlanManagement) global.PametPlanManagement.open();
-      else global.PametPlanManagementLoader?.open?.();
+      withManagement((management) => management.open());
     });
     return dialog;
   }
