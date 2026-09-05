@@ -86,10 +86,24 @@
   function renderAccountFacts(stats) {
     const fullName = [stats.user.firstName, stats.user.lastName].filter(Boolean).join(" ") || "Pamet member";
     const age = stats.accountDays === null ? "Account age unavailable" : `${stats.accountDays} day${stats.accountDays === 1 ? "" : "s"} with Pamet`;
-    return `<div class="plan-account-grid"><div><span>Name</span><strong>${esc(fullName)}</strong></div><div><span>Email</span><strong>${esc(stats.user.email || "Not available")}</strong></div><div><span>Member since</span><strong>${esc(formatDate(stats.createdAt))}</strong></div><div><span>Pamet age</span><strong>${esc(age)}</strong></div></div>`;
+    return `<div class="plan-account-grid">
+      <div><span>Name</span><strong>${esc(fullName)}</strong></div>
+      <div><span>Email</span><strong>${esc(stats.user.email || "Not available")}</strong></div>
+      <div><span>Member since</span><strong>${esc(formatDate(stats.createdAt))}</strong></div>
+      <div><span>Pamet age</span><strong>${esc(age)}</strong></div>
+    </div>`;
   }
   function renderEasterEggs(stats, plan) {
-    return `<section class="plan-account-moments" aria-label="Your Pamet history"><div><strong>${stats.entries}</strong><span>journal ${stats.entries === 1 ? "entry" : "entries"}</span></div><div><strong>${stats.loggedDays}</strong><span>distinct ${stats.loggedDays === 1 ? "day" : "days"} logged</span></div><div><strong>${stats.profiles}</strong><span>${stats.profiles === 1 ? "health profile" : "health profiles"}</span></div><div><strong>${esc(plan.positioning)}</strong><span>your Pamet chapter</span></div>${stats.oldestEntry ? `<p>Your earliest journal entry in this profile is from <strong>${esc(formatDate(stats.oldestEntry))}</strong>.</p>` : `<p>Your first tracked entry will become part of your Pamet history here.</p>`}</section>`;
+    const earliest = stats.oldestEntry
+      ? `<p>Your earliest journal entry in this profile is from <strong>${esc(formatDate(stats.oldestEntry))}</strong>.</p>`
+      : `<p>Your first tracked entry will become part of your Pamet history here.</p>`;
+    return `<section class="plan-account-moments" aria-label="Your Pamet history">
+      <div><strong>${stats.entries}</strong><span>journal ${stats.entries === 1 ? "entry" : "entries"}</span></div>
+      <div><strong>${stats.loggedDays}</strong><span>distinct ${stats.loggedDays === 1 ? "day" : "days"} logged</span></div>
+      <div><strong>${stats.profiles}</strong><span>${stats.profiles === 1 ? "health profile" : "health profiles"}</span></div>
+      <div><strong>${esc(plan.positioning)}</strong><span>your Pamet chapter</span></div>
+      ${earliest}
+    </section>`;
   }
 
   async function loadBillingStatus(root) {
@@ -127,7 +141,15 @@
     const target = planByKey(targetKey);
     const from = currentPlanKey();
     const added = catalog.features.filter((feature) => feature[targetKey] && !feature[from]).slice(0, 7);
-    return `<article class="pamet-compare-card recommended plan-management-upgrade-card"><div class="pamet-plan-label ${targetKey === "ultra" ? "advanced" : ""}">${targetKey === "pro" ? "Next step" : "Advanced care preparation"}</div><h3>${esc(target.name)} · ${esc(target.positioning)}</h3><p>${esc(target.summary)}</p><div class="price">${esc(target.monthly)}/mo · ${esc(target.annual)}/yr</div><ul>${added.map((feature) => `<li>${esc(feature.label)}</li>`).join("")}</ul></article>`;
+    const label = targetKey === "pro" ? "Next step" : "Advanced care preparation";
+    const labelClass = targetKey === "ultra" ? " advanced" : "";
+    return `<article class="pamet-compare-card recommended plan-management-upgrade-card">
+      <div class="pamet-plan-label${labelClass}">${label}</div>
+      <h3>${esc(target.name)} · ${esc(target.positioning)}</h3>
+      <p>${esc(target.summary)}</p>
+      <div class="price">${esc(target.monthly)}/mo · ${esc(target.annual)}/yr</div>
+      <ul>${added.map((feature) => `<li>${esc(feature.label)}</li>`).join("")}</ul>
+    </article>`;
   }
 
   async function ensureStripe(config) {
@@ -156,8 +178,17 @@
         method: "POST",
         body: JSON.stringify({ plan: "pro", interval, checkoutAttemptId: attempt })
       });
-      root.querySelector(".plan-management-modal").innerHTML =
-        `<header class="plan-management-head"><div><span class="plan-management-kicker">UPGRADE TO PRO</span><h2>Secure checkout</h2><p>Payment fields are provided by Stripe. Pamet does not store your card number.</p></div><button type="button" class="pamet-close" data-plan-management-close aria-label="Close">×</button></header><div id="planPaymentElement" class="pamet-payment-box"></div><div data-plan-management-status class="plan-management-status info" role="status" aria-live="polite"></div><button type="button" class="btn btn-primary btn-block" id="planConfirmPayment">Confirm Pro</button>`;
+      root.querySelector(".plan-management-modal").innerHTML = `<header class="plan-management-head">
+        <div>
+          <span class="plan-management-kicker">UPGRADE TO PRO</span>
+          <h2>Secure checkout</h2>
+          <p>Payment fields are provided by Stripe. Pamet does not store your card number.</p>
+        </div>
+        <button type="button" class="pamet-close" data-plan-management-close aria-label="Close">×</button>
+      </header>
+      <div id="planPaymentElement" class="pamet-payment-box"></div>
+      <div data-plan-management-status class="plan-management-status info" role="status" aria-live="polite"></div>
+      <button type="button" class="btn btn-primary btn-block" id="planConfirmPayment">Confirm Pro</button>`;
       root.querySelector("[data-plan-management-close]")?.addEventListener("click", close);
       const stripe = StripeCtor(config.publishableKey);
       const elements = stripe.elements({
@@ -196,7 +227,41 @@
     const root = modalRoot();
     const from = currentPlanKey();
     const target = planByKey(targetKey);
-    root.innerHTML = `<div class="pamet-modal-backdrop plan-management-backdrop"><section class="pamet-modal plan-management-modal" role="dialog" aria-modal="true" aria-labelledby="planUpgradeTitle"><header class="plan-management-head"><div><span class="plan-management-kicker">UPGRADE YOUR PLAN</span><h2 id="planUpgradeTitle">Upgrade to ${esc(target.name)}</h2><p>${from === "free" ? "Choose a billing interval, then complete secure checkout." : "Review Ultra, then continue to secure billing to change your existing Pro subscription."}</p></div><button type="button" class="pamet-close" data-plan-management-close aria-label="Close">×</button></header>${upgradeCard(targetKey)}<div class="pamet-billing-toggle" aria-label="Billing interval"><button class="active" data-upgrade-interval="annual">Annual · Best value</button><button data-upgrade-interval="monthly">Monthly</button></div><div data-plan-management-status class="plan-management-status info" hidden role="status" aria-live="polite"></div><div class="plan-management-actions"><button type="button" class="btn btn-ghost" data-plan-management-back>Back</button><button type="button" class="btn btn-primary" data-confirm-upgrade>Continue to ${esc(target.name)}</button></div><p class="plan-management-footnote">${from === "free" ? "Includes the current Pamet trial offer. Cancel anytime from Manage billing." : "Stripe handles the subscription change and any billing adjustment for the existing Pro subscription."}</p></section></div>`;
+    const billingInterval =
+      from === "free"
+        ? `<div class="pamet-billing-toggle" aria-label="Billing interval">
+            <button class="active" data-upgrade-interval="annual">Annual · Best value</button>
+            <button data-upgrade-interval="monthly">Monthly</button>
+          </div>`
+        : "";
+    const intro =
+      from === "free"
+        ? "Choose a billing interval, then complete secure checkout."
+        : "Review Ultra, then continue to secure billing to change your existing Pro subscription.";
+    const footnote =
+      from === "free"
+        ? "Includes the current Pamet trial offer. Cancel anytime from Manage billing."
+        : "Stripe handles the subscription change and any billing adjustment for the existing Pro subscription.";
+    root.innerHTML = `<div class="pamet-modal-backdrop plan-management-backdrop">
+      <section class="pamet-modal plan-management-modal" role="dialog" aria-modal="true" aria-labelledby="planUpgradeTitle">
+        <header class="plan-management-head">
+          <div>
+            <span class="plan-management-kicker">UPGRADE YOUR PLAN</span>
+            <h2 id="planUpgradeTitle">Upgrade to ${esc(target.name)}</h2>
+            <p>${intro}</p>
+          </div>
+          <button type="button" class="pamet-close" data-plan-management-close aria-label="Close">×</button>
+        </header>
+        ${upgradeCard(targetKey)}
+        ${billingInterval}
+        <div data-plan-management-status class="plan-management-status info" hidden role="status" aria-live="polite"></div>
+        <div class="plan-management-actions">
+          <button type="button" class="btn btn-ghost" data-plan-management-back>Back</button>
+          <button type="button" class="btn btn-primary" data-confirm-upgrade>Continue to ${esc(target.name)}</button>
+        </div>
+        <p class="plan-management-footnote">${footnote}</p>
+      </section>
+    </div>`;
     root.querySelector("[data-plan-management-close]")?.addEventListener("click", close);
     root.querySelector("[data-plan-management-back]")?.addEventListener("click", open);
     let interval = "annual";
@@ -220,14 +285,66 @@
     const next = uniqueNextFeatures(key);
     const nextKey = nextPlanKey(key);
     const root = modalRoot();
-    root.innerHTML = `<div class="pamet-modal-backdrop plan-management-backdrop"><section class="pamet-modal plan-management-modal" role="dialog" aria-modal="true" aria-labelledby="planManagementTitle"><header class="plan-management-head"><div><span class="plan-management-kicker">YOUR PAMET ACCOUNT</span><h2 id="planManagementTitle">Manage your plan</h2><p>Review your account and what ${esc(plan.name)} includes.</p></div><button type="button" class="pamet-close" data-plan-management-close aria-label="Close">×</button></header><section class="plan-management-current"><div><span>Current plan</span><h3>${esc(plan.name)} · ${esc(plan.positioning)}</h3><p>${esc(plan.summary)}</p></div><div class="plan-management-price"><strong>${esc(plan.monthly)}${key === "free" ? "" : "/mo"}</strong>${key === "free" ? "" : `<span>${esc(plan.annual)}/yr</span>`}</div></section>${renderAccountFacts(stats)}${renderEasterEggs(stats, plan)}<section class="plan-management-features"><div class="plan-management-section-head"><div><span>Included now</span><h3>${esc(plan.name)} features</h3></div><strong>${included.length} listed features</strong></div><ul>${renderIncluded(included)}</ul></section>${
-      next.length
-        ? `<section class="plan-management-next"><span>What ${esc(planByKey(nextKey).name)} adds</span><p>${next
+    const nextSection = next.length
+      ? `<section class="plan-management-next">
+          <span>What ${esc(planByKey(nextKey).name)} adds</span>
+          <p>${next
             .slice(0, 4)
             .map((feature) => esc(feature.label))
-            .join(" · ")}</p></section>`
-        : `<section class="plan-management-next complete"><span>Ultra plan</span><p>Your plan includes every feature currently listed in Pamet’s canonical plan catalog.</p></section>`
-    }<div data-plan-management-status class="plan-management-status info" hidden role="status" aria-live="polite"></div>${key === "free" ? "" : '<p class="plan-management-billing-state" data-billing-state>Refreshing billing status…</p>'}<div class="plan-management-actions"><button type="button" class="btn btn-ghost" data-plan-management-compare>Compare all Pamet features</button>${nextKey ? `<button type="button" class="btn btn-primary" data-plan-management-upgrade>Upgrade to ${esc(planByKey(nextKey).name)}</button>` : '<button type="button" class="btn btn-primary" data-plan-management-billing>Manage billing</button>'}</div>${key === "pro" ? '<button type="button" class="data-btn plan-management-secondary-billing" data-plan-management-billing>Billing & invoices</button>' : ""}<p class="plan-management-footnote">Plan access is verified by Pamet’s server-side entitlements. Billing opens only when you choose an upgrade or billing action.</p></section></div>`;
+            .join(" · ")}</p>
+        </section>`
+      : `<section class="plan-management-next complete">
+          <span>Ultra plan</span>
+          <p>Your plan includes every feature currently listed in Pamet’s canonical plan catalog.</p>
+        </section>`;
+    const billingState =
+      key === "free" ? "" : '<p class="plan-management-billing-state" data-billing-state>Refreshing billing status…</p>';
+    const primaryAction = nextKey
+      ? `<button type="button" class="btn btn-primary" data-plan-management-upgrade>Upgrade to ${esc(planByKey(nextKey).name)}</button>`
+      : '<button type="button" class="btn btn-primary" data-plan-management-billing>Manage billing</button>';
+    const secondaryBilling =
+      key === "pro" ? '<button type="button" class="data-btn plan-management-secondary-billing" data-plan-management-billing>Billing & invoices</button>' : "";
+    root.innerHTML = `<div class="pamet-modal-backdrop plan-management-backdrop">
+      <section class="pamet-modal plan-management-modal" role="dialog" aria-modal="true" aria-labelledby="planManagementTitle">
+        <header class="plan-management-head">
+          <div>
+            <span class="plan-management-kicker">YOUR PAMET ACCOUNT</span>
+            <h2 id="planManagementTitle">Manage your plan</h2>
+            <p>Review your account and what ${esc(plan.name)} includes.</p>
+          </div>
+          <button type="button" class="pamet-close" data-plan-management-close aria-label="Close">×</button>
+        </header>
+        <section class="plan-management-current">
+          <div>
+            <span>Current plan</span>
+            <h3>${esc(plan.name)} · ${esc(plan.positioning)}</h3>
+            <p>${esc(plan.summary)}</p>
+          </div>
+          <div class="plan-management-price">
+            <strong>${esc(plan.monthly)}${key === "free" ? "" : "/mo"}</strong>
+            ${key === "free" ? "" : `<span>${esc(plan.annual)}/yr</span>`}
+          </div>
+        </section>
+        ${renderAccountFacts(stats)}
+        ${renderEasterEggs(stats, plan)}
+        <section class="plan-management-features">
+          <div class="plan-management-section-head">
+            <div><span>Included now</span><h3>${esc(plan.name)} features</h3></div>
+            <strong>${included.length} listed features</strong>
+          </div>
+          <ul>${renderIncluded(included)}</ul>
+        </section>
+        ${nextSection}
+        <div data-plan-management-status class="plan-management-status info" hidden role="status" aria-live="polite"></div>
+        ${billingState}
+        <div class="plan-management-actions">
+          <button type="button" class="btn btn-ghost" data-plan-management-compare>Compare all Pamet features</button>
+          ${primaryAction}
+        </div>
+        ${secondaryBilling}
+        <p class="plan-management-footnote">Plan access is verified by Pamet’s server-side entitlements. Billing opens only when you choose an upgrade or billing action.</p>
+      </section>
+    </div>`;
     root.querySelectorAll("[data-plan-management-close]").forEach((button) => button.addEventListener("click", close));
     root.querySelector(".plan-management-backdrop")?.addEventListener("click", (event) => {
       if (event.target === event.currentTarget) close();
@@ -237,7 +354,9 @@
       global.PametPlanComparison?.open?.(key);
     });
     root.querySelector("[data-plan-management-upgrade]")?.addEventListener("click", () => openUpgrade(nextKey));
-    root.querySelectorAll("[data-plan-management-billing]").forEach((button) => button.addEventListener("click", () => openBilling(root, button)));
+    root
+      .querySelectorAll("[data-plan-management-billing]")
+      .forEach((button) => button.addEventListener("click", () => openBilling(root, button)));
     if (key !== "free") loadBillingStatus(root);
   }
 
