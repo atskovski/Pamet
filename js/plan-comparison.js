@@ -43,17 +43,34 @@
     </article>`;
   }
 
+  async function releaseAsset(path) {
+    try {
+      const response = await fetch("/dist/asset-manifest.json", { cache: "no-store" });
+      if (!response.ok) return path;
+      const manifest = await response.json();
+      const token = manifest.generatedAt || manifest.version || "current";
+      return `${path}?release=${encodeURIComponent(token)}`;
+    } catch {
+      return path;
+    }
+  }
+
   function loadMatrix() {
     if (global.PametPlanMatrix) return Promise.resolve(global.PametPlanMatrix);
     if (matrixPending) return matrixPending;
-    matrixPending = new Promise((resolve, reject) => {
-      const script = document.createElement("script");
-      script.src = "/dist/pamet.plan-matrix.min.js";
-      script.async = true;
-      script.addEventListener("load", () => (global.PametPlanMatrix ? resolve(global.PametPlanMatrix) : reject(new Error("Plan matrix did not initialize."))), { once:true });
-      script.addEventListener("error", () => reject(new Error("Plan comparison could not be loaded.")), { once:true });
-      document.head.appendChild(script);
-    }).catch((error) => { matrixPending = null; throw error; });
+    matrixPending = releaseAsset("/dist/pamet.plan-matrix.min.js")
+      .then(
+        (src) =>
+          new Promise((resolve, reject) => {
+            const script = document.createElement("script");
+            script.src = src;
+            script.async = true;
+            script.addEventListener("load", () => (global.PametPlanMatrix ? resolve(global.PametPlanMatrix) : reject(new Error("Plan matrix did not initialize."))), { once:true });
+            script.addEventListener("error", () => reject(new Error("Plan comparison could not be loaded.")), { once:true });
+            document.head.appendChild(script);
+          })
+      )
+      .catch((error) => { matrixPending = null; throw error; });
     return matrixPending;
   }
 
