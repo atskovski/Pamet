@@ -50,17 +50,10 @@
       const script = document.createElement("script");
       script.src = "/dist/pamet.plan-matrix.min.js";
       script.async = true;
-      script.addEventListener(
-        "load",
-        () => (global.PametPlanMatrix ? resolve(global.PametPlanMatrix) : reject(new Error("Plan matrix did not initialize."))),
-        { once: true }
-      );
-      script.addEventListener("error", () => reject(new Error("Plan comparison could not be loaded.")), { once: true });
+      script.addEventListener("load", () => (global.PametPlanMatrix ? resolve(global.PametPlanMatrix) : reject(new Error("Plan matrix did not initialize."))), { once:true });
+      script.addEventListener("error", () => reject(new Error("Plan comparison could not be loaded.")), { once:true });
       document.head.appendChild(script);
-    }).catch((error) => {
-      matrixPending = null;
-      throw error;
-    });
+    }).catch((error) => { matrixPending = null; throw error; });
     return matrixPending;
   }
 
@@ -69,9 +62,7 @@
     return loadMatrix().then((matrix) => matrix.open(normalized));
   }
 
-  function observePlanContainer(container) {
-    settingsObserver?.observe(container, { childList: true, subtree: true, characterData: true });
-  }
+  function observePlanContainer(container) { settingsObserver?.observe(container, { childList:true, subtree:true, characterData:true }); }
 
   function render(container, activePlan = currentPlan()) {
     if (!container) return;
@@ -79,8 +70,7 @@
     settingsGuard = true;
     settingsObserver?.disconnect();
     try {
-      container.innerHTML = `${catalog.plans.map((item) => cardMarkup(item, normalized)).join("")}
-        <div class="plan-full-compare"><button type="button" class="btn btn-ghost" data-open-plan-matrix>Compare all plans</button></div>`;
+      container.innerHTML = `${catalog.plans.map((item) => cardMarkup(item, normalized)).join("")}<div class="plan-full-compare"><button type="button" class="btn btn-ghost" data-open-plan-matrix>Compare all plans</button></div>`;
       container.querySelector("[data-open-plan-matrix]")?.addEventListener("click", () => open(normalized).catch(() => {}));
     } finally {
       settingsGuard = false;
@@ -94,28 +84,20 @@
     const activePlan = currentPlan();
     render(container, activePlan);
     const line = document.querySelector("#planLineText");
-    if (line) {
-      const item = plan(activePlan);
-      line.textContent = `${item.name} · ${item.positioning}`;
-    }
+    if (line) { const item = plan(activePlan); line.textContent = `${item.name} · ${item.positioning}`; }
     const upgrade = document.querySelector("#upgradeBtn");
-    if (upgrade) upgrade.textContent = activePlan === "free" ? "Upgrade your plan" : "Manage your plan";
+    if (upgrade) upgrade.textContent = activePlan === "free" ? "Upgrade to Pro" : activePlan === "pro" ? "Upgrade to Ultra" : "Manage your plan";
   }
 
   function observeSettings() {
     const container = document.querySelector("#planCompare");
     if (!container || settingsObserver) return;
-    settingsObserver = new MutationObserver(() => {
-      if (settingsGuard) return;
-      queueMicrotask(refreshSettings);
-    });
+    settingsObserver = new MutationObserver(() => { if (settingsGuard) return; queueMicrotask(refreshSettings); });
     observePlanContainer(container);
     refreshSettings();
   }
 
-  function differentiatedFeatures(key) {
-    return catalog.features.filter((feature) => feature[key] && (key === "pro" ? !feature.free : !feature.pro)).slice(0, 5);
-  }
+  function differentiatedFeatures(key) { return catalog.features.filter((feature) => feature[key] && (key === "pro" ? !feature.free : !feature.pro)).slice(0, 5); }
 
   function augmentBillingModal() {
     const root = document.querySelector("#pametModalRoot");
@@ -145,8 +127,7 @@
       button.textContent = "Compare all plan features";
       button.addEventListener("click", () => open(currentPlan()).catch(() => {}));
       const reassurance = modal.querySelector(".pamet-reassurance");
-      if (reassurance) reassurance.before(button);
-      else modal.appendChild(button);
+      if (reassurance) reassurance.before(button); else modal.appendChild(button);
     }
   }
 
@@ -155,25 +136,20 @@
     if (!root || root.dataset.pametPlanObserver === "1") return;
     root.dataset.pametPlanObserver = "1";
     modalRootObserver = new MutationObserver(() => augmentBillingModal());
-    modalRootObserver.observe(root, { childList: true, subtree: true });
+    modalRootObserver.observe(root, { childList:true, subtree:true });
     augmentBillingModal();
   }
-
   function installModalObserver() {
     connectModalObserver();
     const bodyObserver = new MutationObserver(() => connectModalObserver());
-    bodyObserver.observe(document.body, { childList: true });
+    bodyObserver.observe(document.body, { childList:true });
   }
 
-  document.addEventListener("DOMContentLoaded", observeSettings, { once: true });
-  document.addEventListener("pamet:settings-rendered", () => queueMicrotask(() => {
-    observeSettings();
-    refreshSettings();
-  }));
+  document.addEventListener("DOMContentLoaded", observeSettings, { once:true });
+  document.addEventListener("pamet:settings-rendered", () => queueMicrotask(() => { observeSettings(); refreshSettings(); }));
   global.addEventListener("pamet:entitlements", () => queueMicrotask(refreshSettings));
   document.querySelectorAll(".tab[data-tab]").forEach((tab) => tab.addEventListener("click", () => requestAnimationFrame(refreshSettings)));
-  if (document.body) installModalObserver();
-  else document.addEventListener("DOMContentLoaded", installModalObserver, { once: true });
+  if (document.body) installModalObserver(); else document.addEventListener("DOMContentLoaded", installModalObserver, { once:true });
   queueMicrotask(observeSettings);
 
   global.PametPlanComparison = Object.freeze({ catalog, render, open, plan, refreshSettings, currentPlan });
