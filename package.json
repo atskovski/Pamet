@@ -10,7 +10,7 @@
     "check:live": "node scripts/check-live-environment.js",
     "check:ui-contract": "node scripts/check-ui-contract.js",
     "format": "npx --yes prettier@3.6.2 --write js/plan-management.js js/plan-comparison.js js/visit-workflow-loader.js tests/e2e/plan-management.spec.js",
-    "format:check": "npx --yes prettier@3.6.2 --write js/plan-management.js && echo __PAMET_FORMAT_BEGIN__ && cat js/plan-management.js && echo __PAMET_FORMAT_END__ && false",
+    "format:check": "npx --yes prettier@3.6.2 js/plan-management.js | diff -u js/plan-management.js -",
     "test:ui-integrity": "playwright test --config=playwright.config.cjs",
     "test:ui-smoke": "playwright test --config=playwright.config.cjs --grep @production",
     "test": "node --test tests/http.test.js tests/security.test.js tests/ui-hardening.test.js tests/remember-me.test.js tests/performance-architecture.test.js tests/crypto-ui.test.js tests/oauth-auth.test.js tests/platform-foundation.test.js tests/ops-alert.test.js tests/operations-jobs.test.js tests/job-auth.test.js tests/entitlement-guard.test.js tests/log-intelligence.test.js tests/visit-workflow.test.js tests/integration.test.js tests/edge-account.integration.test.js",
