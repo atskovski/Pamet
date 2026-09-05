@@ -624,7 +624,7 @@ app.post('/api/billing/create-subscription', limits.billing, auth, async (req, r
       } catch (error) { if (error.code !== 'resource_missing') throw error; }
     }
     const customerId = await customer(req.user);
-    const subscription = await stripe.subscriptions.create({ customer: customerId, items: [{ price }], payment_behavior: 'default_incomplete', payment_settings: { save_default_payment_method: 'on_subscription' }, trial_period_days: 7, metadata: { pamet_user_id: String(req.user.id), pamet_plan: plan, pamet_interval: interval }, expand: ['pending_setup_intent', 'latest_invoice.confirmation_secret', 'latest_invoice.payment_intent'] }, { idempotencyKey: `pamet-sub-${req.user.id}-${checkoutAttemptId}` });
+    const subscription = await stripe.subscriptions.create({ customer: customerId, items: [{ price }], payment_behavior: 'default_incomplete', payment_settings: { save_default_payment_method: 'on_subscription' }, trial_period_days: 7, trial_settings: { end_behavior: { missing_payment_method: 'cancel' } }, metadata: { pamet_user_id: String(req.user.id), pamet_plan: plan, pamet_interval: interval }, expand: ['pending_setup_intent', 'latest_invoice.confirmation_secret', 'latest_invoice.payment_intent'] }, { idempotencyKey: `pamet-sub-${req.user.id}-${checkoutAttemptId}` });
     const setup = subscription.pending_setup_intent;
     const confirmation = subscription.latest_invoice && subscription.latest_invoice.confirmation_secret;
     const paymentIntent = subscription.latest_invoice && subscription.latest_invoice.payment_intent;
