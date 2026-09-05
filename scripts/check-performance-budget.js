@@ -8,11 +8,11 @@ if (!fs.existsSync(manifestPath)) throw new Error('Asset manifest is missing. Ru
 const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 const entries = {
   bootstrapJs: { file: 'dist/pamet.min.js', raw: 170 * 1024, gzip: 55 * 1024 },
-  // One-year Insights plus the local Ultra caregiver PDF fallback stay deferred.
-  // Allow 2 KiB additional raw feature code while preserving gzip and total budgets.
-  featuresJs: { file: 'dist/pamet.features.min.js', raw: 194 * 1024, gzip: 65 * 1024 },
+  // Authenticated-only features include the one-year Insights window, caregiver PDF fallback,
+  // and the clinician-oriented Ultra Advanced Visit Brief. Keep the signed-out budget unchanged.
+  featuresJs: { file: 'dist/pamet.features.min.js', raw: 224 * 1024, gzip: 72 * 1024 },
   bootstrapCss: { file: 'dist/pamet.min.css', raw: 115 * 1024, gzip: 38 * 1024 },
-  featuresCss: { file: 'dist/pamet.features.min.css', raw: 90 * 1024, gzip: 30 * 1024 }
+  featuresCss: { file: 'dist/pamet.features.min.css', raw: 100 * 1024, gzip: 33 * 1024 }
 };
 const initialRawBudget = 260 * 1024;
 const initialGzipBudget = 88 * 1024;
@@ -33,7 +33,7 @@ if (broadExperienceObserver.test(experienceSource)) throw new Error('js/experien
 
 const main = fs.readFileSync('js/main.js', 'utf8');
 const authenticated = fs.readFileSync('js/authenticated-features.js', 'utf8');
-for (const heavy of ['care-planning.js', 'care-workspace.js', 'encrypted-sync.js', 'qr-sharing.js', 'insights.js', 'ui-ux.js']) {
+for (const heavy of ['care-planning.js', 'care-workspace.js', 'encrypted-sync.js', 'qr-sharing.js', 'insights.js', 'ui-ux.js', 'advanced-visit-brief.js']) {
   if (main.includes(`import "./${heavy}"`)) throw new Error(`${heavy} must stay out of the signed-out bootstrap.`);
   if (!authenticated.includes(`import "./${heavy}"`)) throw new Error(`${heavy} must be present in the authenticated feature bundle.`);
 }
