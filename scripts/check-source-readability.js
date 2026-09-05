@@ -11,6 +11,7 @@ const LEGACY_DEBT_CEILING = 96;
 const modernFiles = new Set([
   'plan-comparison.js',
   'plan-management.js',
+  'plan-management-loader.js',
   'visit-workflow-loader.js'
 ]);
 
