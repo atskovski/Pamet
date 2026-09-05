@@ -125,13 +125,22 @@
   padding-block:1.55rem;
   text-align:center;
 }
-.completeness-summary{
-  display:grid;
+/*
+ * The legacy Insights layer styles `.completeness-card > div:first-child` as a
+ * horizontal flex row. Match that selector's specificity and intentionally
+ * replace it for the v1.6.8+ summary so the four summary blocks cannot split
+ * into narrow columns again.
+ */
+.completeness-card > div.completeness-summary:first-child{
+  display:grid!important;
   grid-template-columns:minmax(0,1fr)!important;
   grid-auto-flow:row;
-  justify-items:center;
   align-items:center;
+  justify-items:center;
+  justify-content:stretch;
   gap:.42rem;
+}
+.completeness-summary{
   width:min(100%,46rem);
   margin:0 auto;
   padding-inline:1rem;
