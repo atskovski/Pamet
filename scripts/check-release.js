@@ -13,6 +13,7 @@ const updateFlow=fs.readFileSync('js/version-update.js','utf8');
 const planning=fs.readFileSync('js/care-planning.js','utf8');
 const clarity=fs.readFileSync('js/product-clarity.js','utf8');
 const insights=fs.readFileSync('js/insights.js','utf8');
+const insightsController=fs.readFileSync('js/interaction-controller.js','utf8');
 const experience=fs.readFileSync('js/experience.js','utf8');
 const icons=fs.readFileSync('js/icons.js','utf8');
 const performance=fs.readFileSync('js/performance.js','utf8');
@@ -48,7 +49,7 @@ check(secureServer.includes('appointmentReminderJob')&&secureServer.includes("/a
 check(reminders.includes("appointment.reminder_sent")&&reminders.includes("pamet-appointment-${appointment.id}")&&reminders.includes('GET_LOCK'),'Appointment reminders must remain deduplicated, tagged, and serialized.');
 check(workflow.includes("cron: '*/15 * * * *'")&&workflow.includes('/api/jobs/appointment-reminders'),'Appointment reminder scheduler must remain active every 15 minutes.');
 check(clarity.includes('Switch profile')&&clarity.includes('quickProfileButton')&&clarity.includes('S.switchProfile'),'Every screen must retain quick profile switching through the shared top bar.');
-check(insights.includes('Why am I seeing this?')&&insights.includes('Data completeness')&&insights.includes('Archive')&&insights.includes('[7,30,90]'),'Insights must expose evidence, completeness, archive, and time-window controls.');
+check(insights.includes('buildObservations')&&insights.includes('topSymptom?.[1] >= 2')&&insightsController.includes('Why am I seeing this?')&&insightsController.includes('Tracking quality')&&insightsController.includes('data-pattern-count')&&insightsController.includes('Most useful next step')&&insightsController.includes('[7, 14, 30, 60, 90, 180, 365]'),'Insights must expose repeat-evidence analytics, evidence details, tracking quality, archive actions, and all supported time windows.');
 check(experience.includes("title.textContent = 'Visit Brief'")&&experience.includes('data-calendar-today')&&experience.includes('Search health history'),'Visit Brief naming and evolved Calendar controls must be active.');
 check(icons.includes('window.PametIcons')&&design.includes('--pamet-type-page')&&design.includes('--pamet-primary:#0f3d3e'),'Central icon, type, and semantic color systems must ship.');
 check(clarity.includes('No entry recorded for this day')&&clarity.includes('Mild symptoms')&&clarity.includes('Today'),'Calendar must distinguish missing entries from symptom-free entries and explain its legend.');

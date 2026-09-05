@@ -102,9 +102,12 @@ test('@production Pro Insights supports every 7–365 day history window and nor
     await page.locator(`[data-insights-days="${days}"]`).click();
     await expect(page.locator(`[data-insights-days="${days}"]`)).toHaveClass(/active/);
     await expect(page.locator('#screen-patterns .insights-window-summary')).toContainText(`last ${days} days`);
-    await expect(page.locator('#screen-patterns .readiness-copy')).toContainText(`${days}-day window`);
-    await expect(page.locator('#screen-patterns .readiness-score strong')).toHaveText(String(days));
-    await expect(page.locator('#screen-patterns .completeness-context strong')).toHaveText(`${days} of ${days} days logged`);
+    await expect(page.locator('#screen-patterns .insights-findings-card .pamet-eyebrow')).toContainText(`${days}-day window`);
+    await expect(page.locator('#screen-patterns .tracking-quality-head .pamet-eyebrow')).toContainText(`last ${days} days`);
+    const loggedDays = page.locator('#screen-patterns .insights-kpi', { hasText:'Logged days' });
+    await expect(loggedDays.locator('strong')).toContainText(`${days} / ${days}`);
+    await expect(loggedDays).toContainText('100% of calendar days');
+    await expect(page.locator('#screen-patterns [data-quality-metric="consistency"] strong')).toHaveText('100%');
   }
 
   const windowLayout = await page.locator('#screen-patterns .insights-window').evaluate((element) => ({
@@ -122,4 +125,5 @@ test('@production Pro Insights supports every 7–365 day history window and nor
   await expect(page.locator('[data-insights-days="180"]')).toHaveClass(/history-locked/);
   await expect(page.locator('[data-insights-days="365"]')).toHaveClass(/history-locked/);
   await expect(page.locator('#screen-patterns .insights-window-summary')).toContainText('last 90 days');
+  await expect(page.locator('#screen-patterns .tracking-quality-head .pamet-eyebrow')).toContainText('last 90 days');
 });

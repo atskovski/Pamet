@@ -34,6 +34,7 @@
   };
   const formatDate = (value) => parseDate(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   const distinctDays = (entries) => new Set(entries.map((entry) => dayKey(entry.date)).filter(Boolean)).size;
+  const percent = (numerator, denominator) => denominator ? Math.round((Number(numerator || 0) / Number(denominator)) * 100) : 0;
 
   function archivedSet() {
     try { return new Set(JSON.parse(localStorage.getItem(archiveKey()) || '[]')); }
@@ -60,36 +61,21 @@
     });
   }
 
-  function readiness(entries, observations) {
+  function insightSummary(entries, observations) {
     const days = distinctDays(entries);
-    const completeness = BaseInsights.coverage(entries);
-    let label = 'Start your baseline';
-    let note = 'Log your first day to begin building an observational baseline.';
-    if (days > 0 && days < 3) {
-      label = 'Baseline started';
-      note = `${days} logged day${days === 1 ? '' : 's'} is enough to begin, but not enough for repeat comparisons.`;
-    } else if (days < 7) {
-      label = 'Early comparison stage';
-      note = `${days} logged days can support simple summaries. Keep including ordinary days, not only symptom days.`;
-    } else if (!observations.length) {
-      label = 'Baseline ready';
-      note = `Pamet has enough history for a ${state.days}-day summary, but no observation currently meets the display threshold.`;
-    } else {
-      label = `${observations.length} supported observation${observations.length === 1 ? '' : 's'}`;
-      note = paidComparisons()
-        ? `These observations summarize what was recorded together during the last ${state.days} days. They do not establish medical cause.`
-        : `Free Insights summarizes recorded symptom frequency and direction during the last ${state.days} days without cross-factor comparisons.`;
-    }
-    return { days, completeness, label, note };
-  }
-
-  function completenessMessage(score, loggedDays) {
-    if (!loggedDays) return `Log at least one day in this ${state.days}-day window to measure entry completeness.`;
-    if (score >= 100) return 'Your logged entries include all recommended tracking details.';
-    if (score >= 85) return 'Your logged entries include nearly all recommended tracking details.';
-    if (score >= 70) return 'Your logged entries include most recommended tracking details.';
-    if (score >= 50) return 'Adding a few more tracking details will make comparisons easier to interpret.';
-    return 'Add more tracking details to the days you log to improve the quality of comparisons.';
+    const c = BaseInsights.coverage(entries);
+    const symptomDays = distinctDays(entries.filter((entry) => (entry.symptoms || []).length));
+    const clearDays = distinctDays(entries.filter((entry) => Array.isArray(entry.symptoms) && !entry.symptoms.length));
+    const consistency = percent(days, state.days);
+    const fields = [['Symptoms','symptom'],['Sleep','sleep'],['Stress','stress'],['Hydration','hydration'],['Activity','activity'],['Medications','medication'],['Notes','notes']].map(([label,key]) => [label,key,Number(c[key] || 0)]);
+    let label = observations.length ? `${observations.length} pattern${observations.length === 1 ? '' : 's'} worth reviewing` : 'No supported patterns yet';
+    let note = observations.length ? `These are the specific observations Pamet can support from ${days} logged days in this ${state.days}-day window.` : `Pamet did not find a repeat pattern that clears the display threshold in this ${state.days}-day window.`;
+    if (!days) { label = 'Start your baseline'; note = `Log your first day in this ${state.days}-day window to begin building an observational baseline.`; }
+    else if (days < 3 && !observations.length) { label = 'Baseline started'; note = `${days} logged day${days === 1 ? '' : 's'} can support a history summary; more repeat history is needed for stronger comparisons.`; }
+    const level = !days ? 'No tracking foundation yet' : days < 3 ? 'Limited tracking foundation' : days < 7 || c.overall < 60 ? 'Building tracking foundation' : days >= 14 && c.overall >= 80 && (!symptomDays || clearDays >= 3) ? 'Strong tracking foundation' : 'Good tracking foundation';
+    const weak = [...fields].sort((a,b) => a[2] - b[2])[0];
+    const next = !days ? 'Log your first entry to begin the baseline.' : days < 3 ? `Log ${3-days} more day${3-days === 1 ? '' : 's'} to reach the first repeat-comparison baseline.` : symptomDays && clearDays < 2 ? 'When applicable, include symptom-free days so Pamet has a comparison baseline.' : weak?.[2] < 70 ? `Add ${weak[0].toLowerCase()} more consistently on the days you log.` : 'Keep logging as usual; this window already has useful structured detail.';
+    return { days, c, symptomDays, clearDays, consistency, fields, label, note, level, next };
   }
 
   function observationCard(item, isArchived) {
@@ -122,41 +108,29 @@
     const screen = $('#screen-patterns');
     const column = screen?.querySelector('.content-col');
     if (!screen || !column) return;
-
     normalizeWindowForPlan();
     screen.dataset.insightsV15Rendering = 'true';
     column.dataset.pametInsightsController = 'true';
 
     const entries = entriesWithin(state.days);
-    const allObservations = BaseInsights.buildObservations(entries);
+    const all = BaseInsights.buildObservations(entries);
     const archived = archivedSet();
-    if (!paidComparisons() && !['all', 'symptom'].includes(state.category)) state.category = 'all';
-    const visible = allObservations
-      .filter((item) => state.showArchived ? archived.has(item.id) : !archived.has(item.id))
-      .filter((item) => state.category === 'all' || item.category === state.category);
-    const info = readiness(entries, allObservations);
-    const c = info.completeness;
-    const completenessScore = Number(c.overall || 0);
-    const completenessTitle = info.days ? `${completenessScore}% of logged entries complete` : 'No logged entries in this window';
-    const completenessCopy = completenessMessage(completenessScore, info.days);
-    const completenessItems = [['Symptoms', c.symptom], ['Sleep', c.sleep], ['Stress', c.stress], ['Hydration', c.hydration], ['Activity', c.activity], ['Medications', c.medication], ['Notes', c.notes]];
-    const categories = paidComparisons()
-      ? [['all', 'All'], ['symptom', 'Symptoms'], ['lifestyle', 'Lifestyle'], ['medication', 'Medications'], ['sleepstress', 'Sleep / Stress']]
-      : [['all', 'All'], ['symptom', 'Symptoms']];
-    const helper = paidComparisons()
-      ? 'Pamet summarizes repeat relationships in what you record. It does not diagnose conditions or determine what caused a symptom.'
-      : 'Free Insights summarizes symptom frequency and trend. Recorded-factor comparisons, What Changed, and medication observations unlock with Pro.';
-    const historyNote = longHistory()
-      ? 'Choose a window from one week through one year. Longer windows can make slow changes easier to compare.'
-      : 'Free includes up to 90 days of history. Pro and Ultra unlock the 180-day and 365-day views.';
+    const active = all.filter((item) => !archived.has(item.id));
+    if (!paidComparisons() && !['all','symptom'].includes(state.category)) state.category = 'all';
+    const visible = all.filter((item) => state.showArchived ? archived.has(item.id) : !archived.has(item.id)).filter((item) => state.category === 'all' || item.category === state.category);
+    const info = insightSummary(entries, active);
+    const categories = paidComparisons() ? [['all','All'],['symptom','Symptoms'],['lifestyle','Lifestyle'],['medication','Medications'],['sleepstress','Sleep / Stress']] : [['all','All'],['symptom','Symptoms']];
+    const helper = paidComparisons() ? 'Pamet summarizes repeat relationships in what you record. It does not diagnose conditions or determine what caused a symptom.' : 'Free Insights summarizes symptom frequency and trend. Recorded-factor comparisons and medication observations unlock with Pro.';
+    const historyNote = longHistory() ? 'Choose a window from one week through one year. Longer windows can make slow changes easier to compare.' : 'Free includes up to 90 days of history. Pro and Ultra unlock 180-day and 365-day views.';
+    const findings = active.length ? `<div class="findings-preview-grid">${active.slice(0,4).map((item) => `<div class="finding-preview"><span class="finding-preview-category">${escapeHtml(categoryLabel[item.category] || 'Observation')}</span><strong>${escapeHtml(item.title)}</strong><span class="finding-preview-meta">${Number(item.matchCount || 0)} supporting entr${Number(item.matchCount || 0) === 1 ? 'y' : 'ies'} · ${escapeHtml(item.trend?.label || 'Developing')}</span></div>`).join('')}</div>${active.length > 4 ? `<p class="findings-more">+${active.length-4} more in the detailed list below.</p>` : ''}` : `<div class="findings-empty"><span data-pamet-icon="insights"></span><div><strong>Nothing specific to review yet</strong><p>Keep tracking; Pamet will not manufacture a pattern from weak evidence.</p></div></div>`;
+    const fields = info.fields.map(([label,key,value]) => `<div class="quality-field" data-quality-field="${key}"><div class="quality-field-head"><span>${label}</span><strong>${value}%</strong></div><div class="quality-field-meter"><progress max="100" value="${value}" aria-label="${label} coverage ${value}%"></progress></div><span class="quality-field-count">${Math.round(value * entries.length / 100)} of ${entries.length} logged entr${entries.length === 1 ? 'y' : 'ies'}</span></div>`).join('');
 
     column.innerHTML = `<div class="insights-page-head" data-insights-controller><div><span class="pamet-eyebrow">Observational history</span><h2 class="screen-title">Insights</h2><p class="pamet-helper">${escapeHtml(helper)}</p><p class="insights-window-summary" aria-live="polite">Showing the last <strong>${state.days} days</strong>.</p></div><div class="insights-window-wrap"><div class="insights-window" role="group" aria-label="Observation window">${WINDOWS.map(renderWindowButton).join('')}</div><p class="insights-window-note">${escapeHtml(historyNote)}</p></div></div>
       ${state.status ? `<div class="insights-action-status" role="status">${escapeHtml(state.status)}</div>` : ''}
-      <section class="insights-readiness" aria-labelledby="readinessTitle"><div class="readiness-copy"><span class="pamet-eyebrow">Pattern readiness · ${state.days}-day window</span><h3 id="readinessTitle">${escapeHtml(info.label)}</h3><p>${escapeHtml(info.note)}</p></div><div class="readiness-score"><strong>${info.days}</strong><span>logged days in window</span></div></section>
-      <section class="completeness-card" aria-labelledby="completenessTitle"><div class="completeness-summary"><span class="pamet-eyebrow">Data quality · last ${state.days} days</span><h3 id="completenessTitle">${escapeHtml(completenessTitle)}</h3><p class="completeness-context"><strong>${info.days} of ${state.days} days logged</strong><span aria-hidden="true">·</span><span>${escapeHtml(completenessCopy)}</span></p><p class="pamet-helper completeness-definition">Completeness measures how fully you filled out the entries you logged. It does not mean you logged every day in this window.</p></div><div class="completeness-grid">${completenessItems.map(([label, value]) => `<div class="completeness-item"><div><span>${escapeHtml(label)}</span><strong>${Number(value || 0)}%</strong></div><div class="mini-meter" aria-hidden="true"><progress max="100" value="${Number(value || 0)}"></progress></div></div>`).join('')}</div></section>
-      <div class="insights-toolbar" aria-label="Insight filters"><div class="insights-categories">${categories.map(([key, label]) => `<button type="button" class="chip-btn${state.category === key ? ' active' : ''}" data-insights-category="${key}" aria-pressed="${state.category === key}">${label}</button>`).join('')}</div><button type="button" class="link-btn archived-toggle" data-insights-archived>${state.showArchived ? 'Back to active observations' : `Archived (${archived.size})`}</button></div>
-      <div class="observation-list">${visible.length ? visible.map((item) => observationCard(item, archived.has(item.id))).join('') : emptyState(info, archived)}</div>`;
-
+      <section class="insights-window-kpis" aria-label="${state.days}-day window snapshot"><div class="insights-kpi"><span>Patterns to review</span><strong data-pattern-count>${active.length}</strong><small>supported in this window</small></div><div class="insights-kpi"><span>Logged days</span><strong>${info.days}<small> / ${state.days}</small></strong><small>${info.consistency}% of calendar days</small></div><div class="insights-kpi"><span>Symptom days</span><strong>${info.symptomDays}</strong><small>days with symptoms</small></div><div class="insights-kpi"><span>Symptom-free days</span><strong>${info.clearDays}</strong><small>comparison baseline days</small></div></section>
+      <section class="insights-findings-card" aria-labelledby="findingsTitle"><div class="findings-card-head"><div><span class="pamet-eyebrow">Pattern summary · ${state.days}-day window</span><h3 id="findingsTitle">${escapeHtml(info.label)}</h3><p>${escapeHtml(info.note)}</p></div><div class="findings-count"><strong>${active.length}</strong><span>${active.length === 1 ? 'pattern' : 'patterns'}</span></div></div>${findings}</section>
+      <section class="tracking-quality-card" aria-labelledby="trackingQualityTitle"><div class="tracking-quality-head"><div><span class="pamet-eyebrow">Tracking quality · last ${state.days} days</span><h3 id="trackingQualityTitle">${escapeHtml(info.level)}</h3><p>Based on how often you logged, how complete those entries were, and whether symptom-free baseline days are available.</p></div><div class="quality-next-step" data-quality-next><span>Most useful next step</span><strong>${escapeHtml(info.next)}</strong></div></div><div class="quality-metrics"><div class="quality-metric" data-quality-metric="consistency"><span>Tracking consistency</span><strong>${info.consistency}%</strong><p>${info.days} of ${state.days} calendar days logged</p><progress max="100" value="${info.consistency}"></progress></div><div class="quality-metric" data-quality-metric="detail"><span>Entry detail</span><strong>${Number(info.c.overall || 0)}%</strong><p>recommended-field coverage on logged entries</p><progress max="100" value="${Number(info.c.overall || 0)}"></progress></div><div class="quality-metric" data-quality-metric="baseline"><span>Baseline mix</span><strong>${info.symptomDays} / ${info.clearDays}</strong><p>symptom days / symptom-free days</p><div class="quality-baseline-note">${info.symptomDays && info.clearDays < 2 ? 'Add ordinary days when applicable for a better baseline.' : 'Helps compare symptom and ordinary days without implying cause.'}</div></div></div><div class="quality-fields-wrap"><div class="quality-fields-head"><div><span class="pamet-eyebrow">Tracking detail coverage</span><h4>What your entries consistently include</h4></div><p>Based only on entries logged in this window.</p></div><div class="quality-fields-grid">${fields}</div></div><p class="quality-footnote">Tracking quality describes journal coverage and balance. It does not measure diagnostic certainty or prove causation.</p></section>
+      <div class="insights-toolbar" aria-label="Insight filters"><div class="insights-categories">${categories.map(([key,label]) => `<button type="button" class="chip-btn${state.category === key ? ' active' : ''}" data-insights-category="${key}" aria-pressed="${state.category === key}">${label}</button>`).join('')}</div><button type="button" class="link-btn archived-toggle" data-insights-archived>${state.showArchived ? 'Back to active observations' : `Archived (${archived.size})`}</button></div><div class="observation-list">${visible.length ? visible.map((item) => observationCard(item, archived.has(item.id))).join('') : emptyState(info, archived)}</div>`;
     window.PametIcons?.hydrate?.();
   }
 
