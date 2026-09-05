@@ -18,17 +18,21 @@ Never expose `METRICS_SECRET` in browser JavaScript, screenshots, tickets, logs,
 
 ## Synthetic alert acceptance
 
-`POST /api/ops/test-alert` uses the same protected metrics authorization and sends a deliberately non-health-data synthetic event to `ALERT_WEBHOOK_URL`.
+`POST /api/ops/test-alert` uses the same protected metrics authorization and emits a deliberately non-health-data synthetic event through every configured alert transport:
+
+- `ALERT_WEBHOOK_URL`, when configured; and/or
+- Grafana Cloud OTLP logs when `GRAFANA_OTLP_ENDPOINT`, `GRAFANA_OTLP_USERNAME`, and `GRAFANA_OTLP_TOKEN` are configured.
 
 The operator acceptance exercise is:
 
-1. Confirm `ALERT_WEBHOOK_URL` and, if used, `ALERT_WEBHOOK_TOKEN` are present in the production secret store.
+1. Confirm at least one production alert transport is configured. Grafana OTLP is sufficient for the synthetic emission step when the matching Grafana alert rule/contact point is active.
 2. Call the protected synthetic-alert endpoint from an authorized administrative/operator environment.
-3. Confirm the intended human/channel receives the alert.
-4. Record delivery time and acknowledgement time in the external readiness evidence.
-5. Do not include the metrics secret or webhook token in the evidence.
+3. Confirm the response lists at least one delivered transport and inspect any partial transport failures.
+4. Confirm the intended human/channel receives the alert.
+5. Record delivery time and acknowledgement time in the external readiness evidence.
+6. Do not include the metrics secret, webhook token, Grafana token, or any health data in the evidence.
 
-A successful HTTP response only proves the destination accepted the request. The external/operator gate remains open until a human confirms receipt and escalation ownership.
+A successful HTTP response proves only that at least one configured transport accepted the synthetic event. It does **not** prove a Grafana rule fired, a contact point delivered, or a human acknowledged it. The external/operator gate remains open until human receipt and escalation ownership are documented.
 
 ## Scheduled job batching
 
@@ -43,4 +47,4 @@ This separate low-frequency pool is an incremental safety step. Long term, datab
 
 ## Alert policy
 
-`alert-thresholds.json` is the source-controlled desired alert policy. Implement the equivalent rules in Grafana (or the selected operator platform), then complete the synthetic delivery test. The file alone is not evidence that Grafana rules are active.
+`alert-thresholds.json` is the source-controlled desired alert policy. Implement the equivalent rules in Grafana (or the selected operator platform), then complete the synthetic delivery test. The file alone is not evidence that Grafana rules or contact points are active.

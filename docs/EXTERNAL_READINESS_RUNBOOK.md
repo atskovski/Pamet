@@ -7,12 +7,14 @@ Pamet cannot close these gates with code alone. Use this runbook to produce audi
 Use a controlled internal account and the smallest real charge your pricing model permits. Record only redacted identifiers and timestamps.
 
 1. Confirm production uses live Stripe price IDs and the live webhook endpoint points at Pamet production.
-2. Create a subscription through the real checkout flow.
-3. Confirm the webhook is received and entitlement changes in Pamet.
-4. Cancel the subscription and confirm entitlement/status transition.
-5. Exercise a failed-payment/recovery path using a controlled Stripe-supported method if appropriate.
-6. Record start/end timestamps, redacted event IDs, observed Pamet plan/status, and operator.
-7. Never paste live secret keys, webhook secrets, card numbers, or health journal content into the evidence file.
+2. Confirm the live webhook subscribes to `customer.subscription.created`, `customer.subscription.updated`, and `customer.subscription.deleted` before starting the run. Pamet uses the `customer.subscription.*` family to synchronize server-owned entitlements.
+3. Create a subscription through the real checkout flow.
+4. Confirm the webhook is received and entitlement changes in Pamet.
+5. Open the billing portal and verify subscription management is available.
+6. Cancel the subscription and confirm entitlement/status transition.
+7. Exercise a failed-payment/recovery path using a controlled Stripe-supported method if appropriate.
+8. Record start/end timestamps, redacted event IDs, observed Pamet plan/status, and operator.
+9. Never paste live secret keys, webhook secrets, card numbers, or health journal content into the evidence file.
 
 Exit criteria: all expected Stripe/Pamet transitions are observed, timestamps are recorded, and no manual database correction was needed.
 
@@ -23,19 +25,24 @@ Exit criteria: all expected Stripe/Pamet transitions are observed, timestamps ar
 3. Point an isolated Pamet test deployment at the restored database.
 4. Validate schema, account count, referential integrity, and a small set of synthetic test records.
 5. Record backup timestamp, incident-detection assumption, restore start/end, validation end, calculated RPO and RTO.
-6. Delete the isolated restore after the drill according to retention policy.
+6. Record provider retention and encryption-at-rest evidence without exposing credentials or user data.
+7. Delete the isolated restore after the drill according to retention policy.
 
 Exit criteria: measured RPO/RTO exist and the restored environment passes the agreed validation checklist.
 
 ## 3. Alert-delivery drill
 
-1. Trigger a synthetic 5xx in a safe non-production path or controlled test deployment.
-2. Trigger a synthetic background-job failure.
-3. Trigger a synthetic webhook failure signal.
-4. Confirm Grafana/log-drain ingestion and human alert delivery.
-5. Record the owner, notification channel, receipt time, acknowledgement time, and escalation path.
+Pamet's protected `POST /api/ops/test-alert` endpoint emits only synthetic non-health-data. It can use a dedicated `ALERT_WEBHOOK_URL`, Grafana Cloud OTLP logs, or both. A successful HTTP response proves only that at least one configured transport accepted the event; it does not prove a Grafana rule/contact point or human recipient received it.
 
-Exit criteria: alerts reach the responsible human and the response runbook identifies who owns each class of incident.
+1. Confirm production `GET /api/platform/capabilities` reports at least one usable operations transport. For Grafana-backed testing, `operations.grafanaOtlp` must be `true`.
+2. Confirm the corresponding Grafana alert rule/contact point (or webhook destination) is configured to route the synthetic event to the intended human/channel.
+3. Call `POST /api/ops/test-alert` with the protected metrics authorization from an operator environment.
+4. Confirm the response lists at least one delivered transport and note any partial transport failure.
+5. Confirm Grafana/log-drain ingestion and human alert delivery.
+6. Record the owner, notification channel, transport, receipt time, acknowledgement time, and escalation path.
+7. Do not record `METRICS_SECRET`, Grafana credentials, webhook credentials, or health data.
+
+Exit criteria: the alert reaches the responsible human and the response runbook identifies who owns each class of incident.
 
 ## 4. Penetration test
 
