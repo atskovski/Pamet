@@ -9,7 +9,8 @@
 
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
-  const WINDOWS = Object.freeze([7, 30, 60, 90]);
+  const WINDOWS = Object.freeze([7, 14, 30, 60, 90, 180, 365]);
+  const FREE_HISTORY_DAYS = 90;
   const categoryLabel = Object.freeze({ symptom: 'Symptoms', lifestyle: 'Lifestyle', medication: 'Medications', sleepstress: 'Sleep / Stress' });
   const planCategories = Object.freeze({
     symptoms: Object.freeze({ selector: '#symptomGrid .sym-btn.selected', plural: 'symptoms' }),
@@ -22,6 +23,8 @@
   const profileId = () => String(S.activeProfile?.id || 'primary');
   const archiveKey = () => `pamet_archived_observations_v1_${profileId()}`;
   const paidComparisons = () => E?.has?.('correlations') === true;
+  const longHistory = () => E?.has?.('unlimitedHistory') === true;
+  const isLongWindow = (days) => Number(days) > FREE_HISTORY_DAYS;
   const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
   const parseDate = (value) => new Date(value);
   const dayKey = (value) => {
@@ -39,6 +42,10 @@
 
   function saveArchived(set) {
     localStorage.setItem(archiveKey(), JSON.stringify([...set]));
+  }
+
+  function normalizeWindowForPlan() {
+    if (isLongWindow(state.days) && !longHistory()) state.days = FREE_HISTORY_DAYS;
   }
 
   function entriesWithin(days) {
@@ -104,11 +111,19 @@
     return `<section class="insights-empty"><span data-pamet-icon="insights"></span><h3>No supported observations${category}</h3><p>${info.days < 3 ? `Keep logging complete entries so Pamet has enough history to summarize inside this ${state.days}-day window.` : `Pamet is not forcing a conclusion from limited or inconsistent data in this ${state.days}-day window. Keep tracking and this view will update as your history changes.`}</p>${archived.size ? '<button type="button" class="link-btn" data-insights-archived>Review archived observations</button>' : ''}</section>`;
   }
 
+  function renderWindowButton(days) {
+    const locked = isLongWindow(days) && !longHistory();
+    const classes = `chip-btn${state.days === days ? ' active' : ''}${locked ? ' history-locked' : ''}`;
+    const lockLabel = locked ? '<span class="insights-window-lock" aria-hidden="true">Pro+</span>' : '';
+    return `<button type="button" data-insights-days="${days}" class="${classes}" aria-pressed="${state.days === days}"${locked ? ' aria-label="' + days + ' days — Pro and Ultra"' : ''}><span>${days} days</span>${lockLabel}</button>`;
+  }
+
   function renderInsights() {
     const screen = $('#screen-patterns');
     const column = screen?.querySelector('.content-col');
     if (!screen || !column) return;
 
+    normalizeWindowForPlan();
     screen.dataset.insightsV15Rendering = 'true';
     column.dataset.pametInsightsController = 'true';
 
@@ -131,8 +146,11 @@
     const helper = paidComparisons()
       ? 'Pamet summarizes repeat relationships in what you record. It does not diagnose conditions or determine what caused a symptom.'
       : 'Free Insights summarizes symptom frequency and trend. Recorded-factor comparisons, What Changed, and medication observations unlock with Pro.';
+    const historyNote = longHistory()
+      ? 'Choose a window from one week through one year. Longer windows can make slow changes easier to compare.'
+      : 'Free includes up to 90 days of history. Pro and Ultra unlock the 180-day and 365-day views.';
 
-    column.innerHTML = `<div class="insights-page-head" data-insights-controller><div><span class="pamet-eyebrow">Observational history</span><h2 class="screen-title">Insights</h2><p class="pamet-helper">${escapeHtml(helper)}</p><p class="insights-window-summary" aria-live="polite">Showing the last <strong>${state.days} days</strong>.</p></div><div class="insights-window" role="group" aria-label="Observation window">${WINDOWS.map((days) => `<button type="button" data-insights-days="${days}" class="chip-btn${state.days === days ? ' active' : ''}" aria-pressed="${state.days === days}">${days} days</button>`).join('')}</div></div>
+    column.innerHTML = `<div class="insights-page-head" data-insights-controller><div><span class="pamet-eyebrow">Observational history</span><h2 class="screen-title">Insights</h2><p class="pamet-helper">${escapeHtml(helper)}</p><p class="insights-window-summary" aria-live="polite">Showing the last <strong>${state.days} days</strong>.</p></div><div class="insights-window-wrap"><div class="insights-window" role="group" aria-label="Observation window">${WINDOWS.map(renderWindowButton).join('')}</div><p class="insights-window-note">${escapeHtml(historyNote)}</p></div></div>
       ${state.status ? `<div class="insights-action-status" role="status">${escapeHtml(state.status)}</div>` : ''}
       <section class="insights-readiness" aria-labelledby="readinessTitle"><div class="readiness-copy"><span class="pamet-eyebrow">Pattern readiness · ${state.days}-day window</span><h3 id="readinessTitle">${escapeHtml(info.label)}</h3><p>${escapeHtml(info.note)}</p></div><div class="readiness-score"><strong>${info.days}</strong><span>logged days in window</span></div></section>
       <section class="completeness-card" aria-labelledby="completenessTitle"><div class="completeness-summary"><span class="pamet-eyebrow">Data quality · last ${state.days} days</span><h3 id="completenessTitle">${escapeHtml(completenessTitle)}</h3><p class="completeness-context"><strong>${info.days} of ${state.days} days logged</strong><span aria-hidden="true">·</span><span>${escapeHtml(completenessCopy)}</span></p><p class="pamet-helper completeness-definition">Completeness measures how fully you filled out the entries you logged. It does not mean you logged every day in this window.</p></div><div class="completeness-grid">${completenessItems.map(([label, value]) => `<div class="completeness-item"><div><span>${escapeHtml(label)}</span><strong>${Number(value || 0)}%</strong></div><div class="mini-meter" aria-hidden="true"><progress max="100" value="${Number(value || 0)}"></progress></div></div>`).join('')}</div></section>
@@ -160,6 +178,10 @@
     if (windowButton) {
       const days = Number(windowButton.dataset.insightsDays);
       if (!WINDOWS.includes(days)) return;
+      if (isLongWindow(days) && !longHistory()) {
+        E?.requireAccess?.({ feature: 'unlimitedHistory', label: 'Long-term Insights' }, event);
+        return;
+      }
       event.preventDefault();
       state.days = days;
       state.expanded.clear();
@@ -286,7 +308,11 @@
     scheduleInsightsRender();
   }
 
-  window.PametInsightsController = Object.freeze({ render: renderInsights, getState: () => ({ days: state.days, category: state.category, showArchived: state.showArchived }) });
+  window.PametInsightsController = Object.freeze({
+    render: renderInsights,
+    getState: () => ({ days: state.days, category: state.category, showArchived: state.showArchived }),
+    windows: () => [...WINDOWS]
+  });
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });
   else boot();
