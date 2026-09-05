@@ -1,8 +1,48 @@
-/* Pamet v1.6.3 — authentication presentation, registration entry point, and rotating brand landscapes. */
+/* Pamet v1.6.9 — authentication presentation, persistent-session preference, registration entry point, and rotating brand landscapes. */
 (function () {
   "use strict";
   const welcome = document.querySelector("#welcome");
+  const A = window.PametAuth;
   if (!welcome) return;
+
+  function ensureRememberMe() {
+    const loginForm = document.querySelector("#loginForm");
+    const submit = loginForm?.querySelector('button[type="submit"]');
+    if (!loginForm || !submit) return;
+
+    let checkbox = loginForm.querySelector("#loginRemember");
+    if (!checkbox) {
+      const row = document.createElement("label");
+      row.className = "remember-me-row";
+      row.htmlFor = "loginRemember";
+
+      checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.id = "loginRemember";
+      checkbox.setAttribute("aria-describedby", "loginRememberHelp");
+
+      const copy = document.createElement("span");
+      copy.className = "remember-me-copy";
+      const title = document.createElement("strong");
+      title.textContent = "Remember me";
+      const help = document.createElement("small");
+      help.id = "loginRememberHelp";
+      help.textContent = "Keep me signed in on this device for 30 days. Don’t use this on a shared device.";
+      copy.append(title, help);
+      row.append(checkbox, copy);
+      submit.insertAdjacentElement("beforebegin", row);
+
+      const rememberedEmail = A?.getRememberedEmail?.();
+      const email = document.querySelector("#loginEmail");
+      if (rememberedEmail && email) {
+        email.value = rememberedEmail;
+        checkbox.checked = true;
+      }
+    }
+
+    const secure = document.querySelector("#welcomeSecure");
+    if (secure && A?.isSecure) secure.textContent = "🔒 Sign-in uses a secure session. Pamet does not save your plain-text password in the browser.";
+  }
 
   function ensureRegistrationEntry() {
     const loginForm = document.querySelector("#loginForm");
@@ -42,6 +82,17 @@
     createLink.hidden = false;
     createLink.removeAttribute("hidden");
     createLink.setAttribute("aria-label", "Create a new Pamet account");
+    ensureRememberMe();
+  }
+
+  if (A?.login && !A.__rememberMeLoginWrapped) {
+    const originalLogin = A.login.bind(A);
+    A.__rememberMeLoginWrapped = true;
+    A.login = function loginWithRememberPreference(email, password, options = {}) {
+      const checkbox = document.querySelector("#loginRemember");
+      const rememberMe = Object.prototype.hasOwnProperty.call(options, "rememberMe") ? !!options.rememberMe : !!checkbox?.checked;
+      return originalLogin(email, password, { ...options, rememberMe });
+    };
   }
 
   const scenes = ["login-sunrise.jpg", "login-dusk.jpg", "login-morning.jpg"];
