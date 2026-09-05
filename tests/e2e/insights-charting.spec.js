@@ -81,7 +81,10 @@ test('@production Pro Patterns charting moves from simple frequency to advanced 
   await expect(chart.locator('.insights-chart-svg')).toBeVisible();
   await expect(chart.locator('.chart-summary-grid')).toBeVisible();
   await expect(chart.locator('.chart-method-note')).toContainText('Missing days remain missing');
-  await expect(chart.locator('[data-chart-symptom] option')).toContainText(['Any symptom','Headache','Fatigue']);
+  const symptomSelect = chart.locator('[data-chart-symptom]');
+  await expect(symptomSelect.locator('option', { hasText:'Any symptom' })).toHaveCount(1);
+  await expect(symptomSelect.locator('option', { hasText:'Headache' })).toHaveCount(1);
+  await expect(symptomSelect.locator('option', { hasText:'Fatigue' })).toHaveCount(1);
 
   await page.locator('[data-insights-days="30"]').click();
   await expect(chart).toHaveAttribute('data-chart-window','30');
@@ -100,7 +103,7 @@ test('@production Pro Patterns charting moves from simple frequency to advanced 
   await expect(chart.locator('.chart-series-secondary')).toBeVisible();
   await expect(chart.locator('.chart-series-trend')).toBeVisible();
 
-  await chart.locator('[data-chart-symptom]').selectOption({ label:/Headache/ });
+  await chart.locator('[data-chart-symptom]').selectOption('Headache');
   await expect(chart.locator('#insightsChartTitle')).toHaveText('Recorded sleep');
   await expect(chart.locator('.legend-secondary')).toContainText('Headache days');
   await expect(chart.locator('.advanced-comparison-head h4')).toContainText('Headache days compared with other logged days');
