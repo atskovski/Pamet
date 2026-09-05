@@ -66,7 +66,7 @@ test('@production Patterns windows, finding details, evidence, archive actions, 
   await expect(page.locator('#screen-patterns .insights-findings-card .pamet-eyebrow')).toContainText('7-day window');
   await expect(page.locator('[data-insights-days="180"]')).toHaveClass(/history-locked/);
   await expect(page.locator('[data-insights-days="365"]')).toHaveClass(/history-locked/);
-  await expect(page.locator('#screen-patterns [data-pattern-count]')).toHaveText('1');
+  await expect(page.locator('#screen-patterns [data-pattern-count]')).toHaveText('0');
 
   for (const days of [14, 30, 60, 90, 7]) {
     await page.locator(`[data-insights-days="${days}"]`).click();
@@ -81,17 +81,19 @@ test('@production Patterns windows, finding details, evidence, archive actions, 
   await expect(page.locator('[data-insights-days="7"]')).toHaveClass(/active/);
   await page.locator('[data-entitlement-close]').click();
 
+  await page.locator('[data-insights-days="30"]').click();
+  await expect(page.locator('#screen-patterns [data-pattern-count]')).toHaveText('1');
   const preview = page.locator('#screen-patterns .finding-preview').first();
   await expect(preview).toBeVisible();
   await expect(preview).toContainText('Headache is your most frequently recorded symptom');
-  await expect(preview).toContainText('1 supporting entry');
-  await preview.click();
+  await expect(preview).toContainText('2 supporting entries');
 
   const card = page.locator('#screen-patterns .observation-card').first();
   await expect(card).toBeVisible();
+  await card.locator('[data-observation-evidence]').click();
   await expect(card.locator('.observation-evidence')).toBeVisible();
   await expect(card.locator('.observation-evidence')).toContainText('Why Pamet surfaced this');
-  await expect(card.locator('.observation-evidence')).toContainText('7-day window');
+  await expect(card.locator('.observation-evidence')).toContainText('30-day window');
 
   await card.locator('[data-observation-archive]').click();
   await expect(page.locator('#screen-patterns .insights-action-status')).toContainText('Observation archived');
