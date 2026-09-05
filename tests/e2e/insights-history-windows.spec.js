@@ -38,16 +38,16 @@ async function installSession(page, testInfo) {
   }, { id });
 }
 
-async function seedOneYear(page) {
+async function seedHistory360(page) {
   await page.evaluate(() => {
     const store = window.PametStore;
     store._entries = [];
     const now = new Date();
     now.setHours(12, 0, 0, 0);
-    for (let offset = 364; offset >= 0; offset -= 1) {
+    for (let offset = 359; offset >= 0; offset -= 1) {
       const date = new Date(now);
       date.setDate(date.getDate() - offset);
-      const sequence = 365 - offset;
+      const sequence = 360 - offset;
       const symptomFree = sequence % 11 === 0;
       const headache = !symptomFree && sequence % 3 === 0;
       const fatigue = !symptomFree && sequence % 2 === 0;
@@ -69,14 +69,14 @@ async function seedOneYear(page) {
         mood:headache ? 'Tired 😴' : 'Okay 😐',
         activity:jointPain ? 'Cycling' : 'Walk',
         medications:headache ? ['Ibuprofen'] : [],
-        notes:`One-year Insights fixture day ${sequence}`
+        notes:`360-day Insights fixture day ${sequence}`
       });
     }
     store.persistEntries();
   });
 }
 
-test('@production Pro Insights supports every 7–365 day history window and normalizes safely after downgrade', async ({ page }, testInfo) => {
+test('@production Pro Insights supports every 7–360 day history window, keeps charts synchronized, and normalizes safely after downgrade', async ({ page }, testInfo) => {
   await installSession(page, testInfo);
   let verifiedPlan = 'pro';
 
@@ -91,14 +91,15 @@ test('@production Pro Insights supports every 7–365 day history window and nor
   await page.goto('/', { waitUntil:'commit' });
   await page.waitForFunction(() => window.PametEntitlements?.snapshot?.().verified === true);
   await expect.poll(async () => page.evaluate(() => window.PametEntitlements.snapshot().plan)).toBe('pro');
-  await seedOneYear(page);
+  await seedHistory360(page);
   await page.locator('[data-tab="patterns"]').click();
 
-  await expect.poll(async () => page.evaluate(() => window.PametInsightsController?.windows?.())).toEqual([7,14,30,60,90,180,365]);
+  await expect.poll(async () => page.evaluate(() => window.PametInsightsController?.windows?.())).toEqual([7,14,30,60,90,180,360]);
   await expect(page.locator('#screen-patterns [data-insights-days]')).toHaveCount(7);
   await expect(page.locator('#screen-patterns .history-locked')).toHaveCount(0);
 
-  for (const days of [7,14,30,60,90,180,365]) {
+  const expectedBucketDays = new Map([[7,1],[14,1],[30,3],[60,7],[90,10],[180,14],[360,30]]);
+  for (const days of [7,14,30,60,90,180,360]) {
     await page.locator(`[data-insights-days="${days}"]`).click();
     await expect(page.locator(`[data-insights-days="${days}"]`)).toHaveClass(/active/);
     await expect(page.locator('#screen-patterns .insights-window-summary')).toContainText(`last ${days} days`);
@@ -108,6 +109,10 @@ test('@production Pro Insights supports every 7–365 day history window and nor
     await expect(loggedDays.locator('strong')).toContainText(`${days} / ${days}`);
     await expect(loggedDays).toContainText('100% of calendar days');
     await expect(page.locator('#screen-patterns [data-quality-metric="consistency"] strong')).toHaveText('100%');
+    const chart = page.locator('#screen-patterns .insights-chart-card');
+    await expect(chart).toHaveAttribute('data-chart-window', String(days));
+    await expect(chart).toHaveAttribute('data-chart-bucket-days', String(expectedBucketDays.get(days)));
+    await expect(chart.locator('.insights-chart-svg')).toBeVisible();
   }
 
   const windowLayout = await page.locator('#screen-patterns .insights-window').evaluate((element) => ({
@@ -123,7 +128,8 @@ test('@production Pro Insights supports every 7–365 day history window and nor
   await expect.poll(async () => page.evaluate(() => window.PametEntitlements.snapshot().plan)).toBe('free');
   await expect(page.locator('[data-insights-days="90"]')).toHaveClass(/active/);
   await expect(page.locator('[data-insights-days="180"]')).toHaveClass(/history-locked/);
-  await expect(page.locator('[data-insights-days="365"]')).toHaveClass(/history-locked/);
+  await expect(page.locator('[data-insights-days="360"]')).toHaveClass(/history-locked/);
   await expect(page.locator('#screen-patterns .insights-window-summary')).toContainText('last 90 days');
   await expect(page.locator('#screen-patterns .tracking-quality-head .pamet-eyebrow')).toContainText('last 90 days');
+  await expect(page.locator('#screen-patterns .insights-chart-card')).toHaveAttribute('data-chart-mode-current', 'basic');
 });
