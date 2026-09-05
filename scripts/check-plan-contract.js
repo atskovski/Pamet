@@ -7,6 +7,7 @@ const mobile = JSON.parse(fs.readFileSync('contracts/mobile-api.json', 'utf8'));
 const server = fs.readFileSync('server.js', 'utf8');
 const comparison = fs.readFileSync('js/plan-comparison.js', 'utf8');
 const main = fs.readFileSync('js/main.js', 'utf8');
+const authenticated = fs.readFileSync('js/authenticated-features.js', 'utf8');
 const guard = fs.readFileSync('js/entitlement-guard.js', 'utf8');
 const insights = fs.readFileSync('js/insights.js', 'utf8');
 
@@ -65,10 +66,17 @@ check(guard.includes("longitudinal:Object.freeze({ plans:Object.freeze(['ultra']
 check(guard.includes("included:'Pro and Ultra'") && guard.includes("included:'Ultra'") && guard.includes('See Pro &amp; Ultra'), 'Locked paid controls must render plan-aware upgrade copy instead of opening the feature.');
 check(guard.includes("wrapPublicMethod(window.PametCareUx, 'openAppointmentWorkspace'") && guard.includes("wrapPublicMethod(window.PametPhase2, 'manageProfiles'"), 'Public paid-feature helpers must not bypass the same entitlement boundary.');
 
-const billingIndex = main.indexOf('import "./billing-sharing.js";');
+/* Performance split strengthens the entitlement boundary: the guard is installed
+ * eagerly before any paid feature code can be injected. Billing/Insights remain
+ * ordered inside the deferred feature bundle for their legacy dependency chain. */
 const guardIndex = main.indexOf('import "./entitlement-guard.js";');
-const insightsIndex = main.indexOf('import "./insights.js";');
-check(billingIndex >= 0 && guardIndex > billingIndex && insightsIndex > guardIndex, 'Entitlement guard must load after legacy billing hooks and before paid Insight rendering.');
+const featureLoaderIndex = main.indexOf('function loadAuthenticatedFeatures()');
+const billingIndex = authenticated.indexOf('import "./billing-sharing.js";');
+const insightsIndex = authenticated.indexOf('import "./insights.js";');
+check(guardIndex >= 0 && featureLoaderIndex > guardIndex, 'Entitlement guard must install before authenticated feature loading can begin.');
+check(!main.includes('import "./billing-sharing.js";') && !main.includes('import "./insights.js";'), 'Paid billing and Insight rendering must remain outside the signed-out bootstrap.');
+check(billingIndex >= 0 && insightsIndex > billingIndex, 'Deferred billing hooks must initialize before paid Insight rendering.');
+check(main.includes("window.addEventListener(eventName, () => loadAuthenticatedFeatures()") && main.includes("if (window.PametAuth?.isAuthed?.()) loadAuthenticatedFeatures()"), 'Authenticated feature loading must be session-gated.');
 check(insights.includes('if (!paidComparisons()) return observations;'), 'Free Insights must stop before recorded-factor comparison generation.');
 check(insights.includes("E?.has?.('medicationTiming') === true"), 'Medication observations must require the Pro/Ultra entitlement.');
 
