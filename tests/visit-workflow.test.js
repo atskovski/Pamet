@@ -1,5 +1,6 @@
 'use strict';
 
+const fs = require('node:fs');
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { createVisitBriefPdf } = require('../lib/visit-brief-pdf');
@@ -53,6 +54,19 @@ test('Google Calendar event is private, deterministic, and carries the Pamet rem
   assert.deepEqual(event.reminders.overrides, [{method:'popup',minutes:1440}]);
   assert.equal(event.extendedProperties.private.pametAppointmentId, appointment.id);
   assert.match(event.description, /headache review/);
+});
+
+test('Appointment Workspace saves locally first, auto-syncs, and offers calendar actions only on saved visits', () => {
+  const source = fs.readFileSync('js/care-ux.js','utf8');
+  assert.match(source, /pamet_saved_appointments_v160_/);
+  assert.match(source, /data-care-save-status/);
+  assert.match(source, /Appointment saved to Upcoming and saved visits/);
+  assert.match(source, /Secure account sync will continue automatically/);
+  assert.match(source, /syncPending/);
+  assert.match(source, /data-calendar-enhanced="true"/);
+  assert.match(source, /Google Calendar/);
+  assert.match(source, /Apple Calendar/);
+  assert.doesNotMatch(source, /Retry secure sync|careRetrySync|Secure appointment sync is still disconnected/);
 });
 
 test('Direct Google Calendar OAuth remains disabled until explicitly enabled', () => {
