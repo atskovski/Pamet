@@ -3,7 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { createVisitBriefPdf } = require('../lib/visit-brief-pdf');
-const { buildIcs, googleEvent, signedCalendarState, readCalendarState, sendVisitBriefEmail } = require('../routes/visit-workflow');
+const { buildIcs, googleEvent, signedCalendarState, readCalendarState, sendVisitBriefEmail, calendarConfig } = require('../routes/visit-workflow');
 
 const appointment = {
   id:'123e4567-e89b-12d3-a456-426614174000',
@@ -53,6 +53,29 @@ test('Google Calendar event is private, deterministic, and carries the Pamet rem
   assert.deepEqual(event.reminders.overrides, [{method:'popup',minutes:1440}]);
   assert.equal(event.extendedProperties.private.pametAppointmentId, appointment.id);
   assert.match(event.description, /headache review/);
+});
+
+test('Direct Google Calendar OAuth remains disabled until explicitly enabled', () => {
+  const previous = {
+    flag:process.env.GOOGLE_CALENDAR_ENABLED,
+    client:process.env.GOOGLE_OAUTH_CLIENT_ID,
+    secret:process.env.GOOGLE_OAUTH_CLIENT_SECRET,
+    state:process.env.OAUTH_STATE_SECRET
+  };
+  try {
+    process.env.GOOGLE_OAUTH_CLIENT_ID='client';
+    process.env.GOOGLE_OAUTH_CLIENT_SECRET='secret';
+    process.env.OAUTH_STATE_SECRET='0123456789abcdef0123456789abcdef0123456789abcdef';
+    delete process.env.GOOGLE_CALENDAR_ENABLED;
+    assert.equal(calendarConfig('https://pamet.example').googleEnabled,false);
+    process.env.GOOGLE_CALENDAR_ENABLED='true';
+    assert.equal(calendarConfig('https://pamet.example').googleEnabled,true);
+  } finally {
+    if(previous.flag===undefined)delete process.env.GOOGLE_CALENDAR_ENABLED;else process.env.GOOGLE_CALENDAR_ENABLED=previous.flag;
+    if(previous.client===undefined)delete process.env.GOOGLE_OAUTH_CLIENT_ID;else process.env.GOOGLE_OAUTH_CLIENT_ID=previous.client;
+    if(previous.secret===undefined)delete process.env.GOOGLE_OAUTH_CLIENT_SECRET;else process.env.GOOGLE_OAUTH_CLIENT_SECRET=previous.secret;
+    if(previous.state===undefined)delete process.env.OAUTH_STATE_SECRET;else process.env.OAUTH_STATE_SECRET=previous.state;
+  }
 });
 
 test('Google Calendar OAuth state is signed and tamper-evident', () => {
