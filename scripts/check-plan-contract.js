@@ -73,14 +73,14 @@ check(comparison.includes('Compare all plans'), 'Settings must offer a clear ful
 check(comparison.includes('Upgrade to Pro or Ultra') && comparison.includes('Upgrade to Ultra'), 'Settings must let Free choose Pro or Ultra while Pro advances to Ultra.');
 check(comparison.includes('Compare all plan features'), 'Legacy upgrade chooser must still link to the full comparison when invoked elsewhere.');
 check(comparison.includes('/dist/pamet.plan-matrix.min.js'), 'Full plan matrix must stay deferred from the authenticated critical bundle.');
-check(comparison.includes('pamet-features-js') && comparison.includes('?release='), 'Deferred plan matrix must use the current release token so stale service-worker cache cannot pin old upgrade UI.');
+check(comparison.includes('/dist/pamet.plan-matrix.min.js?v=1694'), 'Deferred plan matrix must use the hotfix cache key so stale service-worker cache cannot pin old upgrade UI.');
 check(matrix.includes('Compare all Pamet features'), 'Deferred matrix must present the complete Pamet comparison heading.');
 check(matrix.includes('data-plan-matrix-back') && matrix.includes('Back to Manage your plan'), 'Full comparison must provide a back path to Manage your plan.');
 check(matrix.includes('data-plan-matrix-upgrade="pro"') && matrix.includes('data-plan-matrix-upgrade="ultra"'), 'Free comparison must provide direct Pro and Ultra upgrade actions.');
 check(!matrix.includes('PAMET PLAN CATALOG') && !matrix.includes('canonical plan catalog'), 'Customer-facing plan comparison must not expose internal catalog implementation language.');
 check(matrix.includes('PametPlanCatalog') && comparison.includes('PametPlanCatalog'), 'Plan comparison surfaces must use the canonical generated catalog internally.');
 check(managementLoader.includes('/dist/pamet.plan-management.min.js'), 'Paid account management must stay deferred from the critical feature bundle.');
-check(managementLoader.includes('pamet-features-js') && managementLoader.includes('?release='), 'Deferred plan management must use the current release token so stale service-worker cache cannot pin old upgrade UI.');
+check(managementLoader.includes('/dist/pamet.plan-management.min.js?v=1694'), 'Deferred plan management must use the hotfix cache key so stale service-worker cache cannot pin old upgrade UI.');
 check(management.includes('#upgradeBtn') && management.includes('["pro", "ultra"]') && management.includes('Upgrade to Pro or Ultra') && management.includes('Manage billing'), 'Manage your plan must offer both paid tiers to Free while reserving billing management for paid accounts.');
 check(management.includes('body: JSON.stringify({ plan: targetKey, interval, checkoutAttemptId: attempt })'), 'Free checkout must use the selected Pro or Ultra tier instead of hard-coding Pro.');
 check(management.includes('featureSection(from, { current: true })') && management.includes('plan-management-upgrade-grid'), 'Upgrade views must show the current plan together with complete target-plan feature sections.');
