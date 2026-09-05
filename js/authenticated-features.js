@@ -20,7 +20,7 @@ import "./insights.js";
 import "./interaction-controller.js";
 import "./experience.js";
 import "./care-ux.js";
-import "./visit-workflow.js";
+import "./visit-workflow-loader.js";
 import "./advanced-visit-brief.js";
 import "./ui-ux.js";
 import "./care-sharing-enhancements.js";
