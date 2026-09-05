@@ -50,6 +50,9 @@
   letter-spacing:.02em;
   line-height:1;
 }
+.insights-window-lock::before{
+  content:"\00a0";
+}
 .insights-window-note{
   margin:0;
   color:var(--text-tertiary,var(--ink-muted));
