@@ -304,3 +304,49 @@
     margin-top:.75rem!important;
   }
 }
+
+/* Settings cleanup: keep technical internals out of customer-facing surfaces. */
+#pametPlanMatrixDialog .plan-matrix-foot > span{
+  display:none!important;
+}
+#pametPlanMatrixDialog .plan-matrix-foot{
+  justify-content:flex-end;
+}
+#pametPlanMatrixDialog .plan-matrix-foot:not(:has([data-plan-matrix-manage])){
+  display:none;
+}
+
+/* Keep data portability internals available to the app, but remove raw format choices from Settings. */
+.settings-card:has(#changePasswordBtn) #exportCsv,
+.settings-card:has(#changePasswordBtn) #exportJson{
+  display:none!important;
+}
+.settings-card:has(#changePasswordBtn) .settings-section{
+  font-size:0;
+  letter-spacing:0;
+}
+.settings-card:has(#changePasswordBtn) .settings-section::after{
+  content:"Account";
+  color:var(--text-tertiary);
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.6px;
+  text-transform:uppercase;
+}
+
+/* Treat the security explanation as part of the same card reading flow. */
+#securityCard .security-note{
+  max-width:72ch;
+  margin:.15rem 12px 12px!important;
+  padding:.85rem 0 0!important;
+  border-top:1px solid var(--border-color,var(--line));
+  text-align:left;
+  text-wrap:pretty;
+}
+
+@media(max-width:620px){
+  #securityCard .security-note{
+    margin:.1rem 12px 12px!important;
+    padding-top:.75rem!important;
+  }
+}

@@ -191,7 +191,7 @@ test('@production Log counters react to selections while preserving custom-field
   await expect(page.locator('#pametLogPlanTitle')).toContainText('reached the Free limit');
 });
 
-test('@production Reward badge and Security note stay centered and aligned', async ({ page }, testInfo) => {
+test('@production Reward badge and Settings cleanup stay centered and aligned', async ({ page }, testInfo) => {
   await startSyntheticFreeSession(page, testInfo);
 
   const badge = page.locator('#pametCurrentTier .logging-current-badge');
@@ -214,8 +214,23 @@ test('@production Reward badge and Security note stay centered and aligned', asy
   await expect(note).toBeVisible();
   const alignment = await note.evaluate((element) => {
     const style = getComputedStyle(element);
-    return { marginLeft: style.marginLeft, textAlign: style.textAlign };
+    return {
+      marginLeft: style.marginLeft,
+      marginRight: style.marginRight,
+      textAlign: style.textAlign,
+      borderTopWidth: style.borderTopWidth,
+      paddingTop: Number.parseFloat(style.paddingTop)
+    };
   });
-  expect(alignment.marginLeft).toBe('0px');
+  expect(alignment.marginLeft).toBe('12px');
+  expect(alignment.marginRight).toBe('12px');
   expect(alignment.textAlign).toBe('left');
+  expect(alignment.borderTopWidth).toBe('1px');
+  expect(alignment.paddingTop).toBeGreaterThan(8);
+
+  const accountCard = page.locator('.settings-card', { has: page.locator('#changePasswordBtn') });
+  await expect(accountCard.locator('#exportCsv')).toBeHidden();
+  await expect(accountCard.locator('#exportJson')).toBeHidden();
+  const accountLabel = await accountCard.locator('.settings-section').evaluate((element) => getComputedStyle(element, '::after').content);
+  expect(accountLabel.replace(/["']/g, '')).toBe('Account');
 });
