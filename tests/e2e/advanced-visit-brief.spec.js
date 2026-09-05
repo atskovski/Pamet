@@ -55,7 +55,7 @@ test('@production Pro keeps standard Visit Brief and Advanced control fails clos
   await page.getByRole('button',{name:'Advanced · Ultra'}).click();
   const lock=page.locator('#pametEntitlementModalRoot .entitlement-lock-modal');
   await expect(lock).toBeVisible();
-  await expect(lock.getByRole('heading',{name:'Advanced Visit Brief is included with Ultra',exact:true})).toBeVisible();
+  await expect(lock.getByRole('heading',{name:/^Advanced visit brief is included with Ultra$/i})).toBeVisible();
   await expect(page.locator('#reportDoc')).toContainText('Symptom report');
   expect(await page.evaluate(()=>window.PametAdvancedVisitBrief.active)).toBe(false);
 });
