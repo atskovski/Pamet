@@ -11,7 +11,7 @@
 
     pending = new Promise((resolve, reject) => {
       const script = document.createElement("script");
-      script.src = "/dist/pamet.plan-management.min.js";
+      script.src = "/dist/pamet.plan-management.min.js?v=1694";
       script.async = true;
       script.addEventListener(
         "load",
