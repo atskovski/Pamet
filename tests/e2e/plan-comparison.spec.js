@@ -82,6 +82,8 @@ test('@production Settings plan actions, legal version, and Free Pro-or-Ultra up
   await expect(upgradeCards).toHaveCount(2);
   await expect(upgradeCards.nth(0)).toContainText('Pro · Understand');
   await expect(upgradeCards.nth(1)).toContainText('Ultra · Prepare');
+  await expect(upgradeCards.nth(0).locator('li')).toHaveCount(14);
+  await expect(upgradeCards.nth(1).locator('li')).toHaveCount(18);
   await expect(modal.getByRole('button', { name: 'Upgrade to Pro', exact: true })).toBeVisible();
   await expect(modal.getByRole('button', { name: 'Upgrade to Ultra', exact: true })).toBeVisible();
 
@@ -95,6 +97,16 @@ test('@production Settings plan actions, legal version, and Free Pro-or-Ultra up
   expect(modalBox.y + modalBox.height).toBeLessThanOrEqual(viewport.height + 1);
 
   await modal.getByRole('button', { name: 'Back to Manage your plan' }).click();
+  await expect(modal.getByRole('heading', { name: 'Manage your plan' })).toBeVisible();
+
+  await modal.getByRole('button', { name: 'Compare all Pamet features' }).click();
+  const matrix = page.locator('#pametPlanMatrixDialog');
+  await expect(matrix).toBeVisible();
+  await expect(matrix.getByRole('button', { name: 'Back to Manage your plan' })).toBeVisible();
+  await expect(matrix.getByRole('button', { name: 'Upgrade to Pro', exact: true })).toBeVisible();
+  await expect(matrix.getByRole('button', { name: 'Upgrade to Ultra', exact: true })).toBeVisible();
+  await matrix.getByRole('button', { name: 'Back to Manage your plan' }).click();
+  await expect(modal).toBeVisible();
   await expect(modal.getByRole('heading', { name: 'Manage your plan' })).toBeVisible();
 
   if (testInfo.project.name.includes('mobile')) {
