@@ -2,6 +2,7 @@
 
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const { spawnSync } = require('node:child_process');
 const test = require('node:test');
 
 test('production architecture keeps signed-out startup split and measurable', () => {
@@ -39,6 +40,19 @@ test('hot-path database and telemetry amplification are bounded', () => {
   assert.match(telemetry, /maxBatch = 32/);
   assert.match(telemetry, /resourceMetrics/);
   assert.match(telemetry, /resourceLogs/);
+});
+
+test('production preload actually installs the database and telemetry wrappers', () => {
+  const program = [
+    "const mysql=require('mysql2/promise');",
+    'const poolBefore=mysql.createPool;',
+    'const fetchBefore=global.fetch;',
+    "require('./lib/performance-bootstrap');",
+    'if(mysql.createPool===poolBefore) process.exit(21);',
+    'if(global.fetch===fetchBefore) process.exit(22);'
+  ].join('');
+  const result = spawnSync(process.execPath, ['-e', program], { cwd: process.cwd(), encoding: 'utf8' });
+  assert.equal(result.status, 0, result.stderr || result.stdout || `bootstrap exited ${result.status}`);
 });
 
 test('derived journal analytics are memoized without changing the store contract', () => {
