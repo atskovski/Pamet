@@ -5,6 +5,7 @@
 import "./home-dashboard.js";
 import "./home-dashboard-lifecycle.js";
 import "./plan-comparison.js";
+import "./plan-management.js";
 import "./billing-sharing.js";
 import "./observation-engine.js";
 import "./log-experience.js";
