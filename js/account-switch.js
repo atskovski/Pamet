@@ -6,13 +6,13 @@
   if (!A || !S) return;
 
   const originalLogin = A.login.bind(A);
-  A.login = async function guardedLogin(email, password) {
+  A.login = async function guardedLogin(email, password, options) {
     const existing = A.getUser && A.getUser();
     const normalized = String(email || "").trim().toLowerCase();
     if (existing && !A.isAuthed() && String(existing.email || "").toLowerCase() !== normalized) {
       throw new Error("This browser still contains local Pamet data for another account. Choose “Use a different account” first so health data is not mixed between accounts.");
     }
-    return originalLogin(email, password);
+    return originalLogin(email, password, options);
   };
 
   function initialize() {
