@@ -14,11 +14,15 @@ Pamet supports optional server-side Google and Sign in with Apple authentication
 
 ## Production callback URLs
 
-Google:
+Google sign-in:
 
 `https://pamet.wasmer.app/api/auth/oauth/google/callback`
 
-Apple:
+Optional direct Google Calendar add:
+
+`https://pamet.wasmer.app/api/calendar/google/callback`
+
+Apple sign-in:
 
 `https://pamet.wasmer.app/api/auth/oauth/apple/callback`
 
@@ -32,6 +36,7 @@ Google requires:
 
 - `GOOGLE_OAUTH_CLIENT_ID`
 - `GOOGLE_OAUTH_CLIENT_SECRET`
+- `GOOGLE_CALENDAR_ENABLED=true` only after the optional direct Calendar integration is fully configured
 
 Apple requires:
 
@@ -54,6 +59,22 @@ The login page only shows a provider when every required value for that provider
 
 Pamet requests only `openid email profile` for sign-in.
 
+### Optional Google Calendar direct add
+
+Appointment Workspace works without Google Calendar API credentials: Pamet can open a prefilled Google Calendar event for the user to review and save. Direct insertion is a separate opt-in capability and remains disabled unless `GOOGLE_CALENDAR_ENABLED=true`.
+
+Before enabling direct insertion:
+
+1. Enable **Google Calendar API** in the same Google Cloud project.
+2. Add the exact redirect URI:
+   `https://pamet.wasmer.app/api/calendar/google/callback`
+3. Ensure the OAuth consent screen is allowed to request `https://www.googleapis.com/auth/calendar.events`.
+4. Complete any Google verification required for the production consent screen and requested scope.
+5. Set `GOOGLE_CALENDAR_ENABLED=true` in the production deployment only after the steps above are complete.
+6. Test with a non-production account before enabling broadly.
+
+Pamet requests the narrow `calendar.events` permission for this flow. The access token is used only to insert the selected Appointment Workspace event into the user's primary Google Calendar and is not stored by Pamet.
+
 ## Apple configuration
 
 1. In the Apple Developer account, enable **Sign in with Apple** on the primary App ID associated with Pamet.
@@ -63,6 +84,8 @@ Pamet requests only `openid email profile` for sign-in.
 4. Create a Sign in with Apple private key and record its Key ID.
 5. Store the Services ID, Team ID, Key ID, and downloaded `.p8` private key in the Wasmer production secrets named above.
 6. Keep the `.p8` key private; it must never be committed to GitHub.
+
+Appointment Workspace does not need Apple OAuth credentials to create an Apple Calendar handoff. Pamet generates a standards-based `.ics` file containing the saved appointment and reminder; the user explicitly confirms adding that event in Apple Calendar.
 
 ## Database migration
 
@@ -86,6 +109,8 @@ After secrets and the migration are applied:
 6. Replayed or browser-mismatched OAuth state is rejected.
 7. Signing in to a different account while local data belongs to another user is blocked until **Use a different account** clears the local identity/data boundary.
 8. Email/password login, password reset, and **Create an account** still work.
+9. With `GOOGLE_CALENDAR_ENABLED=false`, Appointment Workspace opens a prefilled Google Calendar event instead of attempting Calendar OAuth.
+10. With direct Calendar integration configured and enabled, the saved appointment is added with private visibility and the configured reminder, and Pamet does not retain the Google access token.
 
 ## What cannot be committed
 
