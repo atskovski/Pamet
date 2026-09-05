@@ -16,7 +16,8 @@ async function startSyntheticFreeSession(page, testInfo) {
     localStorage.setItem('pamet_user_v1', JSON.stringify(user));
     localStorage.setItem('pamet_session_v2', JSON.stringify({ token: `interaction-session-${id}`, at: Date.now() }));
   }, { id: unique });
-  await page.goto('/', { waitUntil: 'domcontentloaded' });
+  await page.goto('/', { waitUntil: 'commit' });
+  await page.waitForFunction(() => typeof window.PametLoadAuthenticatedFeatures === 'function');
   await expect(page.locator('#welcome')).toHaveClass(/hidden/);
   await expect(page.locator('#screen-home')).toHaveClass(/active/);
 }
