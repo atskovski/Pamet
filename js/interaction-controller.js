@@ -4,12 +4,13 @@
 
   const S = window.PametStore;
   const BaseInsights = window.PametInsights;
+  const Charts = window.PametInsightsCharts;
   const E = window.PametEntitlements;
-  if (!S || !BaseInsights?.buildObservations || !BaseInsights?.coverage) return;
+  if (!S || !BaseInsights?.buildObservations || !BaseInsights?.coverage || !Charts?.render) return;
 
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
-  const WINDOWS = Object.freeze([7, 14, 30, 60, 90, 180, 365]);
+  const WINDOWS = Object.freeze([7, 14, 30, 60, 90, 180, 360]);
   const FREE_HISTORY_DAYS = 90;
   const categoryLabel = Object.freeze({ symptom: 'Symptoms', lifestyle: 'Lifestyle', medication: 'Medications', sleepstress: 'Sleep / Stress' });
   const planCategories = Object.freeze({
@@ -19,7 +20,7 @@
     meds: Object.freeze({ selector: '#medFlow .chip.selected', plural: 'medications' })
   });
 
-  const state = { days: 7, category: 'all', showArchived: false, expanded: new Set(), status: '' };
+  const state = { days: 7, category: 'all', showArchived: false, expanded: new Set(), status: '', chartMode: 'basic', chartMetric: 'frequency', chartSymptom: 'all' };
   const profileId = () => String(S.activeProfile?.id || 'primary');
   const archiveKey = () => `pamet_archived_observations_v1_${profileId()}`;
   const paidComparisons = () => E?.has?.('correlations') === true;
@@ -47,6 +48,7 @@
 
   function normalizeWindowForPlan() {
     if (isLongWindow(state.days) && !longHistory()) state.days = FREE_HISTORY_DAYS;
+    if (!paidComparisons() && state.chartMode === 'advanced') state.chartMode = 'basic';
   }
 
   function entriesWithin(days) {
@@ -110,6 +112,7 @@
     if (!screen || !column) return;
     normalizeWindowForPlan();
     screen.dataset.insightsV15Rendering = 'true';
+    screen.dataset.insightsCharting = 'true';
     column.dataset.pametInsightsController = 'true';
 
     const entries = entriesWithin(state.days);
@@ -121,13 +124,15 @@
     const info = insightSummary(entries, active);
     const categories = paidComparisons() ? [['all','All'],['symptom','Symptoms'],['lifestyle','Lifestyle'],['medication','Medications'],['sleepstress','Sleep / Stress']] : [['all','All'],['symptom','Symptoms']];
     const helper = paidComparisons() ? 'Pamet summarizes repeat relationships in what you record. It does not diagnose conditions or determine what caused a symptom.' : 'Free Insights summarizes symptom frequency and trend. Recorded-factor comparisons and medication observations unlock with Pro.';
-    const historyNote = longHistory() ? 'Choose a window from one week through one year. Longer windows can make slow changes easier to compare.' : 'Free includes up to 90 days of history. Pro and Ultra unlock 180-day and 365-day views.';
+    const historyNote = longHistory() ? 'Choose a window from 7 through 360 days. Longer windows group the chart automatically so slow changes stay readable.' : 'Free includes up to 90 days of history. Pro and Ultra unlock 180-day and 360-day views plus advanced charting.';
     const findings = active.length ? `<div class="findings-preview-grid">${active.slice(0,4).map((item) => `<div class="finding-preview"><span class="finding-preview-category">${escapeHtml(categoryLabel[item.category] || 'Observation')}</span><strong>${escapeHtml(item.title)}</strong><span class="finding-preview-meta">${Number(item.matchCount || 0)} supporting entr${Number(item.matchCount || 0) === 1 ? 'y' : 'ies'} · ${escapeHtml(item.trend?.label || 'Developing')}</span></div>`).join('')}</div>${active.length > 4 ? `<p class="findings-more">+${active.length-4} more in the detailed list below.</p>` : ''}` : `<div class="findings-empty"><span data-pamet-icon="insights"></span><div><strong>Nothing specific to review yet</strong><p>Keep tracking; Pamet will not manufacture a pattern from weak evidence.</p></div></div>`;
     const fields = info.fields.map(([label,key,value]) => `<div class="quality-field" data-quality-field="${key}"><div class="quality-field-head"><span>${label}</span><strong>${value}%</strong></div><div class="quality-field-meter"><progress max="100" value="${value}" aria-label="${label} coverage ${value}%"></progress></div><span class="quality-field-count">${Math.round(value * entries.length / 100)} of ${entries.length} logged entr${entries.length === 1 ? 'y' : 'ies'}</span></div>`).join('');
+    const chart = Charts.render({ entries, days:state.days, mode:state.chartMode, metric:state.chartMetric, symptom:state.chartSymptom, advancedEnabled:paidComparisons() });
 
     column.innerHTML = `<div class="insights-page-head" data-insights-controller><div><span class="pamet-eyebrow">Observational history</span><h2 class="screen-title">Insights</h2><p class="pamet-helper">${escapeHtml(helper)}</p><p class="insights-window-summary" aria-live="polite">Showing the last <strong>${state.days} days</strong>.</p></div><div class="insights-window-wrap"><div class="insights-window" role="group" aria-label="Observation window">${WINDOWS.map(renderWindowButton).join('')}</div><p class="insights-window-note">${escapeHtml(historyNote)}</p></div></div>
       ${state.status ? `<div class="insights-action-status" role="status">${escapeHtml(state.status)}</div>` : ''}
       <section class="insights-window-kpis" aria-label="${state.days}-day window snapshot"><div class="insights-kpi"><span>Patterns to review</span><strong data-pattern-count>${active.length}</strong><small>supported in this window</small></div><div class="insights-kpi"><span>Logged days</span><strong>${info.days}<small> / ${state.days}</small></strong><small>${info.consistency}% of calendar days</small></div><div class="insights-kpi"><span>Symptom days</span><strong>${info.symptomDays}</strong><small>days with symptoms</small></div><div class="insights-kpi"><span>Symptom-free days</span><strong>${info.clearDays}</strong><small>comparison baseline days</small></div></section>
+      ${chart}
       <section class="insights-findings-card" aria-labelledby="findingsTitle"><div class="findings-card-head"><div><span class="pamet-eyebrow">Pattern summary · ${state.days}-day window</span><h3 id="findingsTitle">${escapeHtml(info.label)}</h3><p>${escapeHtml(info.note)}</p></div><div class="findings-count"><strong>${active.length}</strong><span>${active.length === 1 ? 'pattern' : 'patterns'}</span></div></div>${findings}</section>
       <section class="tracking-quality-card" aria-labelledby="trackingQualityTitle"><div class="tracking-quality-head"><div><span class="pamet-eyebrow">Tracking quality · last ${state.days} days</span><h3 id="trackingQualityTitle">${escapeHtml(info.level)}</h3><p>Based on how often you logged, how complete those entries were, and whether symptom-free baseline days are available.</p></div><div class="quality-next-step" data-quality-next><span>Most useful next step</span><strong>${escapeHtml(info.next)}</strong></div></div><div class="quality-metrics"><div class="quality-metric" data-quality-metric="consistency"><span>Tracking consistency</span><strong>${info.consistency}%</strong><p>${info.days} of ${state.days} calendar days logged</p><progress max="100" value="${info.consistency}"></progress></div><div class="quality-metric" data-quality-metric="detail"><span>Entry detail</span><strong>${Number(info.c.overall || 0)}%</strong><p>recommended-field coverage on logged entries</p><progress max="100" value="${Number(info.c.overall || 0)}"></progress></div><div class="quality-metric" data-quality-metric="baseline"><span>Baseline mix</span><strong>${info.symptomDays} / ${info.clearDays}</strong><p>symptom days / symptom-free days</p><div class="quality-baseline-note">${info.symptomDays && info.clearDays < 2 ? 'Add ordinary days when applicable for a better baseline.' : 'Helps compare symptom and ordinary days without implying cause.'}</div></div></div><div class="quality-fields-wrap"><div class="quality-fields-head"><div><span class="pamet-eyebrow">Tracking detail coverage</span><h4>What your entries consistently include</h4></div><p>Based only on entries logged in this window.</p></div><div class="quality-fields-grid">${fields}</div></div><p class="quality-footnote">Tracking quality describes journal coverage and balance. It does not measure diagnostic certainty or prove causation.</p></section>
       <div class="insights-toolbar" aria-label="Insight filters"><div class="insights-categories">${categories.map(([key,label]) => `<button type="button" class="chip-btn${state.category === key ? ' active' : ''}" data-insights-category="${key}" aria-pressed="${state.category === key}">${label}</button>`).join('')}</div><button type="button" class="link-btn archived-toggle" data-insights-archived>${state.showArchived ? 'Back to active observations' : `Archived (${archived.size})`}</button></div><div class="observation-list">${visible.length ? visible.map((item) => observationCard(item, archived.has(item.id))).join('') : emptyState(info, archived)}</div>`;
@@ -159,6 +164,31 @@
       event.preventDefault();
       state.days = days;
       state.expanded.clear();
+      state.status = '';
+      renderInsights();
+      return;
+    }
+
+    const chartModeButton = event.target.closest('[data-chart-mode]');
+    if (chartModeButton) {
+      event.preventDefault();
+      const mode = chartModeButton.dataset.chartMode;
+      if (mode === 'advanced' && !paidComparisons()) {
+        E?.requireAccess?.({ feature: 'correlations', label: 'Advanced charting' }, event);
+        return;
+      }
+      state.chartMode = mode === 'advanced' ? 'advanced' : 'basic';
+      state.status = '';
+      renderInsights();
+      return;
+    }
+
+    const chartMetricButton = event.target.closest('[data-chart-metric]');
+    if (chartMetricButton) {
+      event.preventDefault();
+      const metric = chartMetricButton.dataset.chartMetric;
+      if (!paidComparisons() || state.chartMode !== 'advanced' || !Charts.metrics().includes(metric)) return;
+      state.chartMetric = metric;
       state.status = '';
       renderInsights();
       return;
@@ -210,6 +240,14 @@
     }
   }
 
+  function handleInsightsChange(event) {
+    const select = event.target?.closest?.('#screen-patterns [data-chart-symptom]');
+    if (!select) return;
+    state.chartSymptom = select.value || 'all';
+    state.status = '';
+    renderInsights();
+  }
+
   function selectedCount(config) {
     return $$(config.selector).filter((element) => {
       const label = element.textContent.trim();
@@ -256,6 +294,7 @@
     if (patternScreen) patternScreen.dataset.insightsV15Rendering = 'true';
 
     document.addEventListener('click', handleInsightsClick, true);
+    document.addEventListener('change', handleInsightsChange, true);
     document.addEventListener('click', (event) => {
       if (event.target.closest?.('[data-tab="patterns"], [data-nav="patterns"]')) setTimeout(renderInsights, 0);
       if (event.target.closest?.('#symptomGrid .sym-btn, #moodFlow .chip, #activityFlow .chip, #medFlow .chip, #addSymptomPlus, #addMoodPlus, #addActivityPlus, #addMedPlus')) schedulePlanHintRefresh();
@@ -275,7 +314,7 @@
     window.addEventListener('pamet:entitlements', () => { schedulePlanHintRefresh(); scheduleInsightsRender(); });
     window.addEventListener('pamet:login', () => { schedulePlanHintRefresh(); scheduleInsightsRender(); });
     window.addEventListener('pamet:registered', () => { schedulePlanHintRefresh(); scheduleInsightsRender(); });
-    window.addEventListener('pamet:profile-updated', () => { state.expanded.clear(); state.showArchived = false; schedulePlanHintRefresh(); scheduleInsightsRender(); });
+    window.addEventListener('pamet:profile-updated', () => { state.expanded.clear(); state.showArchived = false; state.chartMode = 'basic'; state.chartMetric = 'frequency'; state.chartSymptom = 'all'; schedulePlanHintRefresh(); scheduleInsightsRender(); });
     document.addEventListener('pamet:settings-rendered', schedulePlanHintRefresh);
 
     schedulePlanHintRefresh();
@@ -284,7 +323,7 @@
 
   window.PametInsightsController = Object.freeze({
     render: renderInsights,
-    getState: () => ({ days: state.days, category: state.category, showArchived: state.showArchived }),
+    getState: () => ({ days: state.days, category: state.category, showArchived: state.showArchived, chartMode: state.chartMode, chartMetric: state.chartMetric, chartSymptom: state.chartSymptom }),
     windows: () => [...WINDOWS]
   });
 
