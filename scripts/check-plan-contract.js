@@ -6,6 +6,7 @@ const catalog = JSON.parse(fs.readFileSync('contracts/plan-features.json', 'utf8
 const mobile = JSON.parse(fs.readFileSync('contracts/mobile-api.json', 'utf8'));
 const server = fs.readFileSync('server.js', 'utf8');
 const comparison = fs.readFileSync('js/plan-comparison.js', 'utf8');
+const management = fs.readFileSync('js/plan-management.js', 'utf8');
 const main = fs.readFileSync('js/main.js', 'utf8');
 const authenticated = fs.readFileSync('js/authenticated-features.js', 'utf8');
 const guard = fs.readFileSync('js/entitlement-guard.js', 'utf8');
@@ -80,10 +81,12 @@ check(main.includes("window.addEventListener(eventName, () => loadAuthenticatedF
 check(insights.includes('if (!paidComparisons()) return observations;'), 'Free Insights must stop before recorded-factor comparison generation.');
 check(insights.includes("E?.has?.('medicationTiming') === true"), 'Medication observations must require the Pro/Ultra entitlement.');
 
-check(comparison.includes('Compare all plans'), 'Settings must offer a clear full-plan comparison action.');
+check(comparison.includes('Compare all Pamet features'), 'Settings must offer a clear full-plan comparison action.');
 check(comparison.includes('Upgrade your plan'), 'Free-plan Settings must expose a clear upgrade action.');
-check(comparison.includes('Compare all plan features'), 'Upgrade modal must link to the full canonical plan matrix.');
+check(comparison.includes('PAMET PLAN CATALOG') && comparison.includes('current catalog features'), 'Full comparison must explain that its rows come from the canonical catalog.');
 check(comparison.includes('PametPlanCatalog'), 'Plan comparison UI must use the canonical generated catalog.');
+check(management.includes('#upgradeBtn') && management.includes('Open Stripe billing portal'), 'Paid Manage your plan must open in-app account context before an explicit billing action.');
+check(management.includes('/api/billing/status') && management.includes('/api/billing/portal'), 'Plan management must separate read-only billing status from explicit portal creation.');
 check(!JSON.stringify(catalog).includes('Scheduled caregiver updates'), 'Canonical plan contract must not advertise removed live caregiver surveillance.');
 check(!JSON.stringify(catalog).includes('FHIR-ready data export'), 'Canonical plan contract must not advertise unshipped FHIR export.');
 
