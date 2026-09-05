@@ -128,4 +128,5 @@ const manifest = {
 };
 fs.writeFileSync(path.join(dist, 'asset-manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
 fs.rmSync(temp, { recursive: true, force: true });
+require('./build-insights-charting.js');
 console.log(`Pamet performance-first production bundles built: ${manifest.bootstrapJs}, ${manifest.featuresJs}, ${manifest.bootstrapCss}, ${manifest.featuresCss}; deferred plan management: /dist/pamet.plan-management.min.js; deferred plan matrix: /dist/pamet.plan-matrix.min.js`);
