@@ -2,15 +2,21 @@
 
 const { test, expect } = require('@playwright/test');
 
-async function registerAccount(page, testInfo) {
+async function startSyntheticFreeSession(page, testInfo) {
   const unique = `${Date.now()}-${Math.random().toString(16).slice(2)}-${testInfo.project.name.replace(/\W+/g, '-')}`;
+  await page.addInitScript(({ id }) => {
+    const user = {
+      id: `home-${id}`,
+      firstName: 'Home',
+      lastName: 'Dashboard',
+      email: `home-${id}@pamet.test`,
+      plan: 'free',
+      createdAt: new Date().toISOString()
+    };
+    localStorage.setItem('pamet_user_v1', JSON.stringify(user));
+    localStorage.setItem('pamet_session_v2', JSON.stringify({ token: `home-session-${id}`, at: Date.now() }));
+  }, { id: unique });
   await page.goto('/', { waitUntil: 'domcontentloaded' });
-  await page.locator('#showRegister').click();
-  await page.locator('#regFirstName').fill('Home');
-  await page.locator('#regLastName').fill('Dashboard');
-  await page.locator('#regEmail').fill(`home-${unique}@example.com`);
-  await page.locator('#regPassword').fill(`Pamet-Home-${unique}-Password!`);
-  await page.locator('#registerForm button[type="submit"]').click();
   await expect(page.locator('#welcome')).toHaveClass(/hidden/);
   await expect(page.locator('#screen-home')).toHaveClass(/active/);
 }
@@ -62,7 +68,7 @@ async function addRecentHistory(page) {
 }
 
 test('@production Home gives first-use CTA a real action and keeps it in bounds', async ({ page }, testInfo) => {
-  await registerAccount(page, testInfo);
+  await startSyntheticFreeSession(page, testInfo);
 
   await expect(page.locator('#homeEmptyPlus')).toBeVisible();
   await expect(page.locator('#homeEmptyPlus')).toHaveAttribute('aria-label', 'Log your first entry');
@@ -82,7 +88,7 @@ test('@production Home gives first-use CTA a real action and keeps it in bounds'
 });
 
 test('@production Home shows a compact seven-day dashboard without legacy metric clutter', async ({ page }, testInfo) => {
-  await registerAccount(page, testInfo);
+  await startSyntheticFreeSession(page, testInfo);
   await addRecentHistory(page);
 
   await expect(page.locator('#homeWeekCard')).toBeVisible();
