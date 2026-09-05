@@ -60,7 +60,7 @@ check(app.includes('Entry saved — Pamet is updating your patterns.'),'Saved-en
 check(manifest.display==='standalone','PWA manifest must remain standalone.');
 check(new RegExp(`navigator\\.serviceWorker\\.register\\('sw\\.js\\?v=${assetVersion}[1-9][0-9]*'`).test(main),'Service worker must register from the external production bundle with a release-specific cache revision.');
 check(new RegExp(`pamet-shell-v${assetVersion}-[1-9][0-9]*`).test(worker)&&worker.includes('/dist/asset-manifest.json'),'Service worker shell identity must include the current release and discover content-hashed assets from the manifest.');
-check(!worker.includes('caches.match(r,{ignoreSearch:true})')&&!worker.includes('ignoreSearch:true'),'Versioned static assets must not ignore release identity.');
+check(!worker.includes('caches.match(r,{ignoreSearch:true})'),'Versioned static assets must not use the historical ignore-search lookup; the offline HTML fallback may ignore a navigation query string.');
 check(worker.includes("url.pathname.startsWith('/api/')||url.pathname.startsWith('/share')"),'Sensitive API/share routes must bypass cache.');
 for(const key of ['bootstrapJs','featuresJs','bootstrapCss','featuresCss'])check(/^\/dist\/pamet\.(?:bootstrap|features|styles)\.[a-f0-9]{12}\.(?:js|css)$/.test(assetManifest[key]||''),`Release asset manifest ${key} must be content hashed.`);
 check(mainCss.trim().endsWith('@import "./dark-mode.css";')&&authenticatedCss.trim().endsWith('@import "./dark-mode.css";')&&darkMode.includes('.completeness-card')&&darkMode.includes('.insights-empty'),'Unified dark mode must be final in both full and deferred stylesheet layers and cover Insights.');
