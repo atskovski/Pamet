@@ -11,6 +11,8 @@
 }
 
 body.dark {
+  --teal-deep: var(--sage-mid, #93B89A);
+  --brand-primary: var(--teal-deep);
   --surface: var(--card-bg, #201913);
   --surface-soft: var(--surface-secondary, #241C15);
   --paper-warm: var(--surface-secondary, #241C15);
