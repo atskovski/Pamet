@@ -20,7 +20,6 @@
       : (global.PametStore?.settings?.plan || global.PametStore?._settings?.plan || "free");
     return plan(key).key;
   };
-  const releaseToken = () => document.querySelector('meta[name="pamet-features-js"]')?.content?.match(/[a-f0-9]{12}/)?.[0] || "current";
 
   let settingsGuard = false;
   let settingsObserver;
@@ -49,7 +48,7 @@
     if (matrixPending) return matrixPending;
     matrixPending = new Promise((resolve, reject) => {
       const script = document.createElement("script");
-      script.src = `/dist/pamet.plan-matrix.min.js?release=${releaseToken()}`;
+      script.src = "/dist/pamet.plan-matrix.min.js?v=1694";
       script.async = true;
       script.addEventListener("load", () => (global.PametPlanMatrix ? resolve(global.PametPlanMatrix) : reject(new Error("Plan matrix did not initialize."))), { once:true });
       script.addEventListener("error", () => reject(new Error("Plan comparison could not be loaded.")), { once:true });
@@ -109,14 +108,8 @@
     modal.classList.add("plan-upgrade-modal");
     const head = modal.querySelector(".pamet-modal-head");
     if (head && !head.querySelector("[data-plan-modal-back]")) {
-      const back = document.createElement("button");
-      back.type = "button";
-      back.className = "plan-flow-back";
-      back.dataset.planModalBack = "1";
-      back.setAttribute("aria-label", "Back to previous screen");
-      back.textContent = "←";
-      back.addEventListener("click", () => { root.innerHTML = ""; });
-      head.prepend(back);
+      head.insertAdjacentHTML("afterbegin", '<button type="button" class="plan-flow-back" data-plan-modal-back aria-label="Back to previous screen">←</button>');
+      head.querySelector("[data-plan-modal-back]").onclick = () => { root.innerHTML = ""; };
     }
     modal.querySelectorAll("[data-plan]").forEach((button) => {
       const key = button.dataset.plan;
