@@ -100,6 +100,28 @@ function parseAuthJson(req, res, next) {
   });
 }
 
+/*
+ * Password logins remain backwards compatible: clients that do not send the
+ * preference keep the established 30-day cookie. The web login explicitly sends
+ * rememberMe=false when the box is clear; for that case only, strip Max-Age so
+ * the browser owns a session cookie that disappears when the browser session ends.
+ * The password itself is never persisted by this middleware.
+ */
+function applyLoginCookiePolicy(req, res, next) {
+  if (!req.body || req.body.rememberMe !== false) return next();
+  const setHeader = res.setHeader.bind(res);
+  res.setHeader = (name, value) => {
+    if (String(name).toLowerCase() !== 'set-cookie') return setHeader(name, value);
+    const transient = (cookie) => {
+      const text = String(cookie || '');
+      if (!text.startsWith('pamet_session=')) return cookie;
+      return text.replace(/;\s*Max-Age=\d+/i, '');
+    };
+    return setHeader(name, Array.isArray(value) ? value.map(transient) : transient(value));
+  };
+  next();
+}
+
 function renderVersionedIndex(req, res) {
   res.type('html').set('Cache-Control', 'no-store').send(versionedIndex);
 }
@@ -143,7 +165,7 @@ app.use('/api/ready', (req, res, next) => {
 
 app.get(['/', '/index.html'], authSecurityHeaders, renderVersionedIndex);
 
-app.post('/api/auth/login', parseAuthJson, accountLoginLimit);
+app.post('/api/auth/login', parseAuthJson, accountLoginLimit, applyLoginCookiePolicy);
 app.post('/api/auth/register', parseAuthJson, passwordSafetyLimit, rejectBreachedPassword);
 app.post('/api/auth/password', parseAuthJson, passwordSafetyLimit, rejectBreachedPassword);
 app.post('/api/auth/legacy-upgrade', parseAuthJson, passwordSafetyLimit, rejectBreachedPassword, legacyUpgrade);
