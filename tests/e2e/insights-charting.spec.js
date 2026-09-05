@@ -102,10 +102,10 @@ test('@production Pro Patterns charting keeps exact daily windows, offers line/b
   await chart.locator('[data-chart-type="bar"]').click();
   await expect(chart).toHaveAttribute('data-chart-type-current','bar');
   expect(await chart.locator('.chart-bar').count()).toBeGreaterThan(0);
-  await expect(chart.locator('.chart-series-trend')).toBeVisible();
+  await expect(chart.locator('.chart-series-trend')).toHaveAttribute('d', /^M/);
   await chart.locator('[data-chart-type="line"]').click();
   await expect(chart).toHaveAttribute('data-chart-type-current','line');
-  await expect(chart.locator('.chart-series-primary')).toBeVisible();
+  await expect(chart.locator('.chart-series-primary')).toHaveAttribute('d', /^M/);
 
   await chart.locator('[data-chart-mode="advanced"]').click();
   await expect(chart).toHaveAttribute('data-chart-mode-current','advanced');
@@ -116,8 +116,8 @@ test('@production Pro Patterns charting keeps exact daily windows, offers line/b
   await chart.locator('[data-chart-metric="sleep"]').click();
   await expect(chart.locator('#insightsChartTitle')).toHaveText('Recorded sleep');
   await expect(chart.locator('.legend-secondary')).toContainText('Any symptom days');
-  await expect(chart.locator('.chart-series-secondary')).toBeVisible();
-  await expect(chart.locator('.chart-series-trend')).toBeVisible();
+  await expect(chart.locator('.chart-series-secondary')).toHaveAttribute('d', /^M/);
+  await expect(chart.locator('.chart-series-trend')).toHaveAttribute('d', /^M/);
   await expect(chart.locator('.chart-axis-title-y')).toHaveText('Sleep (hours)');
 
   await chart.locator('[data-chart-symptom]').selectOption('Headache');
