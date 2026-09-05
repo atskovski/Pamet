@@ -1,0 +1,79 @@
+name: Pamet v1.6.8 release prep
+
+on:
+  push:
+    branches:
+      - fix/pamet-v1.6.8-insights-completeness
+
+permissions:
+  contents: write
+
+jobs:
+  release-prep:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: fix/pamet-v1.6.8-insights-completeness
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+      - name: Promote release identity
+        run: |
+          set -euo pipefail
+          npm version 1.6.8 --no-git-tag-version
+          node <<'NODE'
+          const fs = require('fs');
+          const path = require('path');
+          const replace = (file, from, to) => {
+            let text = fs.readFileSync(file, 'utf8');
+            if (!text.includes(from)) throw new Error(`${file}: missing ${from}`);
+            text = text.split(from).join(to);
+            fs.writeFileSync(file, text);
+          };
+
+          replace('js/main.js', 'Pamet v1.6.7 production entrypoint', 'Pamet v1.6.8 production entrypoint');
+          replace('js/main.js', "const PAMET_VERSION = '1.6.7'", "const PAMET_VERSION = '1.6.8'");
+          replace('js/main.js', "sw.js?v=1670", "sw.js?v=1680");
+          replace('css/main.css', 'Pamet v1.6.7 production stylesheet entrypoint', 'Pamet v1.6.8 production stylesheet entrypoint');
+
+          let index = fs.readFileSync('index.html', 'utf8');
+          index = index.replaceAll('?v=167', '?v=168').replaceAll('Pamet v1.6.7', 'Pamet v1.6.8');
+          fs.writeFileSync('index.html', index);
+
+          let worker = fs.readFileSync('sw.js', 'utf8');
+          worker = worker.replaceAll('Pamet v1.6.7', 'Pamet v1.6.8').replaceAll('v167', 'v168');
+          fs.writeFileSync('sw.js', worker);
+
+          const contract = JSON.parse(fs.readFileSync('contracts/mobile-api.json', 'utf8'));
+          contract.backendVersion = '1.6.8';
+          fs.writeFileSync('contracts/mobile-api.json', `${JSON.stringify(contract, null, 2)}\n`);
+
+          let readme = fs.readFileSync('README.md', 'utf8');
+          readme = readme.replace('Version 1.6.7', 'Version 1.6.8').replace('### Pamet 1.6.7', '### Pamet 1.6.8');
+          fs.writeFileSync('README.md', readme);
+
+          let changelog = fs.readFileSync('CHANGELOG.md', 'utf8');
+          if (!changelog.includes('## [1.6.8]')) {
+            changelog = changelog.replace('# Pamet Change Log\n', `# Pamet Change Log\n\n## [1.6.8] — 2026-09-04\n\n### Patterns data quality clarity\n\n- Replaced the ambiguous “100% complete” summary with explicit logged-entry completeness language.\n- Separated logging consistency (“X of Y days logged”) from how fully each logged entry was completed.\n- Centered the Data Quality summary across desktop and mobile while retaining the detailed field-coverage breakdown.\n- Kept Data Quality synchronized with the 7 / 30 / 60 / 90-day Patterns window.\n- Stabilized production feature smoke tests with isolated synthetic sessions so browser validation does not trip account-registration throttling.\n`);
+          }
+          fs.writeFileSync('CHANGELOG.md', changelog);
+
+          replace('VERSIONING.md', 'current stable release line is `v1.6.7`', 'current stable release line is `v1.6.8`');
+
+          const hotfix = `# Pamet 1.6.8 Data Quality Hotfix\n\nDate: 2026-09-04  \nBase release: **Pamet 1.6.7**  \nAssurance baseline: **Pamet 1.6.7**\n\n## Scope\n\nPamet 1.6.8 is a patch-only client clarity, layout, and release-test reliability hotfix. It does not change the database schema, authentication model, billing behavior, server-side entitlement enforcement, encryption design, dependency specifications, or health-analysis safety boundaries reviewed for 1.6.7.\n\n## Fixes\n\n- Renames the Patterns completeness summary to Data Quality and centers its primary content.\n- Separates days logged from completeness of the entries that were actually logged.\n- Uses explicit copy such as “100% of logged entries complete” and “1 of 7 days logged” so the score cannot be mistaken for a logging streak.\n- Keeps Data Quality copy synchronized to the selected 7, 30, 60, or 90-day window.\n- Retains the per-field completeness breakdown for symptoms, sleep, stress, hydration, activity, medications, and notes.\n- Uses isolated synthetic sessions for feature UI smoke tests so repeated browser validation does not create real accounts or trigger registration throttles.\n\n## Release gate\n\nThe hotfix is not considered live until all of the following are true:\n\n1. Exact-head CI quality, unit/security, MySQL integration, and Chromium/Firefox/mobile UI-integrity checks are green.\n2. The hotfix PR is squash-merged to \`main\` without bypassing unresolved gates.\n3. Wasmer deploys the merged \`main\` SHA.\n4. Production \`/api/health\` reports \`1.6.8\`.\n5. Production desktop/mobile browser smoke passes against the deployed SHA.\n\n## Assurance note\n\nExisting penetration, accessibility, legal/compliance, provider, capacity, and production-readiness records that explicitly identify Pamet 1.6.7 remain the evidence baseline for this patch. This document does not convert repository/self-review evidence into an independent certification and does not claim that external assurance was rerun merely because the patch version changed.\n`;
+          fs.writeFileSync('HOTFIX_STATUS.md', hotfix);
+
+          const planTest = 'tests/e2e/plan-comparison.spec.js';
+          let planText = fs.readFileSync(planTest, 'utf8');
+          planText = planText.replaceAll('Pamet v1.6.7', 'Pamet v1.6.8');
+          fs.writeFileSync(planTest, planText);
+          NODE
+          rm .github/workflows/pamet-v1.6.8-release-prep.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Promote Pamet v1.6.8 release identity"
+          git push origin HEAD:fix/pamet-v1.6.8-insights-completeness
