@@ -9,7 +9,7 @@
     '"':'&quot;',
     "'":'&#39;'
   }[character]));
-  const finite = (value) => Number.isFinite(Number(value));
+  const finite = (value) => value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value));
   const clamp = (value, min, max) => Math.min(max, Math.max(min, Number(value || 0)));
   const average = (values) => {
     const valid = values.filter(finite).map(Number);
