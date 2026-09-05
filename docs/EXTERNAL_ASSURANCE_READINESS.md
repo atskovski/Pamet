@@ -30,6 +30,7 @@ Reviewer should map each data class to collection purpose, storage location, ret
 - account identity and authentication metadata
 - encrypted sync blobs and their metadata
 - caregiver/provider share snapshots and recipient email addresses
+- Visit Brief PDFs and recipient email addresses when outbound health-PDF email is explicitly enabled
 - Stripe customer/subscription identifiers
 - feedback records (designed to exclude account and health details)
 - push subscriptions and timezone/reminder metadata
@@ -39,9 +40,9 @@ Confirm that public-facing claims match actual implementation, especially local-
 
 ## 3. BAA / DPA / vendor posture decision
 
-Create and maintain a vendor register for every production processor/subprocessor, including at minimum hosting/database, Redis/Valkey, Stripe, Resend, Grafana/observability, and any support/error-reporting provider added later.
+Maintain `docs/PRODUCTION_VENDOR_REGISTER.md` as the current public engineering inventory for every production processor/service provider and conditional external data flow. It includes at minimum hosting/database, Redis/Valkey when configured, Stripe, Resend, Grafana/observability, Google/Apple integrations, Web Push, and any support/error-reporting provider added later.
 
-For each vendor record:
+For each active provider, privately verify and record:
 
 - service and data categories received
 - purpose and lawful/contractual basis
@@ -50,10 +51,14 @@ For each vendor record:
 - encryption/security commitments
 - incident notification terms
 - DPA status
-- BAA availability/status where applicable to the intended Pamet use case
+- BAA availability/status only where applicable to the legally determined Pamet use case
 - subprocessor list/review date
 
-Counsel/privacy review must explicitly decide whether Pamet's intended workflows create HIPAA covered-entity/business-associate obligations, consumer-health-data obligations, state privacy obligations, or other healthcare-specific duties. Do not market Pamet as HIPAA compliant or certified without the appropriate legal and assurance basis.
+A public provider DPA or security page is evidence of available terms, not proof that Pamet has executed a particular agreement or that a BAA is required. Counsel/privacy review must explicitly decide whether Pamet's intended workflows create HIPAA covered-entity/business-associate obligations, consumer-health-data obligations, state privacy obligations, or other healthcare-specific duties.
+
+Outbound Visit Brief PDF email remains fail-closed unless `PAMET_FEATURE_VISIT_BRIEF_EMAIL=true` is explicitly configured in addition to the email provider. Do not enable that flag until the legal/privacy determination and provider-contract permission for the intended data category have been documented.
+
+Do not market Pamet as HIPAA compliant or certified without the appropriate legal and assurance basis.
 
 ## 4. Accessibility assurance scope
 
@@ -95,6 +100,7 @@ Use these repository artifacts as the starting evidence set:
 - `ASSURANCE_HANDOFF.md`
 - `SECURITY.md`
 - `THREAT_MODEL.md`
+- `docs/PRODUCTION_VENDOR_REGISTER.md`
 - `docs/LOCAL_ENCRYPTION_THREAT_MODEL.md`
 - `docs/EXTERNAL_READINESS_RUNBOOK.md`
 - `.github/workflows/ci.yml`
@@ -102,6 +108,7 @@ Use these repository artifacts as the starting evidence set:
 - `tests/ui-hardening.test.js`
 - `tests/crypto-ui.test.js`
 - `tests/ops-alert.test.js`
+- `tests/visit-workflow.test.js`
 - `scripts/backup-restore-drill.sh`
 - `scripts/check-production.js`
 - `server.js`, `secure-server.js`, and `lib/edge-account.js`
