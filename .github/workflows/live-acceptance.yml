@@ -22,6 +22,10 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 20
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Build expected production bundles
+        run: npm run build
       - name: Wait for and verify Wasmer production release
         env:
           PAMET_BASE_URL: https://pamet.wasmer.app
@@ -29,14 +33,14 @@ jobs:
           set -euo pipefail
           for attempt in 1 2 3 4 5 6; do
             echo "Live acceptance attempt ${attempt}/6"
-            if node scripts/check-live-environment.js; then
+            if node scripts/check-live-assets.js && node scripts/check-live-environment.js; then
               exit 0
             fi
             if [ "$attempt" -lt 6 ]; then
               sleep 30
             fi
           done
-          echo "Wasmer production did not converge to the repository release."
+          echo "Wasmer production did not converge to the exact repository build."
           exit 1
 
   browser-ui-smoke:
