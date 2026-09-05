@@ -44,7 +44,7 @@ async function installPro(page) {
 
 async function ready(page) {
   await page.goto('/', { waitUntil:'commit' });
-  await page.waitForFunction(() => window.PametAuthenticatedFeaturesLoaded === true && !!window.PametPlanManagement && !!window.PametPlanComparison);
+  await page.waitForFunction(() => window.PametAuthenticatedFeaturesLoaded === true && !!window.PametPlanManagementLoader && !!window.PametPlanComparison);
   await expect.poll(() => page.evaluate(() => window.PametEntitlements?.snapshot?.().plan)).toBe('pro');
   await page.locator('.tab[data-tab="settings"]').click();
 }
@@ -58,9 +58,11 @@ test('@production paid Manage your plan opens account details without immediatel
   });
   await ready(page);
 
+  await expect.poll(() => page.evaluate(() => !!window.PametPlanManagement)).toBe(false);
   await page.getByRole('button',{name:'Manage your plan',exact:true}).click();
   const modal = page.locator('#pametPlanManagementRoot .plan-management-modal');
   await expect(modal).toBeVisible();
+  await expect.poll(() => page.evaluate(() => !!window.PametPlanManagement)).toBe(true);
   await expect(modal.getByRole('heading',{name:'Manage your plan'})).toBeVisible();
   await expect(modal).toContainText('Pro · Understand');
   await expect(modal).toContainText('Plan Member');
