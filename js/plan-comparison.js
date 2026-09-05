@@ -145,7 +145,8 @@
     dialog.querySelector("[data-plan-matrix-close]")?.addEventListener("click", () => dialog.close());
     dialog.querySelector("[data-plan-matrix-manage]")?.addEventListener("click", () => {
       dialog.close();
-      global.PametPlanManagement?.open?.();
+      if (global.PametPlanManagement) global.PametPlanManagement.open();
+      else global.PametPlanManagementLoader?.open?.();
     });
     return dialog;
   }
