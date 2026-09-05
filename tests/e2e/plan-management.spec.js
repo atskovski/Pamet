@@ -96,6 +96,6 @@ test('@production full comparison renders every canonical feature across Free Pr
   await expect(dialog.locator('thead th')).toContainText(['Feature','Free','Pro','Ultra']);
   await expect(dialog.locator('tbody [data-plan-feature]')).toHaveCount(18);
   await expect(dialog.locator('.plan-matrix-group')).toHaveCount(4);
-  await expect(dialog).toContainText('Always current by design.');
+  await expect(dialog.locator('.plan-matrix-foot > span')).toBeHidden();
   await expect(dialog.getByRole('button',{name:'Manage your current plan'})).toBeVisible();
 });
