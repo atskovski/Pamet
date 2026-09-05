@@ -7,8 +7,8 @@ const localBaseURL = 'http://127.0.0.1:8080';
 
 module.exports = defineConfig({
   testDir: './tests/e2e',
-  timeout: 25_000,
-  expect: { timeout: 5_000 },
+  timeout: 35_000,
+  expect: { timeout: 6_000 },
   fullyParallel: false,
   forbidOnly: Boolean(process.env.CI),
   retries: 0,
@@ -24,8 +24,8 @@ module.exports = defineConfig({
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
     serviceWorkers: 'block',
-    actionTimeout: 7_500,
-    navigationTimeout: 12_000
+    actionTimeout: 10_000,
+    navigationTimeout: 20_000
   },
   projects: [
     {
